@@ -28,19 +28,19 @@ export function POSCart({
   onPayment, onShiftToggle, currentShift,
 }: POSCartProps) {
   return (
-    <div className="w-80 flex flex-col border rounded-xl bg-card p-4">
-      <h3 className="font-semibold mb-3 flex items-center gap-2">
+    <div className="w-[450px] flex flex-col border rounded-xl bg-card p-4 shadow-sm">
+      <h3 className="font-semibold mb-4 flex items-center gap-2 text-lg">
         <ShoppingCart className="h-5 w-5 text-primary" /> კალათა
       </h3>
       <ScrollArea className="flex-1 -mx-2 px-2">
         {cart.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">კალათა ცარიელია</p>
+          <p className="text-sm text-muted-foreground text-center py-12">კალათა ცარიელია</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {cart.map((item) => (
-              <div key={item.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+              <div key={item.id} className="flex items-center gap-4 p-3 rounded-xl bg-muted/30 border border-transparent hover:border-primary/20 transition-all">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{item.name}</p>
+                  <p className="text-sm font-bold text-foreground leading-tight line-clamp-2">{item.name}</p>
                   <p className="text-xs text-muted-foreground">₾{item.price.toFixed(2)}</p>
                 </div>
                 <div className="flex items-center gap-1">
