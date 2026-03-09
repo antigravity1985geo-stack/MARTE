@@ -18,18 +18,18 @@ import {
 
 const moduleCategories = [
   {
-    category: '🏠 მთავარი',
+    category: '🏠 მთავარი & AI',
     color: 'from-primary/20 to-primary/5',
     modules: [
       {
-        title: 'დეშბორდი', icon: LayoutDashboard, path: '/app',
-        desc: 'რეალტაიმ KPI ვიჯეტები — დღის გაყიდვები, შემოსავალი, მოგება, მარჟა.',
-        features: ['საათობრივი გაყიდვების გრაფიკი', '7-დღიანი ტრენდი', 'გადახდის მეთოდების წრე', 'CRM მეტრიკები', 'დასწრების პროცენტი', 'მარაგის სტატუსი', 'E-Commerce არხების სტატისტიკა', 'ავტო-შეკვეთების მონიტორი', 'ბოლო ტრანზაქციები'],
+        title: 'დეშბორდი & BI', icon: LayoutDashboard, path: '/app',
+        desc: 'რეალტაიმ KPI ვიჯეტები და AI ანალიტიკა.',
+        features: ['გაყიდვების AI პროგნოზი', '7-დღიანი ტრენდი', 'პიკური საათების BI', 'CRM მეტრიკები', 'მარაგის ავტომატური სტატუსი'],
       },
       {
-        title: 'POS სისტემა', icon: Monitor, path: '/app/pos',
-        desc: 'სრულფასოვანი გაყიდვების წერტილი ტაბლეტებისა და დესკტოპისთვის.',
-        features: ['კალათის მართვა რაოდენობით და ფასდაკლებით', 'ბარკოდის სკანერი (კამერა + ფიზიკური)', 'გადახდა ნაღდით, ბარათით ან კომბინირებულით', 'ცვლის გახსნა/დახურვა PIN კოდით', 'რეფანდი', 'კუპონის ვალიდაცია', 'კლავიატურის მალსახმობები (F1-F4)', 'მობილური ადაპტირებული ინტერფეისი'],
+        title: 'POS სისტემა 2.0', icon: Monitor, path: '/app/pos',
+        desc: 'ულტრა-სწრაფი გაყიდვების წერტილი ოფლაინ რეჟიმით.',
+        features: ['კალათის ინტელექტუალური მართვა', 'ბარკოდის სკანირება', 'კომბინირებული გადახდები', 'ავტომატური RS.GE ზედნადებები', 'ოფლაინ მოქმედება'],
       },
     ],
   },
@@ -177,9 +177,9 @@ const moduleCategories = [
     color: 'from-purple-500/20 to-purple-500/5',
     modules: [
       {
-        title: 'RS.GE', icon: FileText, path: '/app/rsge',
-        desc: 'RS.GE ინტეგრაცია ფისკალური დოკუმენტებისთვის.',
-        features: ['ფისკალური ჩეკები', 'ზედნადებები', 'ანგარიშ-ფაქტურები'],
+        title: 'RS.GE სინქრონიზაცია', icon: FileText, path: '/app/rsge',
+        desc: 'სრული ავტომატიზაცია ფისკალური დოკუმენტებისთვის.',
+        features: ['ავტომატური ზედნადებები', 'ანგარიშ-ფაქტურების იმპორტი', 'საწყობში ავტომატური ასახვა'],
       },
       {
         title: 'ფისკალური', icon: BarChart3, path: '/app/fiscal-report',
@@ -273,12 +273,12 @@ const shortcuts = [
 ];
 
 const quickStart = [
-  { step: '1', title: 'თანამშრომლების დამატება', desc: 'გადადით "თანამშრომლები" გვერდზე, დაამატეთ მოლარეები PIN კოდებით და მიანიჭეთ როლები.', icon: UserCog },
-  { step: '2', title: 'კატეგორიების შექმნა', desc: 'შექმენით პროდუქტების კატეგორიები (საკვები, სასმელი, ჰიგიენა და ა.შ.) სტრუქტურის ორგანიზებისთვის.', icon: Layers },
-  { step: '3', title: 'პროდუქტების შეყვანა', desc: 'დაამატეთ პროდუქტები ფასებით, ბარკოდებით და საწყისი მარაგით.', icon: Package },
-  { step: '4', title: 'მომწოდებლების დამატება', desc: 'შეიყვანეთ მომწოდებლების კონტაქტები შესყიდვების აღრიცხვისთვის.', icon: Truck },
-  { step: '5', title: 'POS-ის გამოყენება', desc: 'გახსენით ცვლა PIN კოდით, დაიწყეთ გაყიდვები და მიიღეთ გადახდები.', icon: Monitor },
-  { step: '6', title: 'ანგარიშების ნახვა', desc: 'დეშბორდზე ნახეთ რეალტაიმ სტატისტიკა, ბუღალტერიაში — ფინანსური ანგარიშები.', icon: BarChart3 },
+  { step: '1', title: 'პერსონალის მართვა', desc: 'დაამატეთ თანამშრომლები PIN კოდებით და მიანიჭეთ შესაბამისი როლები.', icon: UserCog },
+  { step: '2', title: 'კატეგორიების სტრუქტურა', desc: 'შექმენით პროდუქტების იერარქია საუკეთესო ორგანიზებისთვის.', icon: Layers },
+  { step: '3', title: 'მარაგების იმპორტი', desc: 'დაამატეთ პროდუქტები. გამოიყენეთ RS.GE იმპორტი პროცესის დასაჩქარებლად.', icon: Package },
+  { step: '4', title: 'ჭკვიანი შესყიდვები', desc: 'ჩართეთ AI პროგნოზირება მარაგების ავტომატური მართვისთვის.', icon: Zap },
+  { step: '5', title: 'POS გაყიდვები', desc: 'გახსენით ცვლა და დაიწყეთ მომსახურება. სისტემა მუშაობს ინტერნეტის გარეშეც.', icon: Monitor },
+  { step: '6', title: 'BI ანალიტიკა', desc: 'ადევნეთ თვალი ბიზნესის ზრდას რეალტაიმ დეშბორდით.', icon: BarChart3 },
 ];
 
 const faq = [
@@ -319,22 +319,22 @@ export default function GuidePage() {
     <PageTransition>
       <div className="space-y-8">
         {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border border-primary/10 p-8">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-          <div className="relative">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-3 rounded-xl bg-primary/10 shadow-lg shadow-primary/5">
-                <BookOpen className="h-7 w-7 text-primary" />
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-background to-background border border-white/10 p-10">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-[100px]" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-5 mb-6">
+              <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 shadow-2xl">
+                <BookOpen className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">სახელმძღვანელო</h1>
-                <p className="text-muted-foreground">MARTE — სრული დოკუმენტაცია</p>
+                <h1 className="text-4xl font-black tracking-tighter text-white">სახელმძღვანელო</h1>
+                <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs mt-1">Next-Gen Business OS — Documentation</p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 mt-4">
-              <Badge variant="secondary" className="gap-1"><Package className="h-3 w-3" />{moduleCategories.reduce((s, c) => s + c.modules.length, 0)} მოდული</Badge>
-              <Badge variant="secondary" className="gap-1"><Zap className="h-3 w-3" />{moduleCategories.reduce((s, c) => s + c.modules.reduce((fs, m) => fs + m.features.length, 0), 0)}+ ფუნქცია</Badge>
-              <Badge variant="secondary" className="gap-1"><Shield className="h-3 w-3" />4 როლი</Badge>
+            <div className="flex flex-wrap gap-3">
+              <Badge variant="outline" className="gap-2 px-4 py-1.5 rounded-full border-white/10 bg-white/5 text-white font-bold"><Package className="h-4 w-4 text-primary" />{moduleCategories.reduce((s, c) => s + c.modules.length, 0)} მოდული</Badge>
+              <Badge variant="outline" className="gap-2 px-4 py-1.5 rounded-full border-white/10 bg-white/5 text-white font-bold"><Zap className="h-4 w-4 text-primary" />{moduleCategories.reduce((s, c) => s + c.modules.reduce((fs, m) => fs + m.features.length, 0), 0)}+ ფუნქცია</Badge>
+              <Badge variant="outline" className="gap-2 px-4 py-1.5 rounded-full border-white/10 bg-white/5 text-white font-bold"><Shield className="h-4 w-4 text-primary" />4 როლი</Badge>
             </div>
           </div>
         </div>
@@ -352,16 +352,16 @@ export default function GuidePage() {
           <TabsContent value="start" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {quickStart.map(s => (
-                <Card key={s.step} className="group relative overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-primary/30" />
-                  <CardContent className="p-5 pl-6">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground flex items-center justify-center font-bold text-lg shadow-lg shadow-primary/20">
+                <Card key={s.step} className="group relative overflow-hidden border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-500 rounded-2xl">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <CardContent className="p-6 relative z-10">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xl border border-primary/20 group-hover:scale-110 transition-transform">
                         {s.step}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{s.title}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">{s.desc}</p>
+                        <h3 className="font-bold text-white text-lg transition-colors">{s.title}</h3>
+                        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{s.desc}</p>
                       </div>
                     </div>
                   </CardContent>
