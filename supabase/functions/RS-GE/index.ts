@@ -1,4 +1,6 @@
 /// <reference lib="deno.ns" />
+// @ts-nocheck
+declare const Deno: any;
 // RS.GE Proxy Edge Function
 
 const corsHeaders = {
