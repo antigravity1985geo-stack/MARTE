@@ -319,22 +319,28 @@ export default function GuidePage() {
     <PageTransition>
       <div className="space-y-8">
         {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-background to-background border border-white/10 p-10">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-[100px]" />
+        <div className="relative overflow-hidden rounded-3xl bg-[#11141a] border border-white/5 p-12 shadow-2xl">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-[120px] opacity-50" />
+          <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-accent/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-[80px] opacity-30" />
           <div className="relative z-10">
-            <div className="flex items-center gap-5 mb-6">
-              <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 shadow-2xl">
-                <BookOpen className="h-8 w-8 text-primary" />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="flex items-center gap-6">
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-2xl shadow-primary/10">
+                  <BookOpen className="h-10 w-10 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-5xl font-black tracking-tighter text-white mb-2">სახელმძღვანელო</h1>
+                  <p className="text-primary/70 font-bold uppercase tracking-[0.3em] text-xs">Next-Gen Business OS — Docs</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-4xl font-black tracking-tighter text-white">სახელმძღვანელო</h1>
-                <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs mt-1">Next-Gen Business OS — Documentation</p>
+              <div className="flex flex-wrap gap-4">
+                <Badge variant="outline" className="gap-2 px-5 py-2 rounded-xl border-white/10 bg-white/5 text-white/90 font-bold backdrop-blur-md">
+                  <Package className="h-4 w-4 text-primary" />{moduleCategories.reduce((s, c) => s + c.modules.length, 0)} მოდული
+                </Badge>
+                <Badge variant="outline" className="gap-2 px-5 py-2 rounded-xl border-white/10 bg-white/5 text-white/90 font-bold backdrop-blur-md">
+                  <Zap className="h-4 w-4 text-primary" />{moduleCategories.reduce((s, c) => s + c.modules.reduce((fs, m) => fs + m.features.length, 0), 0)}+ ფუნქცია
+                </Badge>
               </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Badge variant="outline" className="gap-2 px-4 py-1.5 rounded-full border-white/10 bg-white/5 text-white font-bold"><Package className="h-4 w-4 text-primary" />{moduleCategories.reduce((s, c) => s + c.modules.length, 0)} მოდული</Badge>
-              <Badge variant="outline" className="gap-2 px-4 py-1.5 rounded-full border-white/10 bg-white/5 text-white font-bold"><Zap className="h-4 w-4 text-primary" />{moduleCategories.reduce((s, c) => s + c.modules.reduce((fs, m) => fs + m.features.length, 0), 0)}+ ფუნქცია</Badge>
-              <Badge variant="outline" className="gap-2 px-4 py-1.5 rounded-full border-white/10 bg-white/5 text-white font-bold"><Shield className="h-4 w-4 text-primary" />4 როლი</Badge>
             </div>
           </div>
         </div>
@@ -352,16 +358,16 @@ export default function GuidePage() {
           <TabsContent value="start" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {quickStart.map(s => (
-                <Card key={s.step} className="group relative overflow-hidden border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-500 rounded-2xl">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <CardContent className="p-6 relative z-10">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xl border border-primary/20 group-hover:scale-110 transition-transform">
+                <Card key={s.step} className="group relative overflow-hidden border-white/5 bg-[#161b22] hover:bg-[#1c2128] transition-all duration-500 rounded-2xl shadow-xl">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-primary/10 transition-colors" />
+                  <CardContent className="p-8 relative z-10">
+                    <div className="flex items-start gap-5">
+                      <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-2xl border border-primary/20 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-500 shadow-lg shadow-primary/5">
                         {s.step}
                       </div>
                       <div>
-                        <h3 className="font-bold text-white text-lg transition-colors">{s.title}</h3>
-                        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{s.desc}</p>
+                        <h3 className="font-black text-white text-xl mb-2 transition-colors group-hover:text-primary">{s.title}</h3>
+                        <p className="text-sm text-gray-400 leading-relaxed font-medium">{s.desc}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -384,21 +390,21 @@ export default function GuidePage() {
                   {cat.modules.map(mod => {
                     const Icon = mod.icon;
                     return (
-                      <Card key={mod.path} className={`group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 bg-gradient-to-br ${cat.color}`}>
-                        <CardContent className="p-5">
-                          <div className="flex items-start gap-3 mb-3">
-                            <div className="p-2.5 rounded-xl bg-background/80 shadow-sm group-hover:shadow-md transition-shadow">
-                              <Icon className="h-5 w-5 text-primary" />
+                      <Card key={mod.path} className={`group overflow-hidden border-white/5 hover:border-primary/30 bg-[#11141a]/80 backdrop-blur-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-1`}>
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4 mb-5">
+                            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 group-hover:border-primary/50 group-hover:bg-primary/5 transition-all duration-500">
+                              <Icon className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-foreground">{mod.title}</h3>
-                              <p className="text-sm text-muted-foreground mt-0.5">{mod.desc}</p>
+                              <h3 className="text-xl font-black text-white group-hover:text-primary transition-colors">{mod.title}</h3>
+                              <p className="text-sm text-gray-400 mt-1 font-medium">{mod.desc}</p>
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex flex-wrap gap-2">
                             {mod.features.map((f, i) => (
-                              <Badge key={i} variant="outline" className="text-[10px] bg-background/60 backdrop-blur-sm border-border/50">
-                                <CheckCircle className="h-2.5 w-2.5 mr-0.5 text-primary" />{f}
+                              <Badge key={i} variant="outline" className="text-[11px] font-bold py-1 px-3 bg-white/5 border-white/10 text-gray-300 group-hover:text-white group-hover:border-primary/30 transition-all">
+                                <CheckCircle className="h-3 w-3 mr-1.5 text-primary opacity-70 group-hover:opacity-100" />{f}
                               </Badge>
                             ))}
                           </div>
