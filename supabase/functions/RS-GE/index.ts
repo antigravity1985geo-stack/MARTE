@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 // RS.GE Proxy Edge Function
 
 const corsHeaders = {
@@ -525,7 +526,7 @@ function generateDemoFiscalResponse(action: string, data: any): any {
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
