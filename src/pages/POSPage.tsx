@@ -10,11 +10,11 @@ import { usePriceRules } from '@/hooks/usePriceRules';
 import { calculateDynamicDiscount } from '@/lib/pricingEngine';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { NetworkStatus } from '@/components/pos/NetworkStatus';
-import { useReceiptStore } from '@/stores/useReceiptStore';
+import { useReceiptConfig } from '@/hooks/useReceiptConfig';
 import { generateInvoice } from '@/lib/generateInvoice';
 import { useShifts, useActiveCashier } from '@/hooks/useShifts';
 import { useEmployees } from '@/hooks/useEmployees';
-import { usePricingStore } from '@/stores/usePricingStore';
+import { usePricing } from '@/hooks/usePricing';
 import { useAccounting } from '@/hooks/useAccounting';
 import { ReceiptPopup } from '@/components/ReceiptPopup';
 import { createFiscalReceipt, saveWaybill } from '@/lib/rsge';
@@ -44,11 +44,11 @@ export default function POSPage() {
   const { transactions, addTransaction } = useTransactions();
   const queryClient = useQueryClient();
   const { addInvoice, getNextInvoiceNumber } = useInvoices();
-  const receiptConfig = useReceiptStore((s) => s.receiptConfig);
+  const { receiptConfig } = useReceiptConfig();
   const { currentShift, openShift, closeShift, addSaleToShift } = useShifts();
   const { employees, authenticateByPin } = useEmployees();
   const { setActiveCashier } = useActiveCashier();
-  const { useCoupon } = usePricingStore();
+  const { useCoupon } = usePricing();
   const { addEntry } = useAccounting();
   const isMobile = useIsMobile();
 

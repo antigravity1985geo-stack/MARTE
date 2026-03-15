@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PageTransition } from '@/components/PageTransition';
 import { useSuppliers } from '@/hooks/useSuppliers';
-import { useSupplierPaymentStore } from '@/stores/useSupplierPaymentStore';
+import { useSupplierPayments } from '@/hooks/useSupplierPayments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 
 export default function SupplierSettlementsPage() {
   const { suppliers } = useSuppliers();
-  const { payments, addPayment } = useSupplierPaymentStore();
+  const { payments, addPayment } = useSupplierPayments();
   const [supplierId, setSupplierId] = useState('');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<'transfer' | 'cash' | 'card'>('transfer');
@@ -21,7 +21,7 @@ export default function SupplierSettlementsPage() {
   const handlePay = () => {
     if (!supplierId || !amount) { toast.error('შეავსეთ ყველა ველი'); return; }
     const supplier = suppliers.find((s) => s.id === supplierId);
-    addPayment({ id: crypto.randomUUID(), supplierId, supplierName: supplier?.name || '', amount: parseFloat(amount), method, date: new Date().toISOString(), note });
+    addPayment({ supplier_id: supplierId, supplier_name: supplier?.name || '', amount: parseFloat(amount), method, date: new Date().toISOString(), description: note });
     toast.success('გადახდა დაფიქსირდა');
     setAmount(''); setNote('');
   };
@@ -45,7 +45,7 @@ export default function SupplierSettlementsPage() {
             <TableBody>
               {payments.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">გადახდები არ არის</TableCell></TableRow> :
               payments.slice().reverse().map((p) => (
-                <TableRow key={p.id}><TableCell className="text-xs">{new Date(p.date).toLocaleDateString('ka-GE')}</TableCell><TableCell>{p.supplierName}</TableCell><TableCell className="font-semibold">₾{p.amount.toFixed(2)}</TableCell><TableCell><Badge variant="secondary">{methodMap[p.method]}</Badge></TableCell><TableCell className="text-xs">{p.note}</TableCell></TableRow>
+                <TableRow key={p.id}><TableCell className="text-xs">{new Date(p.date).toLocaleDateString('ka-GE')}</TableCell><TableCell>{p.supplier_name}</TableCell><TableCell className="font-semibold">₾{Number(p.amount).toFixed(2)}</TableCell><TableCell><Badge variant="secondary">{methodMap[p.method]}</Badge></TableCell><TableCell className="text-xs">{p.description}</TableCell></TableRow>
               ))}
             </TableBody>
           </Table>

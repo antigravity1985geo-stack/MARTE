@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { ReceiptConfig } from '@/stores/useReceiptStore';
+import type { ReceiptConfig } from '@/hooks/useReceiptConfig';
 import type { TransactionWithItems } from '@/hooks/useTransactions';
 import type { SupabaseClient } from '@/hooks/useClients';
 
@@ -77,12 +77,12 @@ export async function generateInvoice({ transaction, client, config, invoiceNumb
 
   // Company name
   setFont(16, [17, 24, 39]);
-  doc.text(config.companyName || '', 14, headerY + 8);
+  doc.text(config.storeName || '', 14, headerY + 8);
 
   setFont(8, [107, 114, 128]);
-  const addr = config.address || config.companyAddress || '';
-  const phone = config.phone || config.companyPhone || '';
-  const tin = config.tin || config.companyTin || '';
+  const addr = config.storeAddress || '';
+  const phone = config.phone || '';
+  const tin = config.taxId || '';
   if (addr) doc.text(addr, 14, headerY + 14);
   if (phone) doc.text(phone, 14, headerY + 19);
   if (tin) doc.text(`ს/კ: ${tin}`, 14, headerY + 24);
@@ -223,7 +223,7 @@ export async function generateInvoice({ transaction, client, config, invoiceNumb
   doc.setLineWidth(0.2);
   doc.line(14, footerY - 8, pageWidth - 14, footerY - 8);
   setFont(7, [156, 163, 175]);
-  doc.text(config.footer || config.footerText || 'გმადლობთ შენაძენისთვის!', pageWidth / 2, footerY - 2, { align: 'center' });
+  doc.text(config.footerText || 'გმადლობთ შენაძენისთვის!', pageWidth / 2, footerY - 2, { align: 'center' });
   doc.text(`გენერირებულია: ${new Date().toLocaleString('ka-GE')}`, pageWidth / 2, footerY + 3, { align: 'center' });
 
   return doc;

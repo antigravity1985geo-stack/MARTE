@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNotificationStore } from '@/stores/useNotificationStore';
+import { useNotifications } from '@/hooks/useNotifications';
 
 /** Request browser notification permission on mount */
 function useBrowserNotificationPermission() {
@@ -29,9 +29,9 @@ function sendBrowserNotification(title: string, body: string) {
 export function useRealtimeNotifications() {
   useBrowserNotificationPermission();
 
-  const addNotification = useNotificationStore((s) => s.addNotification);
-  const addRef = useRef(addNotification);
-  addRef.current = addNotification;
+  const { addNotification } = useNotifications();
+  const addRef = useRef(addNotification.mutate);
+  addRef.current = addNotification.mutate;
 
   useEffect(() => {
     const channel = supabase

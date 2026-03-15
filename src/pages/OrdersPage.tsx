@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { PageTransition } from '@/components/PageTransition';
-import { useOrderStore, type PurchaseOrder } from '@/stores/useOrderStore';
+import { useOrders, type PurchaseOrder } from '@/hooks/useOrders';
 import { useAutoOrderRules, useAutoOrderGlobal } from '@/hooks/useAutoOrderRules';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useProducts } from '@/hooks/useProducts';
@@ -26,7 +26,7 @@ const statusVariant = { pending: 'secondary' as const, approved: 'default' as co
 const nextStatus: Record<string, PurchaseOrder['status']> = { pending: 'approved', approved: 'shipped', shipped: 'received' };
 
 export default function OrdersPage() {
-  const { purchaseOrders, addOrder, updateOrderStatus } = useOrderStore();
+  const { purchaseOrders, addOrder, updateOrderStatus } = useOrders();
   const { suppliers } = useSuppliers();
   const { products } = useProducts();
   const { rules, history, addRule: addRuleMutation, deleteRule: deleteRuleMutation, updateRule: updateRuleMutation } = useAutoOrderRules();
@@ -63,10 +63,11 @@ export default function OrdersPage() {
     const supplier = suppliers.find((s) => s.id === supplierId);
     const product = products.find((p) => p.id === productId);
     if (!supplier || !product) return;
-    addOrder({
-      id: crypto.randomUUID(), supplierId, supplierName: supplier.name,
-      items: [{ productId, name: product.name, quantity: parseInt(quantity), price: parseFloat(price) }],
-      status: 'pending', totalAmount: parseInt(quantity) * parseFloat(price), date: new Date().toISOString(),
+    addOrder.mutate({
+      order_number: '',
+      supplier_id: supplierId, supplier_name: supplier.name,
+      items: [{ product_id: productId, product_name: product.name, quantity: parseInt(quantity), price: parseFloat(price), total: parseInt(quantity) * parseFloat(price) }],
+      status: 'pending', total_amount: parseInt(quantity) * parseFloat(price), order_date: new Date().toISOString().split('T')[0], expected_date: new Date().toISOString().split('T')[0],
     });
     toast.success('შეკვეთა შეიქმნა');
     setDialogOpen(false);
@@ -91,7 +92,7 @@ export default function OrdersPage() {
   const handleStatusChange = (order: PurchaseOrder) => {
     const next = nextStatus[order.status];
     if (!next) return;
-    updateOrderStatus(order.id, next);
+    updateOrderStatus.mutate({ id: order.id, status: next });
     if (next === 'received') {
       // Stock update handled via DB
       toast.success('შეკვეთა მიღებულია');
@@ -111,12 +112,12 @@ export default function OrdersPage() {
               <div key={o.id} className="stat-card p-3 space-y-2">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-medium">{o.supplierName}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(o.date).toLocaleDateString('ka-GE')}</p>
+                    <p className="font-medium">{o.supplier_name}</p>
+                    <p className="text-xs text-muted-foreground">{o.order_date ? new Date(o.order_date).toLocaleDateString('ka-GE') : ''}</p>
                   </div>
-                  <p className="text-lg font-bold text-primary">₾{o.totalAmount.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-primary">₾{(o.total_amount || 0).toFixed(2)}</p>
                 </div>
-                <p className="text-xs text-muted-foreground">{o.items.map((i) => `${i.name} x${i.quantity}`).join(', ')}</p>
+                <p className="text-xs text-muted-foreground">{o.items?.map((i) => `${i.product_name} x${i.quantity}`).join(', ')}</p>
                 <div className="flex items-center justify-between">
                   <Badge variant={statusVariant[o.status]}>{statusMap[o.status]}</Badge>
                   {nextStatus[o.status] && (
@@ -137,10 +138,10 @@ export default function OrdersPage() {
               {purchaseOrders.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">შეკვეთები არ არის</TableCell></TableRow> :
                 purchaseOrders.map((o) => (
                   <TableRow key={o.id}>
-                    <TableCell className="text-xs">{new Date(o.date).toLocaleDateString('ka-GE')}</TableCell>
-                    <TableCell>{o.supplierName}</TableCell>
-                    <TableCell>{o.items.map((i) => `${i.name} x${i.quantity}`).join(', ')}</TableCell>
-                    <TableCell className="font-semibold">₾{o.totalAmount.toFixed(2)}</TableCell>
+                    <TableCell className="text-xs">{o.order_date ? new Date(o.order_date).toLocaleDateString('ka-GE') : ''}</TableCell>
+                    <TableCell>{o.supplier_name}</TableCell>
+                    <TableCell>{o.items?.map((i) => `${i.product_name} x${i.quantity}`).join(', ')}</TableCell>
+                    <TableCell className="font-semibold">₾{(o.total_amount || 0).toFixed(2)}</TableCell>
                     <TableCell><Badge variant={statusVariant[o.status]}>{statusMap[o.status]}</Badge></TableCell>
                     <TableCell>{nextStatus[o.status] && <Button size="sm" variant="outline" onClick={() => handleStatusChange(o)}>→ {statusMap[nextStatus[o.status]]}</Button>}</TableCell>
                   </TableRow>

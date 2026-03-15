@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useReceiptStore } from '@/stores/useReceiptStore';
+import { useReceiptConfig } from '@/hooks/useReceiptConfig';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Printer, Share2, Download, MessageCircle, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
@@ -44,7 +44,7 @@ export function ReceiptPopup({
   pointsEarned,
   autoCloseMs = 5000,
 }: ReceiptPopupProps) {
-  const config = useReceiptStore((s) => s.receiptConfig);
+  const { receiptConfig: config } = useReceiptConfig();
   const [countdown, setCountdown] = useState(Math.ceil(autoCloseMs / 1000));
   const receiptRef = useRef<HTMLDivElement>(null);
   const methodLabel = paymentMethod === 'cash' ? 'ნაღდი' : paymentMethod === 'card' ? 'ბარათი' : 'კომბინირებული';
@@ -60,10 +60,10 @@ export function ReceiptPopup({
 
   const generateReceiptText = useCallback(() => {
     const lines: string[] = [];
-    lines.push(config.companyName);
-    if (config.address) lines.push(config.address);
+    lines.push(config.storeName || '');
+    if (config.storeAddress) lines.push(config.storeAddress);
     if (config.phone) lines.push(config.phone);
-    if (config.tin) lines.push(`ს/კ: ${config.tin}`);
+    if (config.taxId) lines.push(`ს/კ: ${config.taxId}`);
     lines.push('─'.repeat(30));
     lines.push(`თარიღი: ${now.toLocaleDateString('ka-GE')} ${now.toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' })}`);
     if (invoiceNumber) lines.push(`ინვოისი: ${invoiceNumber}`);
@@ -91,7 +91,7 @@ export function ReceiptPopup({
       if (change && change > 0) lines.push(`ხურდა: ₾${change.toFixed(2)}`);
     }
     lines.push('─'.repeat(30));
-    lines.push(config.footer || config.thankYouMessage || '');
+    lines.push(config.footerText || '');
     return lines.join('\n');
   }, [config, items, total, cashAmount, change, paymentMethod, invoiceNumber, cashierName, clientName, couponDiscount, loyaltyDiscount, pointsEarned]);
 
@@ -194,10 +194,10 @@ export function ReceiptPopup({
                   {config.logoUrl && (
                     <img src={config.logoUrl} alt="" className="h-8 mx-auto mb-1 object-contain" />
                   )}
-                  <p className="font-bold text-sm">{config.companyName}</p>
-                  <p className="text-[10px] text-gray-500">{config.address}</p>
+                  <p className="font-bold text-sm">{config.storeName}</p>
+                  <p className="text-[10px] text-gray-500">{config.storeAddress}</p>
                   <p className="text-[10px] text-gray-500">{config.phone}</p>
-                  {config.tin && <p className="text-[10px] text-gray-500">ს/კ: {config.tin}</p>}
+                  {config.taxId && <p className="text-[10px] text-gray-500">ს/კ: {config.taxId}</p>}
                 </div>
 
                 {/* Separator */}
@@ -289,7 +289,7 @@ export function ReceiptPopup({
                 </div>
 
                 {/* QR */}
-                {config.showQR && (
+                {config.showBarcode && (
                   <div className="flex justify-center pt-1">
                     <QRCodeSVG value={`receipt:${invoiceNumber || now.getTime()}`} size={56} />
                   </div>
@@ -297,7 +297,7 @@ export function ReceiptPopup({
 
                 {/* Footer */}
                 <div className="text-center pt-1">
-                  <p className="text-[10px] text-gray-400">{config.footer || config.thankYouMessage}</p>
+                  <p className="text-[10px] text-gray-400">{config.footerText}</p>
                 </div>
               </div>
 

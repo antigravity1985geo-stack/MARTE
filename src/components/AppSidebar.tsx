@@ -7,100 +7,107 @@ import {
   UserCog, Clock, ListOrdered, Printer, BookOpen, LogOut,
   Menu, X, Shield, Activity, HardDriveDownload, Wallet,
   RotateCcw, Globe, Building2, Building, Layers, ArrowDownLeft, Landmark, Heart, Bell, PackagePlus,
-  Settings2, FileSearch, ShieldCheck
+  Settings2, FileSearch, ShieldCheck, CalendarDays, Lock
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const sections = [
-  {
-    title: 'მთავარი',
-    items: [
-      { title: 'მთავარი', icon: LayoutDashboard, path: '/app' },
-      { title: 'POS სისტემა', icon: Monitor, path: '/app/pos' },
-    ],
-  },
-  {
-    title: 'გაყიდვები',
-    items: [
-      { title: 'პროდუქტები', icon: Package, path: '/app/products' },
-      { title: 'კომბოები (Bundles)', icon: PackagePlus, path: '/app/bundles' },
-      { title: 'ფასდაკლებები', icon: BadgePercent, path: '/app/price-rules' },
-      { title: 'კატეგორიები', icon: Tags, path: '/app/categories' },
-    ],
-  },
-  {
-    title: 'ოპერაციები',
-    items: [
-      { title: 'მიღება', icon: Download, path: '/app/receiving' },
-      { title: 'გაყიდვები', icon: TrendingUp, path: '/app/sales' },
-      { title: 'დაბრუნებები', icon: RotateCcw, path: '/app/returns' },
-      { title: 'ინვოისები', icon: FileText, path: '/app/invoices' },
-      { title: 'შეკვეთები', icon: ClipboardList, path: '/app/orders' },
-      { title: 'საწყობები', icon: Warehouse, path: '/app/warehouse-management' },
-      { title: 'წარმოება', icon: Factory, path: '/app/production' },
-      { title: 'მარაგის მეთოდები', icon: Layers, path: '/app/inventory-methods' },
-      { title: 'ზედნადები ხარჯები', icon: Truck, path: '/app/landed-cost' },
-      { title: 'დისტრიბუცია', icon: Truck, path: '/app/distribution' },
-      { title: 'E-Commerce', icon: Globe, path: '/app/ecommerce' },
-    ],
-  },
-  {
-    title: 'კონტაქტები',
-    items: [
-      { title: 'კლიენტები', icon: Users, path: '/app/clients' },
-      { title: 'CRM & ლოიალობა', icon: Heart, path: '/app/crm' },
-      { title: 'მომწოდებლები', icon: Truck, path: '/app/suppliers' },
-    ],
-  },
-  {
-    title: 'ფინანსები',
-    items: [
-      { title: 'ხარჯები', icon: Receipt, path: '/app/expenses' },
-      { title: 'ანგარიშსწორება', icon: HandCoins, path: '/app/supplier-settlements' },
-      { title: 'ბუღალტერია', icon: Calculator, path: '/app/accounting' },
-      { title: 'ფინანსური ანგარიშგება', icon: ArrowDownLeft, path: '/app/cash-flow' },
-      { title: 'საბანკო ინტეგრაცია', icon: Landmark, path: '/app/bank-integration' },
-      { title: 'საბანკო შედარება', icon: FileSearch, path: '/app/reconciliation' },
-      { title: 'ხელფასები & HR', icon: Wallet, path: '/app/salary' },
-      { title: 'ძირითადი საშუალებები', icon: Building, path: '/app/fixed-assets' },
-      { title: 'ვალუტა & კურსები', icon: Globe, path: '/app/currency' },
-      { title: 'ავტომატური წესები', icon: Settings2, path: '/app/accounting-rules' },
-      { title: 'ფასები', icon: BadgePercent, path: '/app/pricing' },
-    ],
-  },
-  {
-    title: 'ადმინისტრირება',
-    items: [
-      { title: 'RS.GE', icon: FileText, path: '/app/rsge' },
-      { title: 'ფისკალური', icon: BarChart3, path: '/app/fiscal-report' },
-      { title: 'თანამშრომლები', icon: UserCog, path: '/app/employees' },
-      { title: 'დასწრება', icon: Clock, path: '/app/attendance' },
-      { title: 'მოლარეების სტატისტიკა', icon: PieChart, path: '/app/cashier-stats' },
-      { title: 'ცვლის ისტორია', icon: Clock, path: '/app/shift-history' },
-      { title: 'ფილიალები', icon: Building2, path: '/app/branches' },
-      { title: 'რიგები', icon: ListOrdered, path: '/app/queue' },
-      { title: 'ქვითარი', icon: Printer, path: '/app/receipt-settings' },
-      { title: 'სისტემის მონიტორინგი', icon: ShieldCheck, path: '/app/system-monitor' },
-      { title: 'ადმინის პანელი', icon: Shield, path: '/app/admin-panel' },
-      { title: 'აქტივობის ლოგი', icon: Activity, path: '/app/activity-log' },
-      { title: 'რეპორტების ჰაბი', icon: BarChart3, path: '/app/reports' },
-      { title: 'ბექაფი / ექსპორტი', icon: HardDriveDownload, path: '/app/data-export' },
-      { title: 'სახელმძღვანელო', icon: BookOpen, path: '/app/guide' },
-      { title: 'შეტყობინებები', icon: Bell, path: '/app/notifications' },
-      { title: 'აპის ინსტალაცია', icon: Download, path: '/app/install' },
-    ],
-  },
-];
+const getSections = (industry: string, features: any = {}, plan: string = 'free', isSuperadmin: boolean = false) => {
+  const isEnabled = (key: string) => features[key] !== false; // Features default to true if setting is missing
+  const isPro = plan.toLowerCase() === 'pro' || plan.toLowerCase() === 'enterprise';
+  const shouldLock = (requiresPro: boolean) => requiresPro && !isPro && !isSuperadmin;
+
+  return [
+    {
+      title: 'მთავარი',
+      items: [
+        { title: 'მთავარი', icon: LayoutDashboard, path: '/app' },
+        ...(industry !== 'clinic' && isEnabled('pos') ? [{ title: 'POS სისტემა', icon: Monitor, path: '/app/pos' }] : []),
+      ],
+    },
+    ...(isEnabled('clinic') ? [{
+      title: 'კლინიკა და ჯანდაცვა',
+      items: [
+        { title: 'ვიზიტების კალენდარი', icon: CalendarDays, path: '/app/clinic/calendar' },
+        { title: 'პაციენტების ბაზა', icon: Users, path: '/app/clinic/patients' },
+      ],
+    }] : []),
+    {
+      title: isEnabled('clinic') ? 'ლოჯისტიკა და მარაგები' : 'გაყიდვები & შემოსავლები',
+      items: [
+        ...(isEnabled('inventory') ? [{ title: 'პროდუქტები (მარაგი)', icon: Package, path: '/app/products' }] : []),
+        ...(isEnabled('sales') ? [
+          { title: 'კომბოები (Bundles)', icon: PackagePlus, path: '/app/bundles' },
+          { title: 'ფასდაკლებები', icon: BadgePercent, path: '/app/price-rules' }
+        ] : []),
+        ...(isEnabled('inventory') ? [{ title: 'კატეგორიები', icon: Tags, path: '/app/categories' }] : []),
+      ],
+    },
+    {
+      title: 'ოპერაციები',
+      items: [
+        ...(isEnabled('purchases') ? [{ title: 'შესყიდვების მიღება', icon: Download, path: '/app/receiving' }] : []),
+        ...(isEnabled('sales') ? [
+          { title: 'გაყიდვები / სერვისები', icon: TrendingUp, path: '/app/sales' },
+          { title: 'დაბრუნებები', icon: RotateCcw, path: '/app/returns' },
+          { title: 'ინვოისები', icon: FileText, path: '/app/invoices' },
+          { title: 'შეკვეთები', icon: ClipboardList, path: '/app/orders' }
+        ] : []),
+        ...(isEnabled('inventory') ? [{ title: 'საწყობები', icon: Warehouse, path: '/app/warehouse-management' }] : []),
+        ...(isEnabled('production') ? [
+          { title: 'წარმოება', icon: Factory, path: '/app/production', isLocked: shouldLock(true) },
+        ] : []),
+      ],
+    },
+    ...(isEnabled('crm') || isEnabled('purchases') ? [{
+      title: isEnabled('crm') ? 'კონტაქტები' : 'მომწოდებლები',
+      items: [
+        ...(isEnabled('crm') ? [{ title: 'კლიენტები', icon: Users, path: '/app/clients' }] : []),
+        ...(isEnabled('crm') ? [{ title: 'CRM & ლოიალობა', icon: Heart, path: '/app/crm', isLocked: shouldLock(true) }] : []),
+        ...(isEnabled('purchases') ? [{ title: 'მომწოდებლები', icon: Truck, path: '/app/suppliers' }] : []),
+      ],
+    }] : []),
+    ...(isEnabled('salon') ? [{
+      title: 'მომსახურება / სალონი',
+      items: [
+        { title: 'ჯავშნები (Calendar)', icon: CalendarDays, path: '/app/salon/calendar' },
+      ],
+    }] : []),
+    ...(isEnabled('accounting') || isEnabled('hr') ? [{
+      title: 'ფინანსები',
+      items: [
+        ...(isEnabled('accounting') ? [
+          { title: 'ხარჯები', icon: Receipt, path: '/app/expenses' },
+          { title: 'ანგარიშსწორება', icon: HandCoins, path: '/app/supplier-settlements' },
+          { title: 'ბუღალტერია', icon: Calculator, path: '/app/accounting', isLocked: shouldLock(true) },
+          { title: 'ფინანსური ანგარიშგება', icon: ArrowDownLeft, path: '/app/cash-flow', isLocked: shouldLock(true) },
+          { title: 'საბანკო ინტეგრაცია', icon: Landmark, path: '/app/bank-integration', isLocked: shouldLock(true) },
+          { title: 'საბანკო შედარება', icon: FileSearch, path: '/app/reconciliation', isLocked: shouldLock(true) },
+        ] : []),
+        ...(isEnabled('hr') ? [{ title: 'ხელფასები & HR', icon: Wallet, path: '/app/salary' }] : []),
+      ],
+    }] : []),
+    {
+      title: 'ადმინისტრირება',
+      items: [
+        ...(isEnabled('hr') ? [{ title: 'თანამშრომლები', icon: UserCog, path: '/app/employees' }] : []),
+        ...(isEnabled('hr') ? [{ title: 'ფილიალები', icon: Building2, path: '/app/branches' }] : []),
+        { title: 'Superadmin', icon: Shield, path: '/app/admin-panel' },
+        { title: 'აქტივობის ლოგი', icon: Activity, path: '/app/activity-log' },
+      ],
+    },
+  ];
+};
 
 export function AppSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const logout = useAuthStore((s) => s.logout);
+  const { user, logout, tenants, activeTenantId, setActiveTenant } = useAuthStore();
   const { hasAccess, isLoading: roleLoading, roleName } = useUserRole();
 
   const handleLogout = () => {
@@ -108,11 +115,29 @@ export function AppSidebar() {
     navigate('/auth');
   };
 
+  const activeTenant = tenants.find(t => t.id === activeTenantId);
+  const industry = activeTenant?.industry || 'retail';
+  const plan = activeTenant?.subscription_plan || 'free';
+  const dynamicSections = getSections(industry, activeTenant?.features, plan, user?.isSuperadmin || false);
+
   // ფილტრაცია როლის მიხედვით
-  const filteredSections = sections.map((section) => ({
+  const filteredSections = dynamicSections.map((section) => ({
     ...section,
     items: section.items.filter((item) => hasAccess(item.path)),
   })).filter((section) => section.items.length > 0);
+
+  // Inject Superadmin
+  if (user?.isSuperadmin) {
+    const adminSection = filteredSections.find(s => s.title === 'ადმინისტრირება');
+    if (adminSection && !adminSection.items.find(i => i.path === '/app/super-admin')) {
+      adminSection.items.unshift({ title: 'პლატფორმის მართვა', icon: ShieldCheck, path: '/app/super-admin' });
+    } else if (!adminSection) {
+      filteredSections.push({
+        title: 'ადმინისტრირება',
+        items: [{ title: 'პლატფორმის მართვა', icon: ShieldCheck, path: '/app/super-admin' }]
+      });
+    }
+  }
 
   const roleBadgeVariant = roleName === 'ადმინი' ? 'default' : 'secondary';
 
@@ -131,6 +156,31 @@ export function AppSidebar() {
         )}
       </div>
 
+      {/* Workspace Switcher */}
+      {tenants.length > 0 && (
+        <div className="p-3 border-b border-sidebar-border bg-sidebar-accent/5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 mb-1.5 px-1">აქტიური ბիუზნესი:</p>
+          <Select 
+            value={activeTenantId || ''} 
+            onValueChange={(val) => { 
+              setActiveTenant(val); 
+              window.location.reload(); 
+            }}
+          >
+            <SelectTrigger className="w-full bg-sidebar border-sidebar-border h-8 text-xs font-medium focus:ring-1 focus:ring-sidebar-primary/30">
+              <SelectValue placeholder="აირჩიეთ ბიზნესი" />
+            </SelectTrigger>
+            <SelectContent>
+              {tenants.map(t => (
+                <SelectItem key={t.id} value={t.id} className="text-xs">
+                  {t.name} <span className="text-muted-foreground ml-1">({t.role})</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Nav */}
       <ScrollArea className="flex-1 py-2 scrollbar-thin">
         {filteredSections.map((section) => (
@@ -143,9 +193,16 @@ export function AppSidebar() {
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileOpen(false)}
+                  to={item.isLocked ? '#' : item.path}
+                  onClick={(e) => {
+                    if (item.isLocked) {
+                      e.preventDefault();
+                      return;
+                    }
+                    setMobileOpen(false);
+                  }}
                   className={`group flex items-center gap-3 mx-2 px-3 py-2 rounded-lg text-sm transition-all duration-200
+                    ${item.isLocked ? 'opacity-50 cursor-not-allowed filter grayscale' : ''}
                     ${isActive
                       ? 'bg-sidebar-accent text-sidebar-primary font-medium shadow-[inset_0_0_0_1px_hsl(162_72%_38%/0.15)]'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground hover:translate-x-0.5'
@@ -154,7 +211,8 @@ export function AppSidebar() {
                 >
                   <item.icon className={`h-4 w-4 flex-shrink-0 transition-colors ${isActive ? 'text-sidebar-primary' : 'group-hover:text-sidebar-primary/70'}`} />
                   <span>{item.title}</span>
-                  {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary glow-pulse" />}
+                  {item.isLocked && <Lock className="ml-auto h-3 w-3 text-muted-foreground/50" />}
+                  {isActive && !item.isLocked && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary glow-pulse" />}
                 </Link>
               );
             })}

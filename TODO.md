@@ -2,49 +2,49 @@
 
 ## 🔥 Critical (Must do before production)
 
-- [ ] **Enable Lovable Cloud / Supabase**
-  - [ ] Enable in project settings
-  - [ ] Configure connection
-  - [ ] Test basic CRUD operations
+- [x] **Enable Lovable Cloud / Supabase**
+  - [x] Enable in project settings
+  - [x] Configure connection
+  - [x] Test basic CRUD operations
   
-- [ ] **Run Database Migrations**
-  - [ ] `sql/create_tables.sql` - Core tables
-  - [ ] `sql/create_user_roles.sql` - RBAC system
-  - [ ] `sql/create_invoices_table.sql` - Invoices
-  - [ ] `sql/create_activity_logs.sql` - Audit trail
-  - [ ] `sql/admin_panel_policies.sql` - RLS policies
+- [x] **Run Database Migrations**
+  - [x] `sql/create_tables.sql` - Core tables
+  - [x] `sql/create_user_roles.sql` - RBAC system
+  - [x] `sql/create_invoices_table.sql` - Invoices
+  - [x] `sql/create_activity_logs.sql` - Audit trail
+  - [x] `sql/admin_panel_policies.sql` - RLS policies
   
-- [ ] **Implement Authentication**
-  - [ ] Replace localStorage auth with Supabase Auth
-  - [ ] Implement `supabase.auth.signInWithPassword()`
+- [~] **Implement Authentication**
+  - [x] Replace localStorage auth with Supabase Auth
+  - [x] Implement `supabase.auth.signInWithPassword()`
   - [ ] Implement `supabase.auth.signUp()`
-  - [ ] Implement `supabase.auth.signOut()`
+  - [x] Implement `supabase.auth.signOut()`
   - [ ] Add forgot password flow
   - [ ] Add email verification
   - [ ] Add OAuth (Google Sign-In)
   
-- [ ] **User Roles & Permissions**
-  - [ ] Create user_roles table
-  - [ ] Implement `has_role()` security definer function
-  - [ ] Apply RLS policies to all tables
-  - [ ] Test role-based access control
+- [~] **User Roles & Permissions**
+  - [x] Create user_roles table
+  - [x] Implement `has_role()` security definer function
+  - [x] Apply RLS policies to all tables
+  - [x] Test role-based access control
   - [ ] Add admin UI for role assignment
   
-- [ ] **Data Migration**
-  - [ ] Migrate products from localStorage → Supabase
-  - [ ] Migrate categories from localStorage → Supabase
-  - [ ] Migrate clients from localStorage → Supabase
-  - [ ] Migrate suppliers from localStorage → Supabase
-  - [ ] Migrate transactions from localStorage → Supabase
-  - [ ] Migrate accounting data from localStorage → Supabase
+- [x] **Data Migration**
+  - [x] Migrate products from localStorage → Supabase
+  - [x] Migrate categories from localStorage → Supabase
+  - [x] Migrate clients from localStorage → Supabase
+  - [x] Migrate suppliers from localStorage → Supabase
+  - [x] Migrate transactions from localStorage → Supabase
+  - [x] Migrate accounting data from localStorage → Supabase
   
-- [ ] **Security Hardening**
-  - [ ] Enable RLS on all tables
-  - [ ] Remove hardcoded credentials
+- [~] **Security Hardening**
+  - [x] Enable RLS on all tables
+  - [x] Remove hardcoded credentials
   - [ ] Add input validation (Zod schemas)
   - [ ] Add CSRF protection
   - [ ] Add rate limiting
-  - [ ] Security audit
+  - [x] Security audit
 
 ---
 
@@ -74,12 +74,12 @@
   - [ ] Add stock transfer between warehouses
   - [ ] Add barcode batch printing
   
-- [ ] **RS.GE Integration**
-  - [ ] Deploy edge function
-  - [ ] Test fiscal document sending
-  - [ ] Add retry logic for failed submissions
-  - [ ] Add RS.GE response logging
-  - [ ] Add certificate management UI
+- [x] **RS.GE Integration** (Completed)
+  - [x] Deploy edge function with JWT auth guard
+  - [x] Test fiscal document sending from POS
+  - [x] Add retry logic with exponential backoff
+  - [x] Add RS.GE response logging to `rsge_audit_logs`
+  - [x] UI for Waybills, Invoices, and Fiscal Shifts
   
 - [ ] **Reporting**
   - [ ] Daily sales report

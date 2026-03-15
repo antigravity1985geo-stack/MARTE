@@ -14,6 +14,8 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [industry, setIndustry] = useState('retail');
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuthStore();
   const navigate = useNavigate();
@@ -36,9 +38,9 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await register(email, password, fullName);
-      toast.success('რეგისტრაცია წარმატებულია!');
-      navigate('/app');
+      await register(email, password, fullName, businessName, industry);
+      toast.success('რეგისტრაცია წარმატებულია! გთხოვთ შეამოწმოთ ელ-ფოსტა.');
+      // Optionally login automatically after some time, or wait for email verification.
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -87,15 +89,36 @@ export default function AuthPage() {
                     <Input placeholder="გიორგი ბერიძე" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>ელ-ფოსტა</Label>
-                    <Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <Label>ბიზნესის (კომპანიის) სახელი</Label>
+                    <Input placeholder="მაგ: შპს მარტე" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>პაროლი</Label>
-                    <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <Label>ინდუსტრია</Label>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={industry}
+                      onChange={(e) => setIndustry(e.target.value)}
+                    >
+                      <option value="retail">საცალო ვაჭრობა & POS</option>
+                      <option value="fnb">რესტორანი / F&B</option>
+                      <option value="salon">სალონი / ესთეტიკური ცენტრი</option>
+                      <option value="pharmacy">აფთიაქი</option>
+                      <option value="construction">მშენებლობა</option>
+                      <option value="other">სხვა</option>
+                    </select>
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'იტვირთება...' : 'რეგისტრაცია'}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>ელ-ფოსტა</Label>
+                      <Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>პაროლი</Label>
+                      <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full mt-6" disabled={loading} style={{ background: 'var(--gradient-primary)' }}>
+                    {loading ? 'მიმდინარეობს...' : 'უფასოდ რეგისტრაცია'}
                   </Button>
                 </form>
               </TabsContent>

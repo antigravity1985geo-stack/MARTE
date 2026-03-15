@@ -1,12 +1,12 @@
 import { Bell } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { useNotificationStore } from '@/stores/useNotificationStore';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function NotificationPanel() {
-  const { notifications, markRead, markAllRead, unreadCount } = useNotificationStore();
+  const { notifications, markRead, markAllRead, unreadCount } = useNotifications();
   const unread = unreadCount();
 
   return (
@@ -25,7 +25,7 @@ export function NotificationPanel() {
         <div className="flex items-center justify-between border-b p-3">
           <h4 className="font-semibold">შეტყობინებები</h4>
           {unread > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllRead} className="text-xs">
+            <Button variant="ghost" size="sm" onClick={() => markAllRead.mutate()} className="text-xs">
               ყველას წაკითხვა
             </Button>
           )}
@@ -38,7 +38,7 @@ export function NotificationPanel() {
               <div
                 key={n.id}
                 className={`border-b p-3 cursor-pointer transition-colors hover:bg-muted/50 ${!n.read ? 'bg-primary/5' : ''}`}
-                onClick={() => markRead(n.id)}
+                onClick={() => markRead.mutate(n.id)}
               >
                 <div className="flex items-start gap-2">
                   <Badge variant={n.type === 'warning' ? 'destructive' : n.type === 'success' ? 'default' : 'secondary'} className="text-[10px] mt-0.5">

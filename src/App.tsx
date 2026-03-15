@@ -69,6 +69,11 @@ import BundlesPage from '@/pages/BundlesPage';
 import PriceRulesPage from '@/pages/PriceRulesPage';
 import ReportsPage from '@/pages/ReportsPage';
 import SystemMonitorPage from '@/pages/SystemMonitorPage';
+import SalonCalendarPage from "@/pages/SalonCalendarPage";
+import SuperAdminPage from "@/pages/SuperAdminPage";
+import ClinicCalendarPage from "@/pages/clinic/ClinicCalendarPage";
+import ClinicPatientsPage from "@/pages/clinic/ClinicPatientsPage";
+import ClinicPatientDetailsPage from "@/pages/clinic/ClinicPatientDetailsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -185,6 +190,7 @@ const App = () => (
                   <Route path="cashier-stats" element={<RoleRoute path="/cashier-stats"><ErrorBoundary><CashierStatsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="receipt-settings" element={<RoleRoute path="/receipt-settings"><ErrorBoundary><ReceiptSettingsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="admin-panel" element={<RoleRoute path="/admin-panel"><ErrorBoundary><AdminPanelPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="super-admin" element={<RoleRoute path="/super-admin"><ErrorBoundary><SuperAdminPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="system-monitor" element={<RoleRoute path="/admin-panel"><ErrorBoundary><SystemMonitorPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="activity-log" element={<RoleRoute path="/activity-log"><ErrorBoundary><ActivityLogPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="data-export" element={<RoleRoute path="/data-export"><ErrorBoundary><DataExportPage /></ErrorBoundary></RoleRoute>} />
@@ -205,6 +211,10 @@ const App = () => (
                   <Route path="reconciliation" element={<RoleRoute path="/reconciliation"><ErrorBoundary><ReconciliationPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="landed-cost" element={<RoleRoute path="/landed-cost"><ErrorBoundary><LandedCostPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="notifications" element={<RoleRoute path="/notifications"><ErrorBoundary><NotificationsPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="salon/calendar" element={<RoleRoute path="/salon/calendar"><ErrorBoundary><SalonCalendarPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/calendar" element={<RoleRoute path="/clinic/calendar"><ErrorBoundary><ClinicCalendarPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/patients" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientsPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/patients/:id" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientDetailsPage /></ErrorBoundary></RoleRoute>} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

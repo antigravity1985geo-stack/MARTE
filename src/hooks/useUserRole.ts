@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 export type AppRole = 'admin' | 'cashier' | 'senior_cashier' | 'manager' | 'warehouse_manager' | 'hr' | 'accountant' | 'supplier' | 'driver';
 
 // ყველა როლისთვის საერთო გვერდები
-const COMMON_PATHS = ['/', '/pos', '/products', '/categories', '/sales', '/queue', '/profile', '/guide'];
+const COMMON_PATHS = ['/', '/pos', '/products', '/categories', '/sales', '/queue', '/profile', '/guide', '/salon/calendar', '/clinic/calendar', '/clinic/patients'];
 
 // როლზე დაფუძნებული წვდომა
 export const ROLE_ALLOWED_PATHS: Record<AppRole, string[]> = {
@@ -76,6 +76,8 @@ export const CASHIER_ALLOWED_PATHS = ROLE_ALLOWED_PATHS.cashier;
 
 export function useUserRole() {
   const user = useAuthStore((s) => s.user);
+  const tenants = useAuthStore((s) => s.tenants);
+  const activeTenantId = useAuthStore((s) => s.activeTenantId);
 
   const query = useQuery({
     queryKey: ['user_role', user?.id],
@@ -93,7 +95,11 @@ export function useUserRole() {
 
   const roles = query.data || [];
 
-  const isAdmin = roles.includes('admin');
+  // Check if user is an owner of the active tenant
+  const activeTenant = tenants.find(t => t.id === activeTenantId);
+  const isOwner = activeTenant?.role === 'owner';
+
+  const isAdmin = roles.includes('admin') || isOwner;
   const isCashier = roles.includes('cashier');
   const isSeniorCashier = roles.includes('senior_cashier');
   const isManager = roles.includes('manager');
@@ -102,7 +108,7 @@ export function useUserRole() {
   const isAccountant = roles.includes('accountant');
 
   // შეაგროვე ყველა ნებადართული path
-  const allowedPaths = new Set<string>();
+  const allowedPaths = new Set<string>(COMMON_PATHS);
   for (const role of roles) {
     const paths = ROLE_ALLOWED_PATHS[role];
     if (paths) {
@@ -112,7 +118,12 @@ export function useUserRole() {
 
   const hasAccess = (path: string) => {
     if (isAdmin || isManager) return true;
-    return allowedPaths.has(path);
+    
+    // Normalize path by removing /app prefix if present
+    const normalizedPath = path.startsWith('/app') ? path.substring(4) : path;
+    const pathToCheck = normalizedPath === '' ? '/' : normalizedPath;
+    
+    return allowedPaths.has(pathToCheck) || allowedPaths.has(path);
   };
 
   // როლის ქართული სახელი

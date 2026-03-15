@@ -3,7 +3,7 @@ import { PageTransition } from '@/components/PageTransition';
 import { useTransactions, type TransactionWithItems } from '@/hooks/useTransactions';
 import { useClients } from '@/hooks/useClients';
 import { useInvoices } from '@/hooks/useInvoices';
-import { useReceiptStore } from '@/stores/useReceiptStore';
+import { useReceiptConfig } from '@/hooks/useReceiptConfig';
 import { generateInvoice } from '@/lib/generateInvoice';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ export default function InvoicesPage() {
   const { transactions, isLoading: txLoading } = useTransactions();
   const { clients } = useClients();
   const { invoices, isLoading: invLoading, addInvoice, updateInvoice, getNextInvoiceNumber } = useInvoices();
-  const config = useReceiptStore((s) => s.receiptConfig);
+  const { receiptConfig: config } = useReceiptConfig();
   const isMobile = useIsMobile();
 
   const [tab, setTab] = useState('invoices');

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PageTransition } from '@/components/PageTransition';
-import { usePricingStore, TIER_LABELS, type PriceTier } from '@/stores/usePricingStore';
+import { usePricing, TIER_LABELS, type PriceTier } from '@/hooks/usePricing';
 import { useProducts } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,22 +14,22 @@ import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PricingPage() {
-  const { priceRules, coupons, loyaltyMembers, addPriceRule, deletePriceRule, addCoupon, deleteCoupon } = usePricingStore();
+  const { priceRules, coupons, loyaltyMembers, addPriceRule, deletePriceRule, addCoupon, deleteCoupon } = usePricing();
   const { products } = useProducts();
   const [ruleDialog, setRuleDialog] = useState(false);
   const [couponDialog, setCouponDialog] = useState(false);
   const [ruleForm, setRuleForm] = useState({ productId: '', tier: 'retail' as PriceTier, price: '', minQuantity: '1' });
-  const [couponForm, setCouponForm] = useState({ code: '', discountType: 'percent' as 'percent' | 'fixed', discountValue: '', minPurchase: '0', expiresAt: '', usageLimit: '100' });
+  const [couponForm, setCouponForm] = useState({ code: '', discountType: 'percentage' as 'percentage' | 'fixed', discountValue: '', minPurchase: '0', expiresAt: '', usageLimit: '100' });
 
   const handleAddRule = () => {
     const product = products.find((p) => p.id === ruleForm.productId);
     if (!product) { toast.error('აირჩიეთ პროდუქტი'); return; }
-    addPriceRule({
-      productId: ruleForm.productId,
-      productName: product.name,
+    addPriceRule.mutate({
+      product_id: ruleForm.productId,
+      product_name: product.name,
       tier: ruleForm.tier,
       price: parseFloat(ruleForm.price) || 0,
-      minQuantity: parseInt(ruleForm.minQuantity) || 1,
+      min_quantity: parseInt(ruleForm.minQuantity) || 1,
     });
     setRuleDialog(false);
     setRuleForm({ productId: '', tier: 'retail', price: '', minQuantity: '1' });
@@ -48,7 +48,7 @@ export default function PricingPage() {
       isActive: true,
     });
     setCouponDialog(false);
-    setCouponForm({ code: '', discountType: 'percent', discountValue: '', minPurchase: '0', expiresAt: '', usageLimit: '100' });
+    setCouponForm({ code: '', discountType: 'percentage', discountValue: '', minPurchase: '0', expiresAt: '', usageLimit: '100' });
     toast.success('კუპონი დაემატა');
   };
 
@@ -73,11 +73,11 @@ export default function PricingPage() {
                     <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">წესები არ არის</TableCell></TableRow>
                   ) : priceRules.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.productName}</TableCell>
+                      <TableCell className="font-medium">{r.product_name}</TableCell>
                       <TableCell><Badge variant="secondary">{TIER_LABELS[r.tier]}</Badge></TableCell>
                       <TableCell>₾{r.price.toFixed(2)}</TableCell>
-                      <TableCell>{r.minQuantity}</TableCell>
-                      <TableCell><Button variant="ghost" className="text-destructive h-8 w-8 p-0" onClick={() => deletePriceRule(r.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                      <TableCell>{r.min_quantity}</TableCell>
+                      <TableCell><Button variant="ghost" className="text-destructive h-8 w-8 p-0" onClick={() => deletePriceRule.mutate(r.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -126,13 +126,13 @@ export default function PricingPage() {
                   ) : coupons.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-mono font-bold">{c.code}</TableCell>
-                      <TableCell>{c.discountType === 'percent' ? 'პროცენტული' : 'ფიქსირებული'}</TableCell>
-                      <TableCell>{c.discountType === 'percent' ? `${c.discountValue}%` : `₾${c.discountValue}`}</TableCell>
+                      <TableCell>{c.discountType === 'percentage' ? 'პროცენტული' : 'ფიქსირებული'}</TableCell>
+                      <TableCell>{c.discountType === 'percentage' ? `${c.discountValue}%` : `₾${c.discountValue}`}</TableCell>
                       <TableCell>₾{c.minPurchase}</TableCell>
                       <TableCell className="text-xs">{c.expiresAt}</TableCell>
                       <TableCell>{c.usedCount}/{c.usageLimit}</TableCell>
                       <TableCell><Badge variant={c.isActive ? 'default' : 'secondary'}>{c.isActive ? 'კი' : 'არა'}</Badge></TableCell>
-                      <TableCell><Button variant="ghost" className="text-destructive h-8 w-8 p-0" onClick={() => deleteCoupon(c.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                      <TableCell><Button variant="ghost" className="text-destructive h-8 w-8 p-0" onClick={() => deleteCoupon.mutate(c.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -175,7 +175,7 @@ export default function PricingPage() {
           <div className="grid gap-3">
             <div className="space-y-1"><Label>კოდი</Label><Input value={couponForm.code} onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>ტიპი</Label><Select value={couponForm.discountType} onValueChange={(v: any) => setCouponForm({ ...couponForm, discountType: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="percent">პროცენტული</SelectItem><SelectItem value="fixed">ფიქსირებული</SelectItem></SelectContent></Select></div>
+              <div className="space-y-1"><Label>ტიპი</Label><Select value={couponForm.discountType} onValueChange={(v: any) => setCouponForm({ ...couponForm, discountType: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="percentage">პროცენტული</SelectItem><SelectItem value="fixed">ფიქსირებული</SelectItem></SelectContent></Select></div>
               <div className="space-y-1"><Label>მნიშვნელობა</Label><Input type="number" value={couponForm.discountValue} onChange={(e) => setCouponForm({ ...couponForm, discountValue: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-3 gap-3">

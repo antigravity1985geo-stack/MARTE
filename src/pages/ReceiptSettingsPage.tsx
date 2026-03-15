@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { PageTransition } from '@/components/PageTransition';
-import { useReceiptStore } from '@/stores/useReceiptStore';
+import { useReceiptConfig } from '@/hooks/useReceiptConfig';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -11,7 +11,7 @@ import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ReceiptSettingsPage() {
-  const { receiptConfig, updateConfig } = useReceiptStore();
+  const { receiptConfig, updateConfig } = useReceiptConfig();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,14 +27,14 @@ export default function ReceiptSettingsPage() {
     }
     const reader = new FileReader();
     reader.onload = (ev) => {
-      updateConfig({ logoUrl: ev.target?.result as string });
+      updateConfig.mutate({ logoUrl: ev.target?.result as string });
       toast.success('ლოგო ატვირთულია');
     };
     reader.readAsDataURL(file);
   };
 
   const removeLogo = () => {
-    updateConfig({ logoUrl: '' });
+    updateConfig.mutate({ logoUrl: '' });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -92,32 +92,31 @@ export default function ReceiptSettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-2"><Label>კომპანიის სახელი</Label><Input value={receiptConfig.companyName} onChange={(e) => updateConfig({ companyName: e.target.value })} /></div>
-            <div className="space-y-2"><Label>მისამართი</Label><Input value={receiptConfig.address} onChange={(e) => updateConfig({ address: e.target.value })} /></div>
+            <div className="space-y-2"><Label>კომპანიის სახელი</Label><Input value={receiptConfig.storeName} onChange={(e) => updateConfig.mutate({ storeName: e.target.value })} /></div>
+            <div className="space-y-2"><Label>მისამართი</Label><Input value={receiptConfig.storeAddress} onChange={(e) => updateConfig.mutate({ storeAddress: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>ტელეფონი</Label><Input value={receiptConfig.phone} onChange={(e) => updateConfig({ phone: e.target.value })} /></div>
-              <div className="space-y-2"><Label>საიდენტიფიკაციო</Label><Input value={receiptConfig.tin} onChange={(e) => updateConfig({ tin: e.target.value })} /></div>
+              <div className="space-y-2"><Label>ტელეფონი</Label><Input value={receiptConfig.phone} onChange={(e) => updateConfig.mutate({ phone: e.target.value })} /></div>
+              <div className="space-y-2"><Label>საიდენტიფიკაციო</Label><Input value={receiptConfig.taxId} onChange={(e) => updateConfig.mutate({ taxId: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>ქაღალდის ზომა</Label><Select value={receiptConfig.paperSize} onValueChange={(v: any) => updateConfig({ paperSize: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="58mm">58mm</SelectItem><SelectItem value="80mm">80mm</SelectItem></SelectContent></Select></div>
-              <div className="space-y-2"><Label>შრიფტის ზომა</Label><Input type="number" value={receiptConfig.fontSize} onChange={(e) => updateConfig({ fontSize: parseInt(e.target.value) || 12 })} /></div>
+              <div className="space-y-2"><Label>შრიფტის ზომა</Label><Input type="number" value={12} disabled /></div>
             </div>
-            <div className="flex items-center justify-between"><Label>QR კოდის ჩვენება</Label><Switch checked={receiptConfig.showQR} onCheckedChange={(v) => updateConfig({ showQR: v })} /></div>
-            <div className="space-y-2"><Label>Footer ტექსტი</Label><Input value={receiptConfig.footer} onChange={(e) => updateConfig({ footer: e.target.value })} /></div>
+            <div className="flex items-center justify-between"><Label>QR კოდის ჩვენება</Label><Switch checked={receiptConfig.showBarcode} onCheckedChange={(v) => updateConfig.mutate({ showBarcode: v })} /></div>
+            <div className="space-y-2"><Label>Footer ტექსტი</Label><Input value={receiptConfig.footerText} onChange={(e) => updateConfig.mutate({ footerText: e.target.value })} /></div>
           </div>
 
           {/* Preview */}
           <div className="stat-card">
             <h3 className="font-semibold mb-4">პრევიუ</h3>
-            <div className={`mx-auto bg-card border rounded-lg p-4 font-mono ${receiptConfig.paperSize === '58mm' ? 'max-w-[232px]' : 'max-w-[320px]'}`} style={{ fontSize: `${receiptConfig.fontSize}px` }}>
+            <div className={`mx-auto bg-card border rounded-lg p-4 font-mono ${receiptConfig.paperSize === '58mm' ? 'max-w-[232px]' : 'max-w-[320px]'}`} style={{ fontSize: `12px` }}>
               <div className="text-center border-b pb-2 mb-2">
                 {receiptConfig.logoUrl && (
                   <img src={receiptConfig.logoUrl} alt="ლოგო" className="h-10 mx-auto mb-1 object-contain" />
                 )}
-                <p className="font-bold">{receiptConfig.companyName}</p>
-                <p className="text-[10px]">{receiptConfig.address}</p>
+                <p className="font-bold">{receiptConfig.storeName}</p>
+                <p className="text-[10px]">{receiptConfig.storeAddress}</p>
                 <p className="text-[10px]">{receiptConfig.phone}</p>
-                <p className="text-[10px]">ს/კ: {receiptConfig.tin}</p>
+                <p className="text-[10px]">ს/კ: {receiptConfig.taxId}</p>
               </div>
               <div className="border-b pb-2 mb-2">
                 <div className="flex justify-between text-[10px]"><span>კოკა-კოლა 0.5ლ x2</span><span>₾4.00</span></div>
@@ -126,10 +125,10 @@ export default function ReceiptSettingsPage() {
               <div className="flex justify-between font-bold"><span>ჯამი:</span><span>₾5.00</span></div>
               <div className="flex justify-between text-[10px]"><span>ნაღდი:</span><span>₾10.00</span></div>
               <div className="flex justify-between text-[10px]"><span>ხურდა:</span><span>₾5.00</span></div>
-              {receiptConfig.showQR && (
+              {receiptConfig.showBarcode && (
                 <div className="flex justify-center mt-3"><QRCodeSVG value="https://rs.ge" size={64} /></div>
               )}
-              <p className="text-center text-[9px] mt-2 text-muted-foreground">{receiptConfig.footer}</p>
+              <p className="text-center text-[9px] mt-2 text-muted-foreground">{receiptConfig.footerText}</p>
             </div>
           </div>
         </div>

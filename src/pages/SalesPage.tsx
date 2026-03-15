@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useReceiptStore } from '@/stores/useReceiptStore';
+import { useReceiptConfig } from '@/hooks/useReceiptConfig';
 import { useEmployees } from '@/hooks/useEmployees';
 import { FileDown, Loader2 } from 'lucide-react';
 import { PrintButton } from '@/components/PrintButton';
@@ -22,7 +22,7 @@ const methodLabel = (m: string) => m === 'cash' ? 'ნაღდი' : m === 'car
 export default function SalesPage() {
   const { transactions, isLoading } = useTransactions();
   const { clients } = useClients();
-  const config = useReceiptStore((s) => s.receiptConfig);
+  const { receiptConfig: config } = useReceiptConfig();
   const { employees } = useEmployees();
   const [dateFilter, setDateFilter] = useState('');
   const [cashierFilter, setCashierFilter] = useState('all');
