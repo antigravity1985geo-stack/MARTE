@@ -103,6 +103,7 @@ export default function AuthPage() {
                       <option value="fnb">რესტორანი / F&B</option>
                       <option value="salon">სალონი / ესთეტიკური ცენტრი</option>
                       <option value="pharmacy">აფთიაქი</option>
+                      <option value="real_estate">MARTEHOME (ბინების ყიდვა-გაყიდვა)</option>
                       <option value="construction">მშენებლობა</option>
                       <option value="other">სხვა</option>
                     </select>

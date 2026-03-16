@@ -21,7 +21,11 @@ export function ClinicCalendar() {
   const { data: doctors = [], isLoading: isLoadingDoctors } = useQuery({
     queryKey: ['clinic_doctors'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('clinic_doctors').select('*').eq('active', true);
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('is_doctor', true)
+        .eq('is_active', true);
       if (error) throw error;
       return data;
     }
@@ -108,7 +112,7 @@ export function ClinicCalendar() {
             ) : (
               doctors.map(doc => (
                 <div key={doc.id} className="flex-1 border-r border-border/50 p-4 text-center font-semibold text-foreground flex flex-col items-center justify-center">
-                  <span className="text-md font-bold text-primary">{doc.first_name} {doc.last_name}</span>
+                  <span className="text-md font-bold text-primary">{doc.full_name}</span>
                   <span className="text-xs text-muted-foreground mt-1 font-medium bg-muted px-2 py-0.5 rounded-full">
                     {doc.specialization || 'ზოგადი'}
                   </span>

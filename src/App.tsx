@@ -18,6 +18,8 @@ import CustomerDisplay from "@/pages/CustomerDisplay";
 // Pages
 import AuthPage from "@/pages/AuthPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import MarteHomeMarketplace from "@/pages/real-estate/MarteHomeMarketplace";
+import PropertyDetail from "@/pages/real-estate/PropertyDetail";
 import DashboardPage from "@/pages/DashboardPage";
 import POSPage from "@/pages/POSPage";
 import ProductsPage from "@/pages/ProductsPage";
@@ -74,6 +76,9 @@ import SuperAdminPage from "@/pages/SuperAdminPage";
 import ClinicCalendarPage from "@/pages/clinic/ClinicCalendarPage";
 import ClinicPatientsPage from "@/pages/clinic/ClinicPatientsPage";
 import ClinicPatientDetailsPage from "@/pages/clinic/ClinicPatientDetailsPage";
+import RealEstateDashboard from "@/pages/real-estate/RealEstateDashboard";
+import PropertyList from "@/pages/real-estate/PropertyList";
+import MortgageManagement from "@/pages/real-estate/MortgageManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,7 +97,7 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, tenants, activeTenantId, user } = useAuthStore();
 
   if (isLoading) {
     return (
@@ -104,6 +109,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Check subscription status
+  const activeTenant = tenants.find(t => t.id === activeTenantId);
+  if (activeTenant?.subscription_status === 'suspended' && !user?.isSuperadmin) {
+    return <Navigate to="/access-denied" state={{ reason: 'suspended' }} replace />;
   }
 
   return <>{children}</>;
@@ -149,6 +160,9 @@ const App = () => (
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/customer-display" element={<ErrorBoundary><CustomerDisplay /></ErrorBoundary>} />
+                <Route path="/martehome" element={<MarteHomeMarketplace />} />
+                <Route path="/martehome/property/:id" element={<PropertyDetail />} />
+                <Route path="/access-denied" element={<AccessDeniedPage />} />
 
                 {/* Legacy Redirects */}
                 <Route path="/pos" element={<Navigate to="/app/pos" replace />} />
@@ -215,6 +229,11 @@ const App = () => (
                   <Route path="clinic/calendar" element={<RoleRoute path="/clinic/calendar"><ErrorBoundary><ClinicCalendarPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/patients" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/patients/:id" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientDetailsPage /></ErrorBoundary></RoleRoute>} />
+                  
+                  {/* MARTEHOME (Real Estate) */}
+                  <Route path="real-estate" element={<ErrorBoundary><RealEstateDashboard /></ErrorBoundary>} />
+                  <Route path="real-estate/properties" element={<RoleRoute path="/app/real-estate/properties"><ErrorBoundary><PropertyList /></ErrorBoundary></RoleRoute>} />
+                  <Route path="real-estate/mortgages" element={<RoleRoute path="/app/real-estate/mortgages"><ErrorBoundary><MortgageManagement /></ErrorBoundary></RoleRoute>} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

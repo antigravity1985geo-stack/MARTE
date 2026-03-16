@@ -40,6 +40,7 @@ export default function Index() {
   const navbarLinks = [
     { name: 'მთავარი', href: '#hero' },
     { name: 'პერიფერია', href: '#features' },
+    { name: 'MarteHome', href: '/martehome' },
     { name: 'ჩვენს შესახებ', href: '#about' },
     { name: 'კონტაქტი', href: '#contact' },
   ];

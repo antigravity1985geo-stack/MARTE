@@ -29,6 +29,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CyberCard } from '@/components/CyberCard';
 import { format } from 'date-fns';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { AVAILABLE_FEATURES, isFeatureLocked, IndustryType, PlanType } from '@/config/features';
 
 const PIE_COLORS = [
   'hsl(162 72% 38%)',
@@ -37,6 +39,8 @@ const PIE_COLORS = [
   'hsl(4 76% 54%)',
   'hsl(280 60% 50%)',
 ];
+
+import RealEstateDashboard from './real-estate/RealEstateDashboard';
 
 export default function DashboardPage() {
   const { products } = useProducts();
@@ -51,11 +55,29 @@ export default function DashboardPage() {
   const { abcData, ltvData, basketData } = useAnalytics();
   const { anomalies } = useAnomalies();
   const { data: activityLogs } = useActivityLogs(20);
+  const { user, tenants, activeTenantId } = useAuthStore();
 
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [countdown, setCountdown] = useState(30);
+
+  const activeTenant = tenants.find(t => t.id === activeTenantId);
+  const industry = (activeTenant?.industry || 'retail') as IndustryType;
+  const plan = (activeTenant?.subscription_plan || 'free') as PlanType;
+  const features = activeTenant?.features || {};
+  
+  const isEnabled = (id: string) => {
+    // 1. Feature must be toggled on
+    if (features[id] === false) return false;
+    
+    // 2. Feature must belong to this industry
+    const config = AVAILABLE_FEATURES.find(f => f.id === id);
+    if (!config) return true;
+    return config.industries.includes(industry);
+  };
+
+  const isLocked = (id: string) => isFeatureLocked(id, plan, user?.isSuperadmin);
 
   const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -191,6 +213,10 @@ export default function DashboardPage() {
     },
   ];
 
+  if (industry === 'real_estate' || user?.isSuperadmin) {
+    return <RealEstateDashboard />;
+  }
+
   return (
     <PageTransition>
       <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
@@ -263,8 +289,8 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
 
-        {/* Anomalies & AI Alerts */}
-        {anomalies.length > 0 && (
+        {/* Anomalies & AI Alerts - Show only if Analytics/Audit enabled */}
+        {(anomalies.length > 0 && isEnabled('analytics')) && (
           <motion.div variants={staggerItem}>
             <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -333,112 +359,115 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
 
-        {/* ABC & LTV Summary Widgets */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          <motion.div variants={staggerItem} className="lg:col-span-1">
-            <Card className="shadow-elegant border-primary/10 h-full card-hover">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-primary" />
-                  ABC ანალიზი (მოგების წილი)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[140px] w-full mt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={[
-                      { name: 'A (Top)', value: abcData.filter(a => a.abc_category === 'A').length, color: 'hsl(162 72% 38%)' },
-                      { name: 'B (Mid)', value: abcData.filter(a => a.abc_category === 'B').length, color: 'hsl(32 95% 52%)' },
-                      { name: 'C (Low)', value: abcData.filter(a => a.abc_category === 'C').length, color: 'hsl(210 92% 45%)' },
-                    ]} layout="vertical">
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" fontSize={10} stroke="hsl(var(--muted-foreground))" width={50} tickLine={false} axisLine={false} />
-                      <Tooltip
-                        cursor={{ fill: 'transparent' }}
-                        contentStyle={{ background: 'hsl(var(--card))', borderRadius: '12px', fontSize: '12px' }}
-                      />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                        {[
-                          { color: 'hsl(162 72% 38%)' },
-                          { color: 'hsl(32 95% 52%)' },
-                          { color: 'hsl(210 92% 45%)' },
-                        ].map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4 p-2 bg-muted/40 rounded-lg">
-                  <p className="text-[10px] text-muted-foreground text-center italic">"A კატეგორია" - პროდუქტები, რომლებიც ქმნიან თქვენს ძირითად მოგებას</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        {/* ABC & LTV Summary Widgets - Show only if Sales enabled */}
+        {isEnabled('sales') && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+            <motion.div variants={staggerItem} className="lg:col-span-1">
+              {/* ... ABC Analysis Card content ... */}
+              <Card className="shadow-elegant border-primary/10 h-full card-hover">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    ABC ანალიზი (მოგების წილი)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[140px] w-full mt-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={[
+                        { name: 'A (Top)', value: abcData.filter(a => a.abc_category === 'A').length, color: 'hsl(162 72% 38%)' },
+                        { name: 'B (Mid)', value: abcData.filter(a => a.abc_category === 'B').length, color: 'hsl(32 95% 52%)' },
+                        { name: 'C (Low)', value: abcData.filter(a => a.abc_category === 'C').length, color: 'hsl(210 92% 45%)' },
+                      ]} layout="vertical">
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" fontSize={10} stroke="hsl(var(--muted-foreground))" width={50} tickLine={false} axisLine={false} />
+                        <Tooltip
+                          cursor={{ fill: 'transparent' }}
+                          contentStyle={{ background: 'hsl(var(--card))', borderRadius: '12px', fontSize: '12px' }}
+                        />
+                        <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                          {[
+                            { color: 'hsl(162 72% 38%)' },
+                            { color: 'hsl(32 95% 52%)' },
+                            { color: 'hsl(210 92% 45%)' },
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 p-2 bg-muted/40 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground text-center italic">"A კატეგორია" - პროდუქტები, რომლებიც ქმნიან თქვენს ძირითად მოგებას</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          <motion.div variants={staggerItem} className="lg:col-span-1">
-            <Card className="shadow-elegant border-primary/10 h-full card-hover">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Crown className="h-4 w-4 text-accent" />
-                  ტოპ კლიენტები (LTV)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-2">
-                {ltvData.slice(0, 4).length > 0 ? ltvData.slice(0, 4).map((client, i) => (
-                  <div key={client.client_id} className="flex items-center justify-between group p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-primary/5 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/10">
-                        #{i + 1}
+            <motion.div variants={staggerItem} className="lg:col-span-1">
+              <Card className="shadow-elegant border-primary/10 h-full card-hover">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-accent" />
+                    ტოპ კლიენტები (LTV)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-2">
+                  {ltvData.slice(0, 4).length > 0 ? ltvData.slice(0, 4).map((client, i) => (
+                    <div key={client.client_id} className="flex items-center justify-between group p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-primary/5 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/10">
+                          #{i + 1}
+                        </div>
+                        <span className="text-xs font-medium truncate max-w-[100px]">{client.client_name}</span>
                       </div>
-                      <span className="text-xs font-medium truncate max-w-[100px]">{client.client_name}</span>
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-foreground">₾{client.total_spent.toFixed(0)}</p>
+                        <p className="text-[9px] text-muted-foreground">{client.total_orders} შეკვეთა</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-foreground">₾{client.total_spent.toFixed(0)}</p>
-                      <p className="text-[9px] text-muted-foreground">{client.total_orders} შეკვეთა</p>
+                  )) : (
+                    <div className="h-full flex flex-col items-center justify-center py-6 text-muted-foreground">
+                      <Users className="h-8 w-8 mb-2 opacity-20" />
+                      <p className="text-[10px]">მონაცემები არ არის</p>
                     </div>
-                  </div>
-                )) : (
-                  <div className="h-full flex flex-col items-center justify-center py-6 text-muted-foreground">
-                    <Users className="h-8 w-8 mb-2 opacity-20" />
-                    <p className="text-[10px]">მონაცემები არ არის</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          <motion.div variants={staggerItem} className="lg:col-span-1">
-            <Card className="shadow-elegant border-primary/10 h-full card-hover">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4 text-info" />
-                  Cross-sell რეკომენდაცია
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-2">
-                {basketData.slice(0, 3).length > 0 ? basketData.slice(0, 3).map((pair, i) => (
-                  <div key={i} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/30 border border-border/40 hover:border-info/30 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-info uppercase tracking-wider">ხშირი წყვილი</span>
-                      <Badge variant="outline" className="text-[9px] bg-background border-info/20 px-1 py-0">{pair.frequency}x</Badge>
+            <motion.div variants={staggerItem} className="lg:col-span-1">
+              <Card className="shadow-elegant border-primary/10 h-full card-hover">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 text-info" />
+                    Cross-sell რეკომენდაცია
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 pt-2">
+                  {basketData.slice(0, 3).length > 0 ? basketData.slice(0, 3).map((pair, i) => (
+                    <div key={i} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/30 border border-border/40 hover:border-info/30 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold text-info uppercase tracking-wider">ხშირი წყვილი</span>
+                        <Badge variant="outline" className="text-[9px] bg-background border-info/20 px-1 py-0">{pair.frequency}x</Badge>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] font-medium truncate flex items-center gap-1"><div className="w-1 h-1 rounded-full bg-info" /> {pair.product_a_name}</span>
+                        <span className="text-[10px] font-medium truncate flex items-center gap-1"><div className="w-1 h-1 rounded-full bg-info/60" /> {pair.product_b_name}</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-medium truncate flex items-center gap-1"><div className="w-1 h-1 rounded-full bg-info" /> {pair.product_a_name}</span>
-                      <span className="text-[10px] font-medium truncate flex items-center gap-1"><div className="w-1 h-1 rounded-full bg-info/60" /> {pair.product_b_name}</span>
+                  )) : (
+                    <div className="h-full flex flex-col items-center justify-center py-6 text-muted-foreground">
+                      <Zap className="h-8 w-8 mb-2 opacity-20" />
+                      <p className="text-[10px]">ანალიზი მუშავდება...</p>
                     </div>
-                  </div>
-                )) : (
-                  <div className="h-full flex flex-col items-center justify-center py-6 text-muted-foreground">
-                    <Zap className="h-8 w-8 mb-2 opacity-20" />
-                    <p className="text-[10px]">ანალიზი მუშავდება...</p>
-                  </div>
-                )}
-                <p className="text-[9px] text-center text-muted-foreground italic mt-2">დაფუძნებულიაMarket Basket Analysis-ზე</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+                  )}
+                  <p className="text-[9px] text-center text-muted-foreground italic mt-2">დაფუძნებულია Market Basket Analysis-ზე</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        )}
 
         {/* Main Stats - Cyber Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
@@ -448,11 +477,16 @@ export default function DashboardPage() {
           <CyberCard title="პროდუქტები" value={products.length.toString()} icon={Package} color="accent" subtitle={`${lowStockCount} დაბალი მარაგით`} />
         </div>
 
-        {/* Financial Summary Row - Cyber Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          <CyberCard title="ბანკი" value={bankBalance} prefix="₾" icon={Wallet} color="info" subtitle="საბანკო ნაშთი (2320)" />
-          <CyberCard title="სალარო" value={cashBalance} prefix="₾" icon={Banknote} color="success" subtitle="ნაღდი ფული (2310)" />
-          <CyberCard title="მოგება (P&L)" value={netIncome} prefix="₾" icon={netIncome >= 0 ? TrendingUp : TrendingDown} color={netIncome >= 0 ? 'success' : 'destructive'} />
+        {/* Financial Summary Row - Show only if Accounting enabled */}
+        {isEnabled('accounting') && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4 mt-4">
+            <CyberCard title="ბანკი" value={bankBalance} prefix="₾" icon={Wallet} color="info" subtitle="საბანკო ნაშთი (2320)" />
+            <CyberCard title="სალარო" value={cashBalance} prefix="₾" icon={Banknote} color="success" subtitle="ნაღდი ფული (2310)" />
+            <CyberCard title="მოგება (P&L)" value={netIncome} prefix="₾" icon={netIncome >= 0 ? TrendingUp : TrendingDown} color={netIncome >= 0 ? 'success' : 'destructive'} />
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mt-4">
           <CyberCard title="კლიენტები" value={clients.length.toString()} icon={Users} color="accent" />
         </div>
 

@@ -10,8 +10,21 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEmployees, Employee, Attendance } from '@/hooks/useEmployees';
-import { Users, Clock, CalendarDays, UserPlus, Search, Loader2, Save } from 'lucide-react';
+import { Users, Clock, CalendarDays, UserPlus, Search, Loader2, Save, Stethoscope } from 'lucide-react';
 import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
+
+const CLINIC_ROLES = [
+  'ექიმი',
+  'ექთანი',
+  'სანიტარი',
+  'რეგისტრატორი',
+  'დაცვა',
+  'მენეჯერი',
+  'ბუღალტერი',
+  'ლაბორანტი',
+  'სხვა'
+];
 
 export default function EmployeesPage() {
   const [activeTab, setActiveTab] = useState('employees');
@@ -91,11 +104,45 @@ export default function EmployeesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>პოზიცია</Label>
-                    <Input
-                      value={editEmp?.position || ''}
-                      onChange={e => setEditEmp({ ...editEmp, position: e.target.value })}
-                    />
+                    <Select 
+                      value={CLINIC_ROLES.includes(editEmp?.position || '') ? editEmp?.position : 'სხვა'} 
+                      onValueChange={val => {
+                        const updates: Partial<Employee> = { position: val === 'სხვა' ? '' : val };
+                        if (val === 'ექიმი') {
+                          updates.is_doctor = true;
+                        }
+                        setEditEmp({ ...editEmp, ...updates });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="აირჩიეთ პოზიცია" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CLINIC_ROLES.map(role => (
+                          <SelectItem key={role} value={role}>{role}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                  <div className="grid gap-2">
+                    <Label>{editEmp?.position === 'სხვა' || !CLINIC_ROLES.includes(editEmp?.position || '') ? 'მიუთითეთ პოზიცია' : 'ხელფასი (NET)'}</Label>
+                    {editEmp?.position === 'სხვა' || !CLINIC_ROLES.includes(editEmp?.position || '') ? (
+                      <Input
+                        placeholder="მაგ: მძღოლი"
+                        value={editEmp?.position || ''}
+                        onChange={e => setEditEmp({ ...editEmp, position: e.target.value })}
+                      />
+                    ) : (
+                      <Input
+                        type="number"
+                        value={editEmp?.salary || ''}
+                        onChange={e => setEditEmp({ ...editEmp, salary: Number(e.target.value) })}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {(editEmp?.position === 'სხვა' || !CLINIC_ROLES.includes(editEmp?.position || '')) && (
                   <div className="grid gap-2">
                     <Label>ხელფასი (NET)</Label>
                     <Input
@@ -104,7 +151,30 @@ export default function EmployeesPage() {
                       onChange={e => setEditEmp({ ...editEmp, salary: Number(e.target.value) })}
                     />
                   </div>
+                )}
+
+                <div className="flex items-center space-x-2 py-2">
+                  <Checkbox 
+                    id="is_doctor" 
+                    checked={editEmp?.is_doctor || false}
+                    onCheckedChange={(checked) => setEditEmp({ ...editEmp, is_doctor: !!checked })}
+                  />
+                  <Label htmlFor="is_doctor" className="cursor-pointer">ექიმია (კალენდარში გამოჩენა)</Label>
                 </div>
+
+                {editEmp?.is_doctor && (
+                  <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
+                    <Label className="flex items-center gap-2">
+                      <Stethoscope className="h-4 w-4 text-primary" />
+                      სპეციალიზაცია
+                    </Label>
+                    <Input
+                      placeholder="მაგ: სტომატოლოგი, თერაპევტი"
+                      value={editEmp?.specialization || ''}
+                      onChange={e => setEditEmp({ ...editEmp, specialization: e.target.value })}
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>PIN კოდი</Label>
@@ -186,7 +256,17 @@ export default function EmployeesPage() {
                       {filteredEmployees.map((emp) => (
                         <TableRow key={emp.id}>
                           <TableCell className="font-medium">{emp.full_name}</TableCell>
-                          <TableCell>{emp.position}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span>{emp.position}</span>
+                              {emp.is_doctor && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Stethoscope className="h-3 w-3" />
+                                  {emp.specialization || 'ზოგადი პროფილი'}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>{emp.salary?.toLocaleString()} ₾</TableCell>
                           <TableCell>
                             <Badge variant={emp.is_active ? 'default' : 'secondary'}>

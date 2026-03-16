@@ -5,7 +5,11 @@ import { useAuthStore } from '@/stores/useAuthStore';
 export type AppRole = 'admin' | 'cashier' | 'senior_cashier' | 'manager' | 'warehouse_manager' | 'hr' | 'accountant' | 'supplier' | 'driver';
 
 // ყველა როლისთვის საერთო გვერდები
-const COMMON_PATHS = ['/', '/pos', '/products', '/categories', '/sales', '/queue', '/profile', '/guide', '/salon/calendar', '/clinic/calendar', '/clinic/patients'];
+const COMMON_PATHS = [
+  '/', '/pos', '/products', '/categories', '/sales', '/queue', '/profile', '/guide', 
+  '/salon/calendar', '/clinic/calendar', '/clinic/patients',
+  '/real-estate', '/real-estate/properties', '/real-estate/mortgages'
+];
 
 // როლზე დაფუძნებული წვდომა
 export const ROLE_ALLOWED_PATHS: Record<AppRole, string[]> = {
@@ -99,7 +103,7 @@ export function useUserRole() {
   const activeTenant = tenants.find(t => t.id === activeTenantId);
   const isOwner = activeTenant?.role === 'owner';
 
-  const isAdmin = roles.includes('admin') || isOwner;
+  const isAdmin = roles.includes('admin') || isOwner || user?.isSuperadmin === true;
   const isCashier = roles.includes('cashier');
   const isSeniorCashier = roles.includes('senior_cashier');
   const isManager = roles.includes('manager');
@@ -117,6 +121,7 @@ export function useUserRole() {
   }
 
   const hasAccess = (path: string) => {
+    if (user?.isSuperadmin === true) return true;
     if (isAdmin || isManager) return true;
     
     // Normalize path by removing /app prefix if present

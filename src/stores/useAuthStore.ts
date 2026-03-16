@@ -153,11 +153,24 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
     login: async (email, password) => {
       if (!email || !password) throw new Error('შეავსეთ ყველა ველი');
-      const { error } = await supabase.auth.signInWithPassword({
+      
+      set({ isLoading: true });
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
-      if (error) throw new Error(error.message);
+      
+      if (error) {
+        set({ isLoading: false });
+        throw new Error(error.message);
+      }
+
+      if (data.session) {
+        await hydrateFromSession(data.session);
+      } else {
+        set({ isLoading: false });
+      }
     },
 
     register: async (email, password, fullName, businessName, industry) => {

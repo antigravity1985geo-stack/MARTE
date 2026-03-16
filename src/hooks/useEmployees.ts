@@ -12,6 +12,8 @@ export interface Employee {
   email: string;
   salary: number;
   is_active: boolean;
+  is_doctor: boolean;
+  specialization?: string;
   hire_date?: string;
   termination_date?: string;
   address?: string;

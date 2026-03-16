@@ -7,8 +7,9 @@ import {
   UserCog, Clock, ListOrdered, Printer, BookOpen, LogOut,
   Menu, X, Shield, Activity, HardDriveDownload, Wallet,
   RotateCcw, Globe, Building2, Building, Layers, ArrowDownLeft, Landmark, Heart, Bell, PackagePlus,
-  Settings2, FileSearch, ShieldCheck, CalendarDays, Lock
+  Settings2, FileSearch, ShieldCheck, CalendarDays, Lock, Home, Key
 } from 'lucide-react';
+import { AVAILABLE_FEATURES, isFeatureLocked, IndustryType, PlanType } from '@/config/features';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
@@ -16,91 +17,144 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const getSections = (industry: string, features: any = {}, plan: string = 'free', isSuperadmin: boolean = false) => {
-  const isEnabled = (key: string) => features[key] !== false; // Features default to true if setting is missing
-  const isPro = plan.toLowerCase() === 'pro' || plan.toLowerCase() === 'enterprise';
-  const shouldLock = (requiresPro: boolean) => requiresPro && !isPro && !isSuperadmin;
+const getSections = (industry: IndustryType, features: any = {}, plan: PlanType = 'free', isSuperadmin: boolean = false) => {
+  const isEnabled = (id: string) => {
+    if (isSuperadmin) return true;
+    if (features[id] === true) return true;
+    if (features[id] === false) return false;
+    const config = AVAILABLE_FEATURES.find(f => f.id === id);
+    if (!config) return true;
+    return config.industries.includes(industry as IndustryType);
+  };
 
-  return [
-    {
-      title: 'მთავარი',
+  const shouldLock = (id: string) => isFeatureLocked(id, plan as PlanType, isSuperadmin);
+
+  const sections = [];
+
+  // Main
+  sections.push({
+    title: 'მთავარი',
+    items: [
+      { title: 'მთავარი', icon: LayoutDashboard, path: '/app' },
+      ...(isEnabled('pos') ? [{ title: 'POS სისტემა', icon: Monitor, path: '/app/pos' }] : []),
+    ],
+  });
+
+  // Real Estate
+  if (isEnabled('real_estate') || isSuperadmin) {
+    sections.push({
+      title: 'MARTEHOME (უძრავი ქონება)',
       items: [
-        { title: 'მთავარი', icon: LayoutDashboard, path: '/app' },
-        ...(industry !== 'clinic' && isEnabled('pos') ? [{ title: 'POS სისტემა', icon: Monitor, path: '/app/pos' }] : []),
+        { title: 'დეშბორდი', icon: LayoutDashboard, path: '/app/real-estate' },
+        { title: 'განცხადებები / ბინები', icon: Home, path: '/app/real-estate/properties' },
+        { title: 'გირაო / იპოთეკა', icon: Key, path: '/app/real-estate/mortgages' },
+        { title: 'MarteHome (საჯარო)', icon: Globe, path: '/martehome' },
       ],
-    },
-    ...(isEnabled('clinic') ? [{
+    });
+  }
+
+  // Clinic
+  if (isEnabled('clinic') || isSuperadmin) {
+    sections.push({
       title: 'კლინიკა და ჯანდაცვა',
       items: [
         { title: 'ვიზიტების კალენდარი', icon: CalendarDays, path: '/app/clinic/calendar' },
         { title: 'პაციენტების ბაზა', icon: Users, path: '/app/clinic/patients' },
       ],
-    }] : []),
-    {
-      title: isEnabled('clinic') ? 'ლოჯისტიკა და მარაგები' : 'გაყიდვები & შემოსავლები',
+    });
+  }
+
+  // Logistics & Sales
+  sections.push({
+    title: (isEnabled('clinic') && !isSuperadmin) ? 'ლოჯისტიკა და მარაგები' : 'გაყიდვები & შემოსავლები',
+    items: [
+      ...(isEnabled('inventory') ? [{ title: 'პროდუქტები (მარაგი)', icon: Package, path: '/app/products' }] : []),
+      ...(isEnabled('sales') ? [
+        { title: 'კომბოები (Bundles)', icon: PackagePlus, path: '/app/bundles' },
+        { title: 'ფასდაკლებები', icon: BadgePercent, path: '/app/price-rules' }
+      ] : []),
+      ...(isEnabled('inventory') ? [{ title: 'კატეგორიები', icon: Tags, path: '/app/categories' }] : []),
+    ],
+  });
+
+  // Operations
+  sections.push({
+    title: 'ოპერაციები',
+    items: [
+      ...(isEnabled('purchases') ? [{ 
+        title: 'შესყიდვების მიღება', 
+        icon: Download, 
+        path: '/app/receiving',
+        isLocked: shouldLock('purchases')
+      }] : []),
+      ...(isEnabled('sales') ? [
+        { title: 'გაყიდვები / სერვისები', icon: TrendingUp, path: '/app/sales' },
+        { title: 'დაბრუნებები', icon: RotateCcw, path: '/app/returns' },
+        { title: 'ინვოისები', icon: FileText, path: '/app/invoices' },
+        { title: 'შეკვეთები', icon: ClipboardList, path: '/app/orders' }
+      ] : []),
+      ...(isEnabled('inventory') ? [{ title: 'საწყობები', icon: Warehouse, path: '/app/warehouse-management' }] : []),
+      ...(isEnabled('production') ? [
+        { title: 'წარმოება', icon: Factory, path: '/app/production', isLocked: shouldLock('production') },
+      ] : []),
+    ],
+  });
+
+  // CRM
+  if (isEnabled('crm') || isEnabled('purchases') || isSuperadmin) {
+    sections.push({
+      title: (isEnabled('crm') || isSuperadmin) ? 'კონტაქტები' : 'მომწოდებლები',
       items: [
-        ...(isEnabled('inventory') ? [{ title: 'პროდუქტები (მარაგი)', icon: Package, path: '/app/products' }] : []),
-        ...(isEnabled('sales') ? [
-          { title: 'კომბოები (Bundles)', icon: PackagePlus, path: '/app/bundles' },
-          { title: 'ფასდაკლებები', icon: BadgePercent, path: '/app/price-rules' }
+        ...(isEnabled('crm') ? [
+          { title: 'კლიენტები', icon: Users, path: '/app/clients' },
+          { title: 'CRM & ლოიალობა', icon: Heart, path: '/app/crm', isLocked: shouldLock('crm') }
         ] : []),
-        ...(isEnabled('inventory') ? [{ title: 'კატეგორიები', icon: Tags, path: '/app/categories' }] : []),
-      ],
-    },
-    {
-      title: 'ოპერაციები',
-      items: [
-        ...(isEnabled('purchases') ? [{ title: 'შესყიდვების მიღება', icon: Download, path: '/app/receiving' }] : []),
-        ...(isEnabled('sales') ? [
-          { title: 'გაყიდვები / სერვისები', icon: TrendingUp, path: '/app/sales' },
-          { title: 'დაბრუნებები', icon: RotateCcw, path: '/app/returns' },
-          { title: 'ინვოისები', icon: FileText, path: '/app/invoices' },
-          { title: 'შეკვეთები', icon: ClipboardList, path: '/app/orders' }
-        ] : []),
-        ...(isEnabled('inventory') ? [{ title: 'საწყობები', icon: Warehouse, path: '/app/warehouse-management' }] : []),
-        ...(isEnabled('production') ? [
-          { title: 'წარმოება', icon: Factory, path: '/app/production', isLocked: shouldLock(true) },
-        ] : []),
-      ],
-    },
-    ...(isEnabled('crm') || isEnabled('purchases') ? [{
-      title: isEnabled('crm') ? 'კონტაქტები' : 'მომწოდებლები',
-      items: [
-        ...(isEnabled('crm') ? [{ title: 'კლიენტები', icon: Users, path: '/app/clients' }] : []),
-        ...(isEnabled('crm') ? [{ title: 'CRM & ლოიალობა', icon: Heart, path: '/app/crm', isLocked: shouldLock(true) }] : []),
         ...(isEnabled('purchases') ? [{ title: 'მომწოდებლები', icon: Truck, path: '/app/suppliers' }] : []),
       ],
-    }] : []),
-    ...(isEnabled('salon') ? [{
+    });
+  }
+
+  // Salon
+  if (isEnabled('salon') || isSuperadmin) {
+    sections.push({
       title: 'მომსახურება / სალონი',
       items: [
         { title: 'ჯავშნები (Calendar)', icon: CalendarDays, path: '/app/salon/calendar' },
       ],
-    }] : []),
-    ...(isEnabled('accounting') || isEnabled('hr') ? [{
+    });
+  }
+
+  // Finance
+  if (isEnabled('accounting') || isEnabled('hr') || isSuperadmin) {
+    sections.push({
       title: 'ფინანსები',
       items: [
         ...(isEnabled('accounting') ? [
           { title: 'ხარჯები', icon: Receipt, path: '/app/expenses' },
           { title: 'ანგარიშსწორება', icon: HandCoins, path: '/app/supplier-settlements' },
-          { title: 'ბუღალტერია', icon: Calculator, path: '/app/accounting', isLocked: shouldLock(true) },
-          { title: 'ფინანსური ანგარიშგება', icon: ArrowDownLeft, path: '/app/cash-flow', isLocked: shouldLock(true) },
-          { title: 'საბანკო ინტეგრაცია', icon: Landmark, path: '/app/bank-integration', isLocked: shouldLock(true) },
-          { title: 'საბანკო შედარება', icon: FileSearch, path: '/app/reconciliation', isLocked: shouldLock(true) },
+          { title: 'ბუღალტერია', icon: Calculator, path: '/app/accounting', isLocked: shouldLock('accounting') },
+          { title: 'ფინანსური ანგარიშგება', icon: ArrowDownLeft, path: '/app/cash-flow', isLocked: shouldLock('accounting') },
+          { title: 'საბანკო ინტეგრაცია', icon: Landmark, path: '/app/bank-integration', isLocked: shouldLock('accounting') },
+          { title: 'საბანკო შედარება', icon: FileSearch, path: '/app/reconciliation', isLocked: shouldLock('accounting') },
         ] : []),
-        ...(isEnabled('hr') ? [{ title: 'ხელფასები & HR', icon: Wallet, path: '/app/salary' }] : []),
+        ...(isEnabled('hr') ? [
+          { title: 'ხელფასები & HR', icon: Wallet, path: '/app/salary', isLocked: shouldLock('hr') }
+        ] : []),
       ],
-    }] : []),
-    {
-      title: 'ადმინისტრირება',
-      items: [
-        ...(isEnabled('hr') ? [{ title: 'თანამშრომლები', icon: UserCog, path: '/app/employees' }] : []),
-        ...(isEnabled('hr') ? [{ title: 'ფილიალები', icon: Building2, path: '/app/branches' }] : []),
-        { title: 'Superadmin', icon: Shield, path: '/app/admin-panel' },
-        { title: 'აქტივობის ლოგი', icon: Activity, path: '/app/activity-log' },
-      ],
-    },
-  ];
+    });
+  }
+
+  // Admin
+  sections.push({
+    title: 'ადმინისტრირება',
+    items: [
+      ...(isEnabled('hr') ? [{ title: 'თანამშრომლები', icon: UserCog, path: '/app/employees', isLocked: shouldLock('hr') }] : []),
+      ...(isEnabled('hr') ? [{ title: 'ფილიალები', icon: Building2, path: '/app/branches', isLocked: shouldLock('hr') }] : []),
+      { title: 'აქტივობის ლოგი', icon: Activity, path: '/app/activity-log' },
+    ],
+  });
+
+  return sections;
 };
 
 export function AppSidebar() {
@@ -116,15 +170,17 @@ export function AppSidebar() {
   };
 
   const activeTenant = tenants.find(t => t.id === activeTenantId);
-  const industry = activeTenant?.industry || 'retail';
-  const plan = activeTenant?.subscription_plan || 'free';
+  const industry = (activeTenant?.industry || 'retail') as IndustryType;
+  const plan = (activeTenant?.subscription_plan || 'free') as PlanType;
   const dynamicSections = getSections(industry, activeTenant?.features, plan, user?.isSuperadmin || false);
 
   // ფილტრაცია როლის მიხედვით
-  const filteredSections = dynamicSections.map((section) => ({
-    ...section,
-    items: section.items.filter((item) => hasAccess(item.path)),
-  })).filter((section) => section.items.length > 0);
+  const filteredSections = user?.isSuperadmin 
+    ? dynamicSections 
+    : dynamicSections.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => hasAccess(item.path)),
+      })).filter((section) => section.items.length > 0);
 
   // Inject Superadmin
   if (user?.isSuperadmin) {

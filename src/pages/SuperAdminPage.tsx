@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, Building, CheckCircle2, XCircle, LogIn, Activity, Search, Filter, Plus, Download, Edit2, Users, DollarSign, Calendar, Megaphone, Trash2, Gauge } from 'lucide-react';
+import { ShieldCheck, Building, CheckCircle2, XCircle, LogIn, Activity, Search, Filter, Plus, Download, Edit2, Users, DollarSign, Calendar, Megaphone, Trash2, Gauge, ShieldAlert, Lock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,51 +16,64 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { AVAILABLE_FEATURES, getDefaultFeatures, IndustryType, PlanType } from '@/config/features';
 
 export default function SuperAdminPage() {
-  const { user, tenants, setActiveTenant } = useAuthStore();
+  const { user, tenants, activeTenantId, setActiveTenant } = useAuthStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState('overview');
 
-  const AVAILABLE_FEATURES = [
-    { id: 'pos', label: 'POS სისტემა' },
-    { id: 'clinic', label: 'კლინიკა' },
-    { id: 'inventory', label: 'საწყობი / მარაგები' },
-    { id: 'sales', label: 'გაყიდვები' },
-    { id: 'purchases', label: 'შესყიდვები' },
-    { id: 'crm', label: 'კლიენტები / CRM' },
-    { id: 'production', label: 'წარმოება' },
-    { id: 'salon', label: 'სალონი / ჯავშნები' },
-    { id: 'accounting', label: 'ფინანსები / ბუღალტერია' },
-    { id: 'hr', label: 'HR / ხელფასები' },
-  ];
+  // Centralized feature list is now imported from @/config/features
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [auditSearch, setAuditSearch] = useState('');
   const [industryFilter, setIndustryFilter] = useState<string>('all');
   const [editTenant, setEditTenant] = useState<any | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Industry states
-  const [addIndustry, setAddIndustry] = useState('retail');
+  const [addIndustry, setAddIndustry] = useState<IndustryType>('retail');
   const [addCustomIndustry, setAddCustomIndustry] = useState('');
-  const [editIndustry, setEditIndustry] = useState('retail');
+  const [editIndustry, setEditIndustry] = useState<IndustryType>('retail');
   const [editCustomIndustry, setEditCustomIndustry] = useState('');
   const [editFeatures, setEditFeatures] = useState<Record<string, boolean>>({});
   const [editLimits, setEditLimits] = useState<Record<string, number>>({});
+
+  // Create Tenant State
+  const [addFeatures, setAddFeatures] = useState<Record<string, boolean>>({
+    pos: true,
+    inventory: true,
+    sales: true,
+    purchases: true,
+    crm: true,
+    accounting: true,
+    hr: true
+  });
+  const [addLimits, setAddLimits] = useState<Record<string, number>>({
+    max_users: 3,
+    branches: 1,
+    warehouses: 1
+  });
 
   useEffect(() => {
     if (isAddModalOpen) {
       setAddIndustry('retail');
       setAddCustomIndustry('');
+      setAddFeatures(getDefaultFeatures('retail'));
+      setAddLimits({
+        max_users: 3,
+        branches: 1,
+        warehouses: 1
+      });
     }
   }, [isAddModalOpen]);
 
   useEffect(() => {
     if (editTenant) {
-      const isPredefined = ['retail', 'fnb', 'salon', 'clinic', 'pharmacy', 'auto'].includes(editTenant.industry);
+      const isPredefined = ['retail', 'fnb', 'salon', 'clinic', 'pharmacy', 'auto', 'real_estate'].includes(editTenant.industry);
       if (isPredefined || !editTenant.industry) {
         setEditIndustry(editTenant.industry || 'retail');
         setEditCustomIndustry('');
@@ -89,6 +102,7 @@ export default function SuperAdminPage() {
         `)
         .order('created_at', { ascending: false });
       
+      console.log('Superadmin Tenants Query Result:', { data, error });
       if (error) throw error;
       
       return data.map((tenant: any) => {
@@ -215,15 +229,15 @@ export default function SuperAdminPage() {
   });
 
   const createTenantMutation = useMutation({
-    mutationFn: async (payload: { name: string, industry: string }) => {
+    mutationFn: async (payload: { name: string, industry: string, features: any, limits: any }) => {
       // 1. Create Tenant
       const { data: tenant, error: tenantError } = await supabase.from('tenants').insert({
         name: payload.name,
         industry: payload.industry,
         subscription_status: 'active',
         subscription_plan: 'free',
-        features: payload.industry === 'salon' ? { pos: false, salon: true } : { pos: true, inventory: true },
-        limits: { branches: 1, warehouses: 1, users: 3 }
+        features: payload.features,
+        limits: payload.limits
       }).select().single();
       
       if (tenantError) throw tenantError;
@@ -310,6 +324,17 @@ export default function SuperAdminPage() {
     });
   }, [allTenants, searchTerm, industryFilter]);
 
+  // Filter audit logs
+  const filteredAuditLogs = useMemo(() => {
+    if (!auditLogs) return [];
+    return auditLogs.filter(log => {
+      const match = (log.actor_email?.toLowerCase().includes(auditSearch.toLowerCase()) || 
+                     log.action?.toLowerCase().includes(auditSearch.toLowerCase()) ||
+                     log.target_label?.toLowerCase().includes(auditSearch.toLowerCase()));
+      return match;
+    });
+  }, [auditLogs, auditSearch]);
+
   const handleExportCSV = () => {
     if (!filteredTenants || filteredTenants.length === 0) return;
     const headers = ['ID', 'Name', 'Industry', 'Status', 'CreatedAt'];
@@ -359,6 +384,34 @@ export default function SuperAdminPage() {
     }));
   }, [allTenants]);
 
+  const mrrGrowthStats = useMemo(() => {
+    if (!allTenants) return [];
+    const months: Record<string, number> = {};
+    const sorted = [...allTenants].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    
+    let cumulative = 0;
+    sorted.forEach(t => {
+      const date = new Date(t.created_at);
+      const monthYear = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      if (t.subscription_status === 'active') {
+        cumulative += Number(t.monthly_fee || 0);
+      }
+      months[monthYear] = cumulative;
+    });
+    
+    return Object.entries(months).map(([name, total]) => ({
+      name,
+      total: Math.round(total)
+    }));
+  }, [allTenants]);
+
+  const isImpersonating = useMemo(() => {
+    if (!user?.isSuperadmin || !activeTenantId) return false;
+    // If the user is a natural member of this tenant, it's in their tenants list
+    const isNaturalMember = tenants.some(t => t.id === activeTenantId);
+    return !isNaturalMember;
+  }, [user, activeTenantId, tenants]);
+
   // Protect the route (after all hooks)
   if (!user?.isSuperadmin) {
     return <Navigate to="/app" replace />;
@@ -398,6 +451,31 @@ export default function SuperAdminPage() {
            </Button>
         </div>
       </div>
+
+      {isImpersonating && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 px-4 py-3 rounded-xl flex items-center justify-between animate-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-3 font-medium">
+            <div className="p-1.5 bg-amber-500/20 rounded-lg">
+              <ShieldAlert className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold leading-none uppercase tracking-wider">Impersonation Mode</p>
+              <p className="text-xs opacity-80 mt-1">თქვენ ათვალიერებთ სხვა ბიზნესის მონაცემებს "God Mode"-ით</p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="border-amber-500/30 hover:bg-amber-500/20"
+            onClick={() => {
+              localStorage.removeItem('marte_active_tenant');
+              window.location.reload();
+            }}
+          >
+            რეჟიმის გამორთვა
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="bg-gradient-to-br from-card to-muted/20 border-border overflow-hidden relative">
@@ -509,6 +587,30 @@ export default function SuperAdminPage() {
                 </ResponsiveContainer>
               </CardContent>
             </Card>
+
+            <Card className="shadow-sm border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg">MRR დინამიკა (შემოსავალი)</CardTitle>
+                <CardDescription>ყოველთვიური მზარდი შემოსავალი (MRR) დროში</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={mrrGrowthStats} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorMRR" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} unit=" ₾" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                    <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorMRR)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -547,7 +649,8 @@ export default function SuperAdminPage() {
                        ind === 'fnb' ? 'რესტორანი/კაფე' : 
                        ind === 'clinic' ? 'კლინიკა და ჯანდაცვა' :
                        ind === 'pharmacy' ? 'აფთიაქი' : 
-                       ind === 'auto' ? 'ავტოსერვისი' : ind}
+                       ind === 'auto' ? 'ავტოსერვისი' : 
+                       ind === 'real_estate' ? 'უძრავი ქონება' : ind}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -563,6 +666,7 @@ export default function SuperAdminPage() {
                 <TableHead>დამრეგისტრირებელი (Owner)</TableHead>
                 <TableHead>ინდუსტრია</TableHead>
                 <TableHead>გეგმა & ფასი</TableHead>
+                <TableHead>რესურსების გამოყენება</TableHead>
                 <TableHead>ვადის გასვლა</TableHead>
                 <TableHead>სტატუსი</TableHead>
                 <TableHead className="text-right">მოქმედება</TableHead>
@@ -589,6 +693,40 @@ export default function SuperAdminPage() {
                   <TableCell>
                     <div className="font-medium text-sm">{tenant.subscription_plan || 'Free'}</div>
                     <div className="text-xs text-muted-foreground">{tenant.monthly_fee ? `₾${tenant.monthly_fee}/თვე` : 'უფასო'}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-2 w-32 group/usage cursor-help">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1"><Users className="h-2.5 w-2.5" /> მომხმ.</span>
+                          <span>{tenant.usage?.users || 0}/{tenant.limits?.max_users || '∞'}</span>
+                        </div>
+                        <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${
+                              (tenant.usage?.users || 0) / (tenant.limits?.max_users || 1) >= 0.9 ? 'bg-rose-500' : 
+                              (tenant.usage?.users || 0) / (tenant.limits?.max_users || 1) >= 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}
+                            style={{ width: `${Math.min(100, ((tenant.usage?.users || 0) / (tenant.limits?.max_users || 1)) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1"><Building className="h-2.5 w-2.5" /> ფილ.</span>
+                          <span>{tenant.usage?.branches || 0}/{tenant.limits?.branches || '∞'}</span>
+                        </div>
+                        <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${
+                              (tenant.usage?.branches || 0) / (tenant.limits?.branches || 1) >= 0.9 ? 'bg-rose-500' : 
+                              (tenant.usage?.branches || 0) / (tenant.limits?.branches || 1) >= 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}
+                            style={{ width: `${Math.min(100, ((tenant.usage?.branches || 0) / (tenant.limits?.branches || 1)) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {tenant.subscription_end_date ? (
@@ -875,21 +1013,32 @@ export default function SuperAdminPage() {
                 სუპერადმინის ქმედებათა (აუდიტის ლოგი)
               </CardTitle>
               <CardDescription>
-                ყველა სუპერადმინის შესრული ხდება ატარიან გათვალისვის უქვესიანიბი — ბიზნესის Ⴀედაქტირება, შეფერება, Login As და შეტყობინებები.
+                ყველა სუპერადმინის შესრულებული ქმედება პლატფორმაზე.
               </CardDescription>
             </CardHeader>
+            <div className="px-6 pb-4">
+              <div className="relative max-w-sm">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="ძებნა ლოგებში..."
+                  className="pl-9 h-9"
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                />
+              </div>
+            </div>
             <CardContent className="p-0">
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>უაყენი</TableHead>
+                    <TableHead>ადმინი</TableHead>
                     <TableHead>ქმედება</TableHead>
-                    <TableHead>თემა</TableHead>
+                    <TableHead>თემა / სამიზნე</TableHead>
                     <TableHead>თარიღი</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {auditLogs?.map(log => {
+                  {filteredAuditLogs?.map(log => {
                     const ACTION_LABELS: Record<string, { label: string, color: string }> = {
                       login_as: { label: 'Login As შესვლა', color: 'text-blue-600 bg-blue-50' },
                       update_tenant: { label: 'რედაქტირება', color: 'text-indigo-600 bg-indigo-50' },
@@ -1056,7 +1205,16 @@ export default function SuperAdminPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>ინდუსტრია</Label>
-                <Select value={editIndustry} onValueChange={setEditIndustry}>
+                <Select 
+                  value={editIndustry} 
+                  onValueChange={(v: string) => {
+                    const ind = v as IndustryType;
+                    setEditIndustry(ind);
+                    if (ind !== 'other') {
+                      setEditFeatures(getDefaultFeatures(ind));
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1115,19 +1273,41 @@ export default function SuperAdminPage() {
                   <ShieldCheck className="h-4 w-4 text-primary" />
                   მოდულების მართვა (Feature Flags)
                 </Label>
-                <div className="grid grid-cols-2 gap-y-4 gap-x-6 bg-muted/20 p-4 rounded-xl border border-border/50">
-                  {AVAILABLE_FEATURES.map(feat => (
-                    <div key={feat.id} className="flex items-center justify-between">
-                      <Label htmlFor={`feature-${feat.id}`} className="text-sm font-medium cursor-pointer text-muted-foreground">
-                        {feat.label}
-                      </Label>
-                      <Switch 
-                        id={`feature-${feat.id}`} 
-                        checked={editFeatures[feat.id] !== false}
-                        onCheckedChange={(checked) => setEditFeatures(prev => ({ ...prev, [feat.id]: checked }))}
-                      />
-                    </div>
-                  ))}
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 bg-muted/20 p-4 rounded-xl border border-border/50">
+                  {AVAILABLE_FEATURES.map(feat => {
+                    const isActive = editFeatures[feat.id] !== false;
+                    return (
+                      <div 
+                        key={feat.id} 
+                        className={`flex items-center justify-between p-2 rounded-lg transition-all border ${
+                          isActive 
+                            ? 'bg-emerald-500/5 border-emerald-500/10' 
+                            : 'bg-muted/50 border-transparent opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {isActive ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          ) : (
+                            <Lock className="h-4 w-4 text-muted-foreground/50" />
+                          )}
+                          <Label 
+                            htmlFor={`feature-${feat.id}`} 
+                            className={`text-xs font-medium cursor-pointer ${
+                              isActive ? 'text-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            {feat.label}
+                          </Label>
+                        </div>
+                        <Switch 
+                          id={`feature-${feat.id}`} 
+                          checked={isActive}
+                          onCheckedChange={(checked) => setEditFeatures(prev => ({ ...prev, [feat.id]: checked }))}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1220,7 +1400,16 @@ export default function SuperAdminPage() {
             </div>
             <div className="space-y-1.5">
               <Label>ინდუსტრია *</Label>
-              <Select value={addIndustry} onValueChange={setAddIndustry}>
+              <Select 
+                value={addIndustry} 
+                onValueChange={(v: string) => {
+                  const ind = v as IndustryType;
+                  setAddIndustry(ind);
+                  if (ind !== 'other') {
+                    setAddFeatures(getDefaultFeatures(ind));
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1243,6 +1432,86 @@ export default function SuperAdminPage() {
                 />
               )}
             </div>
+
+            <div className="pt-4 border-t">
+              <Label className="text-sm font-bold flex items-center gap-2 mb-3">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                მოდულების გააქტიურება
+              </Label>
+              <div className="grid grid-cols-2 gap-y-3 gap-x-4 bg-muted/30 p-3 rounded-lg border border-border/50">
+                {AVAILABLE_FEATURES.map(feat => {
+                  const isActive = addFeatures[feat.id] !== false;
+                  return (
+                    <div 
+                      key={feat.id} 
+                      className={`flex items-center justify-between p-1.5 rounded-md transition-all border ${
+                        isActive 
+                          ? 'bg-emerald-500/5 border-emerald-500/10' 
+                          : 'bg-muted/50 border-transparent opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {isActive ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                        )}
+                        <Label 
+                          htmlFor={`new-feature-${feat.id}`} 
+                          className={`text-[10px] cursor-pointer ${
+                            isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {feat.label}
+                        </Label>
+                      </div>
+                      <Switch 
+                        id={`new-feature-${feat.id}`} 
+                        checked={isActive}
+                        onCheckedChange={(checked) => setAddFeatures(prev => ({ ...prev, [feat.id]: checked }))}
+                        className="scale-90"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <Label className="text-sm font-bold flex items-center gap-2 mb-3">
+                <Gauge className="h-4 w-4 text-primary" />
+                საწყისი ლიმიტები
+              </Label>
+              <div className="grid grid-cols-3 gap-3 bg-muted/30 p-3 rounded-lg border border-border/50">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">მომხმარებლები</Label>
+                  <Input 
+                    type="number" 
+                    value={addLimits.max_users || 3}
+                    onChange={(e) => setAddLimits(prev => ({ ...prev, max_users: parseInt(e.target.value) }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">ფილიალები</Label>
+                  <Input 
+                    type="number" 
+                    value={addLimits.branches || 1}
+                    onChange={(e) => setAddLimits(prev => ({ ...prev, branches: parseInt(e.target.value) }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">საწყობები</Label>
+                  <Input 
+                    type="number" 
+                    value={addLimits.warehouses || 1}
+                    onChange={(e) => setAddLimits(prev => ({ ...prev, warehouses: parseInt(e.target.value) }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>გაუქმება</Button>
@@ -1251,16 +1520,12 @@ export default function SuperAdminPage() {
                 const name = (document.getElementById('new-tenant-name') as HTMLInputElement).value;
                 const ind = addIndustry === 'other' ? addCustomIndustry : addIndustry;
                 
-                if (!name) {
-                  toast({ title: 'გთხოვთ შეიყვანოთ დასახელება', variant: 'destructive' });
-                  return;
-                }
-                if (addIndustry === 'other' && !ind.trim()) {
-                  toast({ title: 'გთხოვთ შეიყვანოთ ინდუსტრია', variant: 'destructive' });
-                  return;
-                }
-                
-                createTenantMutation.mutate({ name, industry: ind });
+                createTenantMutation.mutate({ 
+                  name, 
+                  industry: ind,
+                  features: addFeatures,
+                  limits: addLimits
+                });
               }}
               disabled={createTenantMutation.isPending}
             >

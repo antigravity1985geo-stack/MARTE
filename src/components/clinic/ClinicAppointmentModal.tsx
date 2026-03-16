@@ -128,7 +128,7 @@ export function ClinicAppointmentModal({
               </SelectTrigger>
               <SelectContent>
                 {doctors.map(d => (
-                  <SelectItem key={d.id} value={d.id}>{d.first_name} {d.last_name} ({d.specialization || 'ზოგადი პროფილი'})</SelectItem>
+                  <SelectItem key={d.id} value={d.id}>{d.full_name} ({d.specialization || 'ზოგადი პროფილი'})</SelectItem>
                 ))}
               </SelectContent>
             </Select>
