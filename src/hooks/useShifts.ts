@@ -53,11 +53,18 @@ export function useShifts() {
   const currentShiftQuery = useQuery({
     queryKey: ['shifts', 'current'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
       const { data, error } = await supabase
         .from('shifts')
         .select('*')
+        .eq('user_id', user.id)
         .eq('is_open', true)
+        .order('opened_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
+      
       if (error) throw error;
       return data as DbShift | null;
     },
@@ -106,6 +113,19 @@ export function useShifts() {
     mutationFn: async ({ cashierId, cashierName, openingCash }: { cashierId: string; cashierName: string; openingCash: number }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('არ ხართ ავტორიზებული');
+
+      // Check for existing open shift
+      const { data: existingShift } = await supabase
+        .from('shifts')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_open', true)
+        .maybeSingle();
+
+      if (existingShift) {
+        throw new Error('თქვენ უკვე გაქვთ გახსნილი ცვლა');
+      }
+
       const { data, error } = await supabase
         .from('shifts')
         .insert({
