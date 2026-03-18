@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,6 +35,8 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const { login, register: authRegister } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const referralCode = searchParams.get('ref') || undefined;
 
   const { register: registerLogin, handleSubmit: handleLoginSubmit, formState: { errors: loginErrors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -62,7 +64,7 @@ export default function AuthPage() {
   const onRegister = async (data: RegisterValues) => {
     setLoading(true);
     try {
-      await authRegister(data.email, data.password, data.fullName, data.businessName, data.industry);
+      await authRegister(data.email, data.password, data.fullName, data.businessName, data.industry, referralCode);
       toast.success(t('register_success') || 'Registration successful! Please check your email.');
     } catch (err: any) {
       toast.error(err.message);

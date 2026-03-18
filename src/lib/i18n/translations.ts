@@ -872,6 +872,24 @@ const t = {
   role_agent: { ka: 'აგენტი', en: 'Agent' },
   role_broker: { ka: 'ბროკერი', en: 'Broker' },
   role_lawyer: { ka: 'იურისტი', en: 'Lawyer' },
+
+  // --- Referral & Distributor ---
+  marte_distributor: { ka: 'MARTE-Distributor', en: 'MARTE-Distributor' },
+  referral_link: { ka: 'რეფერალური ლინკი', en: 'Referral Link' },
+  referral_code_label: { ka: 'რეფერალური კოდი', en: 'Referral Code' },
+  copy_link: { ka: 'ლინკის კოპირება', en: 'Copy Link' },
+  link_copied: { ka: 'ლინკი კოპირებულია!', en: 'Link Copied!' },
+  total_earned: { ka: 'ჯამური გამომუშავება', en: 'Total Earned' },
+  pending_commissions: { ka: 'მოლოდინშია', en: 'Pending' },
+  paid_commissions: { ka: 'გადახდილია', en: 'Paid' },
+  referral_stats: { ka: 'რეფერალების სტატისტიკა', en: 'Referral Stats' },
+  referred_users_count: { ka: 'მოწვეული მომხმარებლები', en: 'Referred Users' },
+  commission_rate: { ka: 'საკომისიო განაკვეთი', en: 'Commission Rate' },
+  one_year_rule_note: { ka: 'საკომისიო ირიცხება 1 წლის განმავლობაში თითოეული გადახდიდან.', en: 'Commission is earned for 1 year from each referral\'s payment.' },
+  distributor_dashboard: { ka: 'დისტრიბუტორის პანელი', en: 'Distributor Dashboard' },
+  distributor_list: { ka: 'დისტრიბუტორების სია', en: 'Distributors List' },
+  referral_earnings: { ka: 'რეფერალური შემოსავალი', en: 'Referral Earnings' },
+  payout_status: { ka: 'გადახდის სტატუსი', en: 'Payout Status' },
 } as const;
 
 export type TranslationKey = keyof typeof t;

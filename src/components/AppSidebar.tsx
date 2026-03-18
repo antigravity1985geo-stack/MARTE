@@ -7,7 +7,7 @@ import {
   UserCog, Clock, ListOrdered, LogOut,
   Menu, X, Activity,
   Globe, Building2, Building,
-  ShieldCheck, CalendarDays, Lock, Home, Key, Stethoscope, Wallet2, Settings
+  ShieldCheck, CalendarDays, Lock, Home, Key, Stethoscope, Wallet2, Settings, Gift
 } from 'lucide-react';
 import { Heart } from 'lucide-react';
 import { AVAILABLE_FEATURES, isFeatureLocked, IndustryType, PlanType } from '@/config/features';
@@ -118,6 +118,7 @@ const getSections = (
     adminItems.push({ title: t('nav_attendance'), icon: Clock, path: '/app/attendance' });
   }
   adminItems.push({ title: t('nav_branches'), icon: Building2, path: '/app/branches' });
+  adminItems.push({ title: t('marte_distributor'), icon: Gift, path: '/app/marte-distributor' });
   adminItems.push({ title: t('nav_settings'), icon: Settings, path: '/app/admin-panel' });
   if (isSuperadmin) {
     adminItems.push({ title: t('nav_system_monitor'), icon: Activity, path: '/app/system-monitor' });

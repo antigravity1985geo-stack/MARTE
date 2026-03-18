@@ -80,6 +80,7 @@ const ClinicServicesPage = lazy(() => import('@/pages/clinic/ClinicServicesPage'
 const RealEstateDashboard = lazy(() => import('@/pages/real-estate/RealEstateDashboard'));
 const PropertyList = lazy(() => import('@/pages/real-estate/PropertyList'));
 const MortgageManagement = lazy(() => import('@/pages/real-estate/MortgageManagement'));
+const MarteDistributorPage = lazy(() => import('@/pages/MarteDistributorPage'));
 
 // Portal Pages
 const PortalLayout = lazy(() => import('@/components/portal/PortalLayout').then(m => ({ default: m.PortalLayout })));
@@ -210,6 +211,7 @@ const App = () => (
                   <Route path="guide" element={<ErrorBoundary><GuidePage /></ErrorBoundary>} />
                   <Route path="install" element={<ErrorBoundary><InstallPage /></ErrorBoundary>} />
                   <Route path="profile" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
+                  <Route path="marte-distributor" element={<ErrorBoundary><MarteDistributorPage /></ErrorBoundary>} />
 
                   {/* როლზე დაფუძნებული წვდომა */}
                   <Route path="receiving" element={<RoleRoute path="/receiving"><ErrorBoundary><ReceivingPage /></ErrorBoundary></RoleRoute>} />

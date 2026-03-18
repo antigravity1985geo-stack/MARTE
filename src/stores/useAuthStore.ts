@@ -7,6 +7,8 @@ interface AuthUser {
   email: string;
   fullName: string;
   isSuperadmin: boolean;
+  referralCode?: string;
+  referredBy?: string;
 }
 
 export interface Tenant {
@@ -30,7 +32,7 @@ interface AuthStore {
   setActiveTenant: (id: string) => void;
   initialize: () => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string, businessName: string, industry: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string, businessName: string, industry: string, referralCode?: string) => Promise<void>;
   logout: () => void;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -58,7 +60,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
     try {
       const [profileRes, tenantsRes] = await Promise.all([
-        supabase.from('profiles').select('full_name, is_superadmin').eq('id', session.user.id).maybeSingle(),
+        supabase.from('profiles').select('full_name, is_superadmin, referral_code, referred_by').eq('id', session.user.id).maybeSingle(),
         supabase.from('tenant_members').select(`role, tenants(id, name, industry, features, limits, usage, subscription_plan, subscription_status)`).eq('user_id', session.user.id)
       ]);
 
@@ -115,6 +117,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
         email: session.user.email || '',
         fullName: profileData?.full_name || fallbackName,
         isSuperadmin: !!profileData?.is_superadmin,
+        referralCode: profileData?.referral_code,
+        referredBy: profileData?.referred_by,
       },
       tenants: tenantsList,
       activeTenantId,
@@ -173,7 +177,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       }
     },
 
-    register: async (email, password, fullName, businessName, industry) => {
+    register: async (email, password, fullName, businessName, industry, referralCode) => {
       if (!email || !password || !fullName || !businessName) throw new Error('შეავსეთ ყველა სავალდებულო ველი');
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
@@ -182,7 +186,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
           data: { 
             full_name: fullName.trim(),
             businessName: businessName.trim(),
-            industry: industry || 'retail'
+            industry: industry || 'retail',
+            referralCode: referralCode || null
           },
           emailRedirectTo: window.location.origin,
         },

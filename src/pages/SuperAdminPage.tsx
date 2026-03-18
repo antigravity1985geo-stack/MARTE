@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, Building, CheckCircle2, XCircle, LogIn, Activity, Search, Filter, Plus, Download, Edit2, Users, DollarSign, Calendar, Megaphone, Trash2, Gauge, ShieldAlert, Lock } from 'lucide-react';
+import { ShieldCheck, Building, CheckCircle2, XCircle, LogIn, Activity, Search, Filter, Plus, Download, Edit2, Users, DollarSign, Calendar, Megaphone, Trash2, Gauge, ShieldAlert, Lock, Gift } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -147,6 +147,22 @@ export default function SuperAdminPage() {
     queryKey: ['superadmin-audit-logs'],
     queryFn: async () => {
       const { data, error } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200);
+      if (error) throw error;
+      return data;
+    },
+  });
+  
+  const { data: globalDistributors } = useQuery({
+    queryKey: ['superadmin-distributors'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          referred_users:profiles(id, full_name, email, created_at),
+          commissions:distributor_commissions(*)
+        `)
+        .not('referral_code', 'is', null);
       if (error) throw error;
       return data;
     },
@@ -560,6 +576,7 @@ export default function SuperAdminPage() {
           <TabsTrigger value="tenants" className="px-6 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">ბიზნესების სია</TabsTrigger>
           <TabsTrigger value="users" className="px-6 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">მომხმარებლები</TabsTrigger>
           <TabsTrigger value="announcements" className="px-6 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">გლობალური შეტყობინებები</TabsTrigger>
+          <TabsTrigger value="distributors" className="px-6 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">დისტრიბუტორები</TabsTrigger>
           <TabsTrigger value="invoicing" className="px-6 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">ინვოისები</TabsTrigger>
           <TabsTrigger value="audit-logs" className="px-6 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">აუდიტის ლოგი</TabsTrigger>
         </TabsList>
@@ -1029,6 +1046,74 @@ export default function SuperAdminPage() {
                   {(!announcements || announcements.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">შეტყობინებების ისტორია ცარიელია</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="distributors" className="animate-in fade-in space-y-4">
+          <Card className="border-border shadow-sm">
+            <CardHeader className="pb-4 border-b">
+              <CardTitle className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-primary" />
+                მარტე-დისტრიბუტორები
+              </CardTitle>
+              <CardDescription>მართეთ რეფერალური სისტემა და აკონტროლეთ საკომისიოები.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow>
+                    <TableHead>დისტრიბუტორი</TableHead>
+                    <TableHead>რეფერალური კოდი</TableHead>
+                    <TableHead>მოწვეული მომხმ.</TableHead>
+                    <TableHead>ჯამური გამომუშავება</TableHead>
+                    <TableHead>სტატუსი</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {globalDistributors?.map((dist: any) => {
+                    const totalEarned = dist.commissions?.reduce((sum: number, c: any) => sum + (c.status === 'paid' ? c.amount : 0), 0) || 0;
+                    const pendingEarned = dist.commissions?.reduce((sum: number, c: any) => sum + (c.status === 'pending' ? c.amount : 0), 0) || 0;
+                    return (
+                      <TableRow key={dist.id} className="hover:bg-muted/10 transition-colors">
+                        <TableCell>
+                          <div className="font-medium">{dist.full_name}</div>
+                          <div className="text-xs text-muted-foreground">{dist.email}</div>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs uppercase text-primary font-bold">
+                          {dist.referral_code}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{dist.referred_users?.length || 0}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm font-bold text-emerald-600">₾{totalEarned} (გადახდილი)</div>
+                          <div className="text-xs text-amber-600">₾{pendingEarned} (მოლოდინში)</div>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              // Link to a detailed view or modal if needed
+                              toast({ title: 'დეტალები', description: 'მალე დაემატება დეტალური მართვა' });
+                            }}
+                          >
+                            მართვა
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {(!globalDistributors || globalDistributors.length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                        დისტრიბუტორები არ მოიძებნა
+                      </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
