@@ -159,13 +159,13 @@ export function AppSidebar() {
   const sidebarContent = (
     <div className="flex flex-col h-full bg-sidebar w-64 border-r border-sidebar-border transition-all duration-300">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 p-6 border-b border-sidebar-border">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary shadow-lg shadow-primary/20">
-          <Warehouse className="h-4.5 w-4.5 text-primary-foreground" />
+      <div className="flex items-center gap-3 p-5 h-16 border-b border-sidebar-border">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/20">
+          <div className="size-5 rotate-45 rounded-sm bg-primary shadow-[0_0_20px_var(--glow)]" />
         </div>
-        <span className="text-lg font-bold tracking-tight text-sidebar-foreground uppercase">MARTE</span>
+        <span className="text-xl font-bold tracking-tight text-foreground uppercase truncate">MARTE</span>
         {!roleLoading && (
-          <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors">
+          <Badge variant="outline" className="ml-auto shrink-0 text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/5 hidden xl:flex hover:bg-primary/10 transition-colors">
             {roleName}
           </Badge>
         )}
@@ -174,9 +174,9 @@ export function AppSidebar() {
       {/* Workspace Switcher */}
       {tenants.length > 1 && (
         <div className="p-4 mx-2 mt-4 mb-2 rounded-xl bg-sidebar-accent/50 border border-sidebar-border group transition-all hover:bg-sidebar-accent">
-          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-sidebar-foreground/60 mb-2 px-1">{t('nav_company')}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-2 px-1">{t('nav_company')}</p>
           <Select value={activeTenantId || ''} onValueChange={val => { setActiveTenant(val); window.location.reload(); }}>
-            <SelectTrigger className="w-full bg-transparent border-none p-1 h-auto text-sm font-semibold text-sidebar-foreground focus:ring-0 shadow-none">
+            <SelectTrigger className="w-full bg-transparent border-none p-1 h-auto text-sm font-semibold text-foreground focus:ring-0 shadow-none">
               <SelectValue placeholder="აირჩიეთ ბიზნესი" />
             </SelectTrigger>
             <SelectContent className="bg-popover border-border text-popover-foreground">
@@ -193,7 +193,7 @@ export function AppSidebar() {
       <ScrollArea className="flex-1 px-4 py-4 scrollbar-thin">
         {filteredSections.map((section, idx) => (
           <div key={section.title} className={idx > 0 ? 'mt-8' : ''}>
-            <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/60">
+            <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
               {section.title}
             </p>
             <div className="space-y-1">
@@ -204,17 +204,17 @@ export function AppSidebar() {
                     key={item.path}
                     to={item.isLocked ? '#' : item.path}
                     onClick={e => { if (item.isLocked) { e.preventDefault(); return; } setMobileOpen(false); }}
-                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200
+                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
                       ${item.isLocked ? 'opacity-40 cursor-not-allowed grayscale' : ''}
                       ${isActive
-                        ? 'bg-sidebar-primary/10 text-sidebar-primary font-semibold border border-sidebar-primary/20 shadow-sm'
-                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:translate-x-0.5'
+                        ? 'bg-primary/15 text-primary shadow-[0_0_20px_var(--glow)]'
+                        : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground'
                       }`}
                   >
-                    <item.icon className={`h-4 w-4 flex-shrink-0 transition-colors ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/50 group-hover:text-sidebar-primary'}`} />
+                    <item.icon className={`size-5 shrink-0 transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
                     <span>{item.title}</span>
-                    {item.isLocked && <Lock className="ml-auto h-3 w-3 text-sidebar-foreground/40" />}
-                    {isActive && !item.isLocked && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary animate-pulse" />}
+                    {item.isLocked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
+                    {isActive && !item.isLocked && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
                   </Link>
                 );
               })}

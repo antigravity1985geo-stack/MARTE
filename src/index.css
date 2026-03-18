@@ -6,95 +6,99 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0.98 0.005 250;
+    --foreground: 0.15 0.02 250;
+    --card: 1 0 0;
+    --card-foreground: 0.15 0.02 250;
+    --popover: 1 0 0;
+    --popover-foreground: 0.15 0.02 250;
+    --primary: 0.50 0.22 255;
+    --primary-foreground: 0.98 0.01 250;
+    --secondary: 0.95 0.01 250;
+    --secondary-foreground: 0.25 0.03 250;
+    --muted: 0.95 0.01 250;
+    --muted-foreground: 0.45 0.02 250;
+    --accent: 0.50 0.22 255;
+    --accent-foreground: 0.98 0.01 250;
+    --destructive: 0.55 0.25 25;
+    --destructive-foreground: 0.98 0 0;
+    --border: 0.90 0.01 250;
+    --input: 0.96 0.005 250;
+    --ring: 0.50 0.22 255;
+    --radius: 0.625rem;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --success: 0.50 0.2 145;
+    --success-foreground: 0.98 0.01 250;
+    --warning: 0.60 0.18 85;
+    --warning-foreground: 0.98 0.01 250;
+    --info: 0.55 0.18 180;
+    --info-foreground: 0.98 0.01 250;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --sidebar-background: 0.98 0.008 250;
+    --sidebar-foreground: 0.15 0.02 250;
+    --sidebar-primary: 0.50 0.22 255;
+    --sidebar-primary-foreground: 0.98 0.01 250;
+    --sidebar-accent: 0.94 0.015 250;
+    --sidebar-accent-foreground: 0.15 0.02 250;
+    --sidebar-border: 0.90 0.01 250;
+    --sidebar-ring: 0.50 0.22 255;
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --glow: oklch(0.50 0.22 255 / 0.2);
+    --glass: oklch(1 0 0 / 0.8);
+    --glass-border: oklch(0.88 0.015 250 / 0.8);
+    --success: 0.50 0.2 145;
+    --warning: 0.60 0.18 85;
+    --info: 0.55 0.18 180;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-
-    --radius: 0.75rem;
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 221.2 83.2% 53.3%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 221.2 83.2% 53.3%;
-
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --warning: 48 96% 53%;
-    --warning-foreground: 0 0% 100%;
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 100%;
-
-    --gradient-primary: linear-gradient(135deg, hsl(221.2 83.2% 53.3%), hsl(239 84% 67%));
+    --gradient-primary: linear-gradient(135deg, oklch(0.50 0.22 255), oklch(0.60 0.24 255));
     --shadow-elegant: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
     --shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     --shadow-card-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 214 32% 91%;
+    --background: 0.14 0.035 255;
+    --foreground: 0.95 0.01 250;
+    --card: 0.17 0.04 255;
+    --card-foreground: 0.95 0.01 250;
+    --popover: 0.17 0.04 255;
+    --popover-foreground: 0.95 0.01 250;
+    --primary: 0.65 0.22 255;
+    --primary-foreground: 0.98 0.01 250;
+    --secondary: 0.21 0.045 255;
+    --secondary-foreground: 0.95 0.01 250;
+    --muted: 0.21 0.04 255;
+    --muted-foreground: 0.65 0.02 250;
+    --accent: 0.55 0.24 255;
+    --accent-foreground: 0.98 0.01 250;
+    --destructive: 0.6 0.25 25;
+    --destructive-foreground: 0.98 0 0;
+    --border: 0.28 0.05 255;
+    --input: 0.24 0.045 255;
+    --ring: 0.65 0.22 255;
 
-    --card: 217 33% 17%;
-    --card-foreground: 214 32% 91%;
+    --success: 0.7 0.2 145;
+    --success-foreground: 0.98 0.01 250;
+    --warning: 0.75 0.18 85;
+    --warning-foreground: 0.98 0.01 250;
+    --info: 0.7 0.18 180;
+    --info-foreground: 0.98 0.01 250;
 
-    --popover: 217 33% 17%;
-    --popover-foreground: 214 32% 91%;
-
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 215 25% 27%;
-    --secondary-foreground: 214 32% 91%;
-
-    --muted: 215 25% 20%;
-    --muted-foreground: 215 16% 65%;
-
-    --accent: 239 84% 67%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 215 25% 27%;
-    --input: 215 25% 27%;
-    --ring: 221 83% 53%;
-
-    --sidebar-background: 222 47% 9%;
-    --sidebar-foreground: 215 16% 65%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 20%;
-    --sidebar-accent-foreground: 214 32% 91%;
-    --sidebar-border: 215 25% 27%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-background: 0.12 0.035 255;
+    --sidebar-foreground: 0.95 0.01 250;
+    --sidebar-primary: 0.65 0.22 255;
+    --sidebar-primary-foreground: 0.98 0.01 250;
+    --sidebar-accent: 0.21 0.05 255;
+    --sidebar-accent-foreground: 0.95 0.01 250;
+    --sidebar-border: 0.25 0.045 255;
+    --sidebar-ring: 0.65 0.22 255;
+    
+    --glow: oklch(0.65 0.22 255 / 0.35);
+    --glass: oklch(0.19 0.04 255 / 0.7);
+    --glass-border: oklch(0.35 0.055 255 / 0.6);
+    --success: 0.7 0.2 145;
+    --warning: 0.75 0.18 85;
+    --info: 0.7 0.18 180;
 
     --shadow-elegant: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
     --shadow-card: 0 0 0 1px hsla(215, 25%, 27%, 0.5), 0 1px 3px 0 rgba(0, 0, 0, 0.1);
@@ -116,6 +120,25 @@
   /* Improved focus styles */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Custom scrollbar for the premium look */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: oklch(var(--background));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: oklch(var(--border));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(var(--muted-foreground));
   }
 }
 

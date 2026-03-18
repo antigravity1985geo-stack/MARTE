@@ -24,15 +24,26 @@ export function AppHeader() {
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/60 backdrop-blur-xl px-4 pl-14 lg:pl-6 transition-all shadow-sm">
-      {/* Desktop search */}
-      <div className="hidden sm:block">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 pl-14 lg:pl-6 backdrop-blur-xl transition-all">
+      {/* Left - Greeting (Hidden on tiny screens) */}
+      <div className="hidden sm:flex flex-col">
+        <span className="text-xs text-muted-foreground">კეთილი იყოს თქვენი დაბრუნება</span>
+        <h1 className="text-sm font-semibold text-foreground">
+          გამარჯობა, {user?.fullName || 'სტუმარო'}
+        </h1>
+      </div>
+
+      {/* Center - Search */}
+      <div className="flex-1 max-w-md mx-auto hidden md:block px-4">
         <div className="relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
           <Input 
-            placeholder="ძიება..." 
-            className="pl-9 w-64 h-9 bg-muted/20 border-border text-foreground placeholder:text-muted-foreground transition-all focus:w-80 focus:bg-muted/40 focus:border-primary/50 rounded-lg outline-none ring-0 shadow-none" 
+            placeholder="მოძებნეთ რაც გსურთ..." 
+            className="pl-9 w-full h-10 bg-input border-border text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-1 focus:ring-primary/50 rounded-lg outline-none shadow-none" 
           />
+          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 select-none rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-flex">
+            <span className="text-xs">⌘</span>K
+          </kbd>
         </div>
       </div>
 
@@ -43,40 +54,43 @@ export function AppHeader() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="ძიება..."
-              className="pl-9 w-48 h-9 bg-muted/20 border-border text-foreground"
+              className="pl-9 w-48 h-9 bg-input border-border text-foreground focus:border-primary"
               autoFocus
               onBlur={() => setSearchOpen(false)}
             />
           </div>
         ) : (
-          <button onClick={() => setSearchOpen(true)} className="h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
-            <Search className="h-4 w-4" />
+          <button onClick={() => setSearchOpen(true)} className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+            <Search className="h-5 w-5" />
           </button>
         )}
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
-        <NotificationPanel />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent transition-all hover:rotate-12"
+        <div className="flex size-10 items-center justify-center">
+          <NotificationPanel />
+        </div>
+        
+        <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
-          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
+          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          <span className="sr-only">თემის შეცვლა</span>
+        </button>
+        
         {user && (
-          <Link to="/app/profile" className="flex items-center gap-3 ml-2 pl-2 border-l border-border hover:opacity-80 transition-opacity">
-            <div className="text-right hidden md:block">
-              <p className="text-xs font-bold text-foreground leading-tight">{user.fullName}</p>
-              <p className="text-[10px] text-muted-foreground font-medium">პროფილი</p>
-            </div>
-            <Avatar className="h-8 w-8 ring-2 ring-primary/20 transition-all hover:ring-primary/40">
+          <Link to="/app/profile" className="ml-2 flex flex-shrink-0 items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-secondary">
+            <Avatar className="size-8 border border-border">
               {avatarUrl && <AvatarImage src={avatarUrl} alt={user.fullName} className="object-cover" />}
-              <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+              <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
                 {user.fullName.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
+            <div className="hidden text-left lg:block">
+              <p className="text-sm font-medium text-foreground">{user.fullName}</p>
+              <p className="text-xs text-muted-foreground">{user.email || 'პროფილი'}</p>
+            </div>
           </Link>
         )}
       </div>
