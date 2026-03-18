@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Loader2, Receipt, TrendingDown, CalendarClock, PieChart, Banknote } from 'lucide-react';
 import { PrintButton } from '@/components/PrintButton';
-import { CyberCard } from '@/components/CyberCard';
+import { StatCard } from '@/components/StatCard';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
@@ -75,30 +75,32 @@ export default function ExpensesPage() {
     <PageTransition>
       <div className="space-y-6">
         {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-destructive/10 border border-border p-6 lg:p-8">
-          <div className="absolute top-0 right-0 w-64 h-64 opacity-[0.03] pointer-events-none">
+        <div className="relative overflow-hidden rounded-2xl bg-card border border-border p-6 lg:p-8">
+          <div className="absolute top-0 right-0 w-64 h-64 opacity-[0.03] pointer-events-none text-destructive">
             <TrendingDown className="w-full h-full" />
           </div>
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-destructive/15 border border-destructive/20">
-                <Receipt className="h-6 w-6 text-destructive" />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-destructive/10 border border-destructive/20 shadow-lg shadow-destructive/5">
+                <Receipt className="h-7 w-7 text-destructive" />
               </div>
               <div>
                 <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">ხარჯები</h1>
-                <p className="text-sm text-muted-foreground mt-1">ხარჯების აღრიცხვა და ანალიტიკა</p>
+                <p className="text-sm text-muted-foreground font-medium mt-1">ბიზნესის ხარჯების მართვა და ანალიტიკა</p>
               </div>
             </div>
-            <PrintButton title="ხარჯების ანგარიში" />
+            <div className="flex items-center gap-3">
+              <PrintButton title="ხარჯების ანგარიში" />
+            </div>
           </div>
         </div>
 
-        {/* Cyber Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          <CyberCard title="სულ ხარჯი" value={stats.total} prefix="₾" icon={TrendingDown} color="destructive" subtitle="Total Expenses" />
-          <CyberCard title="მიმდინარე თვე" value={stats.thisMonth} prefix="₾" icon={CalendarClock} color="warning" subtitle="This Month" />
-          <CyberCard title="ტოპ კატეგორია" value={stats.topCategory} icon={PieChart} color="info" subtitle="Top Category" />
-          <CyberCard title="ტრანზაქციები" value={stats.count.toString()} icon={Receipt} color="primary" subtitle="Total Count" />
+        {/* Stats Section */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard title="სულ ხარჯი" value={stats.total} prefix="₾" icon={TrendingDown} color="destructive" />
+          <StatCard title="მიმდინარე თვე" value={stats.thisMonth} prefix="₾" icon={CalendarClock} color="warning" />
+          <StatCard title="ტოპ კატეგორია" value={stats.topCategory} icon={PieChart} color="info" />
+          <StatCard title="ტრანზაქციები" value={stats.count} icon={Receipt} color="primary" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5">

@@ -1,19 +1,46 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle2, Info, Megaphone, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from './ui/button';
 
 export function GlobalAnnouncements() {
-  const { isAuthenticated } = useAuthStore();
-  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+  const { isAuthenticated, user } = useAuthStore();
+  const queryClient = useQueryClient();
+  const [localDismissed, setLocalDismissed] = useState<string | null>(null);
 
-  // Load dismissed ID from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('marte_dismissed_announcement');
-    if (saved) setDismissedKey(saved);
-  }, []);
+  // Fetch profile to get dismissed announcement ID from DB
+  const { data: profileData } = useQuery({
+    queryKey: ['profile-dismissed-announcement', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('dismissed_announcement_id')
+        .eq('id', user.id)
+        .single();
+      return data;
+    },
+    enabled: isAuthenticated && !!user?.id,
+    staleTime: 60 * 1000 * 5,
+  });
+
+  const dismissedKey = localDismissed ?? profileData?.dismissed_announcement_id ?? null;
+
+  // Mutation to persist dismissed ID to Supabase
+  const dismissMutation = useMutation({
+    mutationFn: async (announcementId: string) => {
+      if (!user?.id) return;
+      await supabase
+        .from('profiles')
+        .update({ dismissed_announcement_id: announcementId })
+        .eq('id', user.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile-dismissed-announcement', user?.id] });
+    },
+  });
 
   const { data: announcements, isLoading } = useQuery({
     queryKey: ['global-announcements'],
@@ -42,8 +69,10 @@ export function GlobalAnnouncements() {
   if (dismissedKey === activeAnnouncement.id) return null;
 
   const handleDismiss = () => {
-    localStorage.setItem('marte_dismissed_announcement', activeAnnouncement.id);
-    setDismissedKey(activeAnnouncement.id);
+    // Optimistic local dismiss for instant UI feedback
+    setLocalDismissed(activeAnnouncement.id);
+    // Persist to Supabase (cross-device sync)
+    dismissMutation.mutate(activeAnnouncement.id);
   };
 
   const config = {

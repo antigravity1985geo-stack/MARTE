@@ -73,7 +73,7 @@ export default function SuperAdminPage() {
 
   useEffect(() => {
     if (editTenant) {
-      const isPredefined = ['retail', 'fnb', 'salon', 'clinic', 'pharmacy', 'auto', 'real_estate'].includes(editTenant.industry);
+      const isPredefined = ['retail', 'fnb', 'salon', 'clinic', 'pharmacy', 'auto', 'real_estate', 'construction', 'logistics'].includes(editTenant.industry);
       if (isPredefined || !editTenant.industry) {
         setEditIndustry(editTenant.industry || 'retail');
         setEditCustomIndustry('');
@@ -650,6 +650,8 @@ export default function SuperAdminPage() {
                        ind === 'clinic' ? 'კლინიკა და ჯანდაცვა' :
                        ind === 'pharmacy' ? 'აფთიაქი' : 
                        ind === 'auto' ? 'ავტოსერვისი' : 
+                       ind === 'logistics' ? 'საწყობი / ლოჯისტიკა' :
+                       ind === 'construction' ? 'მშენებლობა' :
                        ind === 'real_estate' ? 'უძრავი ქონება' : ind}
                     </SelectItem>
                   ))}
@@ -1225,6 +1227,9 @@ export default function SuperAdminPage() {
                     <SelectItem value="clinic">კლინიკა და ჯანდაცვა</SelectItem>
                     <SelectItem value="pharmacy">აფთიაქი</SelectItem>
                     <SelectItem value="auto">ავტოსერვისი</SelectItem>
+                    <SelectItem value="logistics">საწყობი / ლოჯისტიკა</SelectItem>
+                    <SelectItem value="construction">მშენებლობა</SelectItem>
+                    <SelectItem value="real_estate">MARTEHOME</SelectItem>
                     <SelectItem value="other">სხვა (ხელით შეყვანა)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1420,6 +1425,9 @@ export default function SuperAdminPage() {
                   <SelectItem value="clinic">კლინიკა და ჯანდაცვა</SelectItem>
                   <SelectItem value="pharmacy">აფთიაქი</SelectItem>
                   <SelectItem value="auto">ავტოსერვისი</SelectItem>
+                  <SelectItem value="logistics">საწყობი / ლოჯისტიკა</SelectItem>
+                  <SelectItem value="construction">მშენებლობა</SelectItem>
+                  <SelectItem value="real_estate">MARTEHOME</SelectItem>
                   <SelectItem value="other">სხვა (ხელით შეყვანა)</SelectItem>
                 </SelectContent>
               </Select>

@@ -5,80 +5,81 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useUserRole } from "@/hooks/useUserRole";
 import { AppLayout } from "@/components/AppLayout";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
-import InstallPage from "@/pages/InstallPage";
-import LandingPage from "@/pages/Index";
-import CustomerDisplay from "@/pages/CustomerDisplay";
+const InstallPage = lazy(() => import('@/pages/InstallPage'));
+const LandingPage = lazy(() => import('@/pages/Index'));
+const CustomerDisplay = lazy(() => import('@/pages/CustomerDisplay'));
 
 // Pages
-import AuthPage from "@/pages/AuthPage";
-import ResetPasswordPage from "@/pages/ResetPasswordPage";
-import MarteHomeMarketplace from "@/pages/real-estate/MarteHomeMarketplace";
-import PropertyDetail from "@/pages/real-estate/PropertyDetail";
-import DashboardPage from "@/pages/DashboardPage";
-import POSPage from "@/pages/POSPage";
-import ProductsPage from "@/pages/ProductsPage";
-import CategoriesPage from "@/pages/CategoriesPage";
-import ReceivingPage from "@/pages/ReceivingPage";
-import SalesPage from "@/pages/SalesPage";
-import InvoicesPage from "@/pages/InvoicesPage";
-import OrdersPage from "@/pages/OrdersPage";
-import WarehouseManagementPage from "@/pages/WarehouseManagementPage";
-import { InventoryCountPage } from "@/pages/InventoryCountPage";
-import ProductionPage from "@/pages/ProductionPage";
-import ClientsPage from "@/pages/ClientsPage";
-import SuppliersPage from "@/pages/SuppliersPage";
-import ExpensesPage from "@/pages/ExpensesPage";
-import SupplierSettlementsPage from "@/pages/SupplierSettlementsPage";
-import AccountingPage from "@/pages/AccountingPage";
-import PricingPage from "@/pages/PricingPage";
-import RSGEPage from "@/pages/RSGEPage";
-import FiscalReportPage from "@/pages/FiscalReportPage";
-import EmployeesPage from "@/pages/EmployeesPage";
-import ShiftHistoryPage from "@/pages/ShiftHistoryPage";
-import QueuePage from "@/pages/QueuePage";
-import ReceiptSettingsPage from "@/pages/ReceiptSettingsPage";
-import GuidePage from "@/pages/GuidePage";
-import ProfilePage from "@/pages/ProfilePage";
-import CashierStatsPage from "@/pages/CashierStatsPage";
-import AdminPanelPage from "@/pages/AdminPanelPage";
-import ActivityLogPage from "@/pages/ActivityLogPage";
-import DataExportPage from "@/pages/DataExportPage";
-import AccountingRulesPage from "@/pages/AccountingRulesPage";
-import ReconciliationPage from "@/pages/ReconciliationPage";
-import LandedCostPage from "@/pages/LandedCostPage";
-import NotFound from "@/pages/NotFound";
-import AccessDeniedPage from "@/pages/AccessDeniedPage";
-import SalaryPage from "@/pages/SalaryPage";
-import ReturnsPage from "@/pages/ReturnsPage";
-import CurrencyPage from "@/pages/CurrencyPage";
-import BranchesPage from "@/pages/BranchesPage";
-import FixedAssetsPage from "@/pages/FixedAssetsPage";
-import CashFlowPage from "@/pages/CashFlowPage";
-import InventoryMethodsPage from "@/pages/InventoryMethodsPage";
-import BankIntegrationPage from "@/pages/BankIntegrationPage";
-import DistributionPage from "@/pages/DistributionPage";
-import EcommercePage from "@/pages/EcommercePage";
-import AttendancePage from "@/pages/AttendancePage";
-import CRMPage from '@/pages/CRMPage';
-import NotificationsPage from '@/pages/NotificationsPage';
-import BundlesPage from '@/pages/BundlesPage';
-import PriceRulesPage from '@/pages/PriceRulesPage';
-import ReportsPage from '@/pages/ReportsPage';
-import SystemMonitorPage from '@/pages/SystemMonitorPage';
-import SalonCalendarPage from "@/pages/SalonCalendarPage";
-import SuperAdminPage from "@/pages/SuperAdminPage";
-import ClinicCalendarPage from "@/pages/clinic/ClinicCalendarPage";
-import ClinicPatientsPage from "@/pages/clinic/ClinicPatientsPage";
-import ClinicPatientDetailsPage from "@/pages/clinic/ClinicPatientDetailsPage";
-import RealEstateDashboard from "@/pages/real-estate/RealEstateDashboard";
-import PropertyList from "@/pages/real-estate/PropertyList";
-import MortgageManagement from "@/pages/real-estate/MortgageManagement";
+const AuthPage = lazy(() => import('@/pages/AuthPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
+const MarteHomeMarketplace = lazy(() => import('@/pages/real-estate/MarteHomeMarketplace'));
+const PropertyDetail = lazy(() => import('@/pages/real-estate/PropertyDetail'));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const POSPage = lazy(() => import('@/pages/POSPage'));
+const ProductsPage = lazy(() => import('@/pages/ProductsPage'));
+const CategoriesPage = lazy(() => import('@/pages/CategoriesPage'));
+const ReceivingPage = lazy(() => import('@/pages/ReceivingPage'));
+const SalesPage = lazy(() => import('@/pages/SalesPage'));
+const InvoicesPage = lazy(() => import('@/pages/InvoicesPage'));
+const OrdersPage = lazy(() => import('@/pages/OrdersPage'));
+const WarehouseManagementPage = lazy(() => import('@/pages/WarehouseManagementPage'));
+const InventoryCountPage = lazy(() => import('@/pages/InventoryCountPage').then(module => ({ default: module.InventoryCountPage })));
+const ProductionPage = lazy(() => import('@/pages/ProductionPage'));
+const ClientsPage = lazy(() => import('@/pages/ClientsPage'));
+const SuppliersPage = lazy(() => import('@/pages/SuppliersPage'));
+const ExpensesPage = lazy(() => import('@/pages/ExpensesPage'));
+const SupplierSettlementsPage = lazy(() => import('@/pages/SupplierSettlementsPage'));
+const AccountingPage = lazy(() => import('@/pages/AccountingPage'));
+const PricingPage = lazy(() => import('@/pages/PricingPage'));
+const RSGEPage = lazy(() => import('@/pages/RSGEPage'));
+const FiscalReportPage = lazy(() => import('@/pages/FiscalReportPage'));
+const EmployeesPage = lazy(() => import('@/pages/EmployeesPage'));
+const ShiftHistoryPage = lazy(() => import('@/pages/ShiftHistoryPage'));
+const QueuePage = lazy(() => import('@/pages/QueuePage'));
+const ReceiptSettingsPage = lazy(() => import('@/pages/ReceiptSettingsPage'));
+const GuidePage = lazy(() => import('@/pages/GuidePage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
+const CashierStatsPage = lazy(() => import('@/pages/CashierStatsPage'));
+const AdminPanelPage = lazy(() => import('@/pages/AdminPanelPage'));
+const ActivityLogPage = lazy(() => import('@/pages/ActivityLogPage'));
+const DataExportPage = lazy(() => import('@/pages/DataExportPage'));
+const AccountingRulesPage = lazy(() => import('@/pages/AccountingRulesPage'));
+const ReconciliationPage = lazy(() => import('@/pages/ReconciliationPage'));
+const LandedCostPage = lazy(() => import('@/pages/LandedCostPage'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
+const AccessDeniedPage = lazy(() => import('@/pages/AccessDeniedPage'));
+const SalaryPage = lazy(() => import('@/pages/SalaryPage'));
+const ReturnsPage = lazy(() => import('@/pages/ReturnsPage'));
+const CurrencyPage = lazy(() => import('@/pages/CurrencyPage'));
+const BranchesPage = lazy(() => import('@/pages/BranchesPage'));
+const FixedAssetsPage = lazy(() => import('@/pages/FixedAssetsPage'));
+const CashFlowPage = lazy(() => import('@/pages/CashFlowPage'));
+const InventoryMethodsPage = lazy(() => import('@/pages/InventoryMethodsPage'));
+const BankIntegrationPage = lazy(() => import('@/pages/BankIntegrationPage'));
+const DistributionPage = lazy(() => import('@/pages/DistributionPage'));
+const EcommercePage = lazy(() => import('@/pages/EcommercePage'));
+const AttendancePage = lazy(() => import('@/pages/AttendancePage'));
+const CRMPage = lazy(() => import('@/pages/CRMPage'));
+const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
+const BundlesPage = lazy(() => import('@/pages/BundlesPage'));
+const PriceRulesPage = lazy(() => import('@/pages/PriceRulesPage'));
+const ReportsPage = lazy(() => import('@/pages/ReportsPage'));
+const SystemMonitorPage = lazy(() => import('@/pages/SystemMonitorPage'));
+const SalonCalendarPage = lazy(() => import('@/pages/SalonCalendarPage'));
+const SuperAdminPage = lazy(() => import('@/pages/SuperAdminPage'));
+const ClinicCalendarPage = lazy(() => import('@/pages/clinic/ClinicCalendarPage'));
+const ClinicPatientsPage = lazy(() => import('@/pages/clinic/ClinicPatientsPage'));
+const ClinicPatientDetailsPage = lazy(() => import('@/pages/clinic/ClinicPatientDetailsPage'));
+const ClinicServicesPage = lazy(() => import('@/pages/clinic/ClinicServicesPage'));
+const RealEstateDashboard = lazy(() => import('@/pages/real-estate/RealEstateDashboard'));
+const PropertyList = lazy(() => import('@/pages/real-estate/PropertyList'));
+const MortgageManagement = lazy(() => import('@/pages/real-estate/MortgageManagement'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -155,7 +156,15 @@ const App = () => (
           <PWAUpdatePrompt />
           <BrowserRouter>
             <AppInit>
-              <Routes>
+              <Suspense fallback={
+                <div className="flex h-[50vh] w-full items-center justify-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                    <p className="text-sm border-primary text-muted-foreground" style={{borderTopColor: "transparent"}}>იტვირთება...</p>
+                  </div>
+                </div>
+              }>
+                <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -229,6 +238,7 @@ const App = () => (
                   <Route path="clinic/calendar" element={<RoleRoute path="/clinic/calendar"><ErrorBoundary><ClinicCalendarPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/patients" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/patients/:id" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientDetailsPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/services" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicServicesPage /></ErrorBoundary></RoleRoute>} />
                   
                   {/* MARTEHOME (Real Estate) */}
                   <Route path="real-estate" element={<ErrorBoundary><RealEstateDashboard /></ErrorBoundary>} />
@@ -237,6 +247,7 @@ const App = () => (
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </Suspense>
             </AppInit>
           </BrowserRouter>
         </TooltipProvider>

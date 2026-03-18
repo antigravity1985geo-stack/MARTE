@@ -1,19 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Warehouse } from 'lucide-react';
+import { Warehouse, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageTransition } from '@/components/PageTransition';
 
+const emailSchema = z.object({
+  email: z.string().email('შეიყვანეთ ვალიდური ელ-ფოსტა'),
+});
+
+const passwordSchema = z.object({
+  newPassword: z.string().min(6, 'პაროლი უნდა შეიცავდეს მინიმუმ 6 სიმბოლოს'),
+});
+
+type EmailValues = z.infer<typeof emailSchema>;
+type PasswordValues = z.infer<typeof passwordSchema>;
+
 export default function ResetPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [sent, setSent] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,10 +37,20 @@ export default function ResetPasswordPage() {
     }
   }, []);
 
-  const handleSendReset = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const { register: registerEmail, handleSubmit: handleEmailSubmit, formState: { errors: emailErrors } } = useForm<EmailValues>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: { email: '' },
+  });
+
+  const { register: registerPassword, handleSubmit: handlePasswordSubmit, formState: { errors: passwordErrors } } = useForm<PasswordValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { newPassword: '' },
+  });
+
+  const onSendReset = async (data: EmailValues) => {
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
@@ -35,18 +58,22 @@ export default function ResetPasswordPage() {
       setSent(true);
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onUpdatePassword = async (data: PasswordValues) => {
+    setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await supabase.auth.updateUser({ password: data.newPassword });
       if (error) throw error;
       toast.success('პაროლი წარმატებით შეიცვალა!');
       navigate('/');
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -62,22 +89,30 @@ export default function ResetPasswordPage() {
           </CardHeader>
           <CardContent>
             {isRecovery ? (
-              <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <form onSubmit={handlePasswordSubmit(onUpdatePassword)} className="space-y-4">
                 <div className="space-y-2">
                   <Label>ახალი პაროლი</Label>
-                  <Input type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} />
+                  <Input type="password" placeholder="••••••••" {...registerPassword('newPassword')} />
+                  {passwordErrors.newPassword && <p className="text-xs text-destructive">{passwordErrors.newPassword.message}</p>}
                 </div>
-                <Button type="submit" className="w-full">პაროლის შეცვლა</Button>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {loading ? 'იტვირთება...' : 'პაროლის შეცვლა'}
+                </Button>
               </form>
             ) : sent ? (
               <p className="text-center text-muted-foreground">შეამოწმეთ ელ-ფოსტა პაროლის აღდგენის ბმულისთვის.</p>
             ) : (
-              <form onSubmit={handleSendReset} className="space-y-4">
+              <form onSubmit={handleEmailSubmit(onSendReset)} className="space-y-4">
                 <div className="space-y-2">
                   <Label>ელ-ფოსტა</Label>
-                  <Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input type="email" placeholder="email@example.com" {...registerEmail('email')} />
+                  {emailErrors.email && <p className="text-xs text-destructive">{emailErrors.email.message}</p>}
                 </div>
-                <Button type="submit" className="w-full">გაგზავნა</Button>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {loading ? 'იტვირთება...' : 'გაგზავნა'}
+                </Button>
               </form>
             )}
           </CardContent>

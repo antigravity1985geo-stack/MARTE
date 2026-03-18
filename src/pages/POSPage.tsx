@@ -9,6 +9,7 @@ import { useBundles } from '@/hooks/useBundles';
 import { usePriceRules } from '@/hooks/usePriceRules';
 import { calculateDynamicDiscount } from '@/lib/pricingEngine';
 import { offlineQueue } from '@/lib/offlineQueue';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NetworkStatus } from '@/components/pos/NetworkStatus';
 import { useReceiptConfig } from '@/hooks/useReceiptConfig';
 import { generateInvoice } from '@/lib/generateInvoice';
@@ -32,10 +33,13 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHardwareScanner } from '@/hooks/useHardwareScanner';
+import { useI18n } from '@/hooks/useI18n';
 
 interface CartItem { id: string; productId: string; name: string; price: number; quantity: number; categoryId?: string; }
 
 export default function POSPage() {
+  useRealtimeSync(['products', 'transactions', 'shift_sales', 'queue_tickets']);
+
   const { products } = useProducts();
   const { categories } = useCategories();
   const { bundles } = useBundles();
@@ -50,6 +54,7 @@ export default function POSPage() {
   const { setActiveCashier } = useActiveCashier();
   const { useCoupon } = usePricing();
   const { addEntry } = useAccounting();
+  const { t } = useI18n();
   const isMobile = useIsMobile();
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -79,7 +84,7 @@ export default function POSPage() {
         }
       }
       if (syncedCount > 0) {
-        toast.success(`${syncedCount} ოფლაინ ტრანზაქცია გაიგზავნა ბაზაში!`);
+        toast.success(`${syncedCount} ${t('offline_synced') || 'ოკ'}`);
         queryClient.invalidateQueries({ queryKey: ['transactions'] });
         queryClient.invalidateQueries({ queryKey: ['products'] });
       }
@@ -178,11 +183,11 @@ export default function POSPage() {
       const product = products.find((p) => p.barcode === code);
       if (product) {
         addToCart(product);
-        toast.success(`${product.name} დაემატა კალათაში (სკანერი)`);
+        toast.success(`${product.name} ${t('added_to_cart_scanner') || 'ოკ'}`);
       } else {
-        toast.error(`პროდუქტი ვერ მოიძებნა ბარკოდით: ${code}`);
+        toast.error(`${t('product_not_found_barcode') || 'ოკ'}: ${code}`);
       }
-    }, [products]),
+    }, [products, t]),
     !paymentOpen && !pinOpen && !shiftOpen
   );
 
@@ -209,7 +214,7 @@ export default function POSPage() {
         for (let i = 0; i < item.quantity; i++) addToCart(product);
       }
     });
-    toast.success(`კომბო "${bundle.name}" დაემატა კალათაში`);
+    toast.success(`${t('bundle') || 'ოკ'} "${bundle.name}" ${t('added_to_cart') || 'ოკ'}`);
   };
 
   const updateQuantity = (productId: string, delta: number) => {
@@ -237,15 +242,15 @@ export default function POSPage() {
     const result = useCoupon(couponCode, cartTotal);
     if (result.valid) {
       setCouponDiscount(result.discount);
-      toast.success(`კუპონი გამოყენებულია! ფასდაკლება: ₾${result.discount.toFixed(2)}`);
+      toast.success(`${t('coupon_applied') || 'ოკ'}: ₾${result.discount.toFixed(2)}`);
     } else {
-      toast.error('არასწორი ან ვადაგასული კუპონი');
+      toast.error(t('invalid_coupon') || 'ოკ');
       setCouponDiscount(0);
     }
   };
 
   const handlePayment = async () => {
-    if (!currentShift) { toast.error('ჯერ გახსენით ცვლა!'); return; }
+    if (!currentShift) { toast.error(t('open_shift_first') || 'ოკ'); return; }
     if (cart.length === 0) return;
 
     const now = new Date();
@@ -255,7 +260,7 @@ export default function POSPage() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error('ავტორიზაციის შეცდომა'); return; }
+      if (!user) { toast.error(t('auth_error') || 'ოკ'); return; }
 
       // Payload preparation
       const payload = {
@@ -274,14 +279,14 @@ export default function POSPage() {
 
       if (!navigator.onLine) {
         txId = await offlineQueue.enqueueSale(payload);
-        toast.success('გაყიდვა რიგშია! ამოიტვირთება ონლაინ დარუნებისთანავე (ოფლაინ რეჟიმი)');
+        toast.success(t('sale_queued_offline') || 'ოკ');
       } else {
         // 1. Call atomic DB function for Sale
         const { data: rpcData, error: rpcError } = await supabase.rpc('process_sale', payload);
 
         if (rpcError) throw rpcError;
         if (!rpcData || !rpcData.success) {
-          throw new Error(rpcData?.error || 'გაყიდვა ვერ დასრულდა');
+          throw new Error(rpcData?.error || (t('sale_failed') || 'ოკ'));
         }
         txId = rpcData.transaction_id;
       }
@@ -336,7 +341,7 @@ export default function POSPage() {
               price: String(item.price)
             }))
           });
-          toast.success('RS.GE ზედნადების დრაფტი შეიქმნა');
+          toast.success(t('rsge_waybill_created') || 'ოკ');
         }
       } catch (e: any) {
         console.error('RS.GE Error:', e);
@@ -354,12 +359,12 @@ export default function POSPage() {
         pointsEarned: pointsToEarn > 0 ? pointsToEarn : undefined,
       });
 
-      toast.success(`გადახდა წარმატებულია! ₾${finalTotal.toFixed(2)}`);
+      toast.success(`${t('pos_sale_complete')} ₾${finalTotal.toFixed(2)}`);
       clearCart();
       setPaymentOpen(false);
       setCreateWaybill(false);
     } catch (err: any) {
-      toast.error(err.message || 'დაფიქსირდა შეცდომა გაყიდვისას');
+      toast.error(err.message || (t('sale_error') || 'ოკ'));
     }
   };
 
@@ -371,35 +376,35 @@ export default function POSPage() {
       setShiftOpen(true);
       setPin('');
     } else {
-      toast.error('არასწორი PIN კოდი');
+      toast.error(t('invalid_pin') || 'ოკ');
       setPin('');
     }
   };
 
   const handleOpenShift = async () => {
     const cashier = useActiveCashier.getState().activeCashier;
-    if (!cashier) { toast.error('ჯერ PIN კოდი შეიყვანეთ'); return; }
+    if (!cashier) { toast.error(t('enter_pin_first') || 'ოკ'); return; }
     try {
       await openShift.mutateAsync({ cashierId: cashier.id, cashierName: cashier.full_name, openingCash: parseFloat(startingCash) || 0 });
       setShiftOpen(false);
       setStartingCash('');
-      toast.success(`ცვლა გახსნილია! მოლარე: ${cashier.full_name}`);
-    } catch (err: any) { toast.error(err.message || 'შეცდომა'); }
+      toast.success(`${t('shift_opened_cashier') || 'ოკ'} ${cashier.full_name}`);
+    } catch (err: any) { toast.error(err.message || t('error')); }
   };
 
   const handleCloseShift = async () => {
     try {
       await closeShift.mutateAsync(0);
       setShiftOpen(false);
-      toast.success('ცვლა დახურულია!');
-    } catch (err: any) { toast.error(err.message || 'შეცდომა'); }
+      toast.success(t('shift_closed') || 'ოკ');
+    } catch (err: any) { toast.error(err.message || t('error')); }
   };
 
   const handleBarcodeScan = useCallback((code: string) => {
     const product = products.find((p) => p.barcode === code);
-    if (product) { addToCart(product); toast.success(`${product.name} დაემატა კალათაში`); }
-    else { toast.error(`პროდუქტი ვერ მოიძებნა ბარკოდით: ${code}`); }
-  }, [products]);
+    if (product) { addToCart(product); toast.success(`${product.name} ${t('added_to_cart_scanner') || 'ოკ'}`); }
+    else { toast.error(`${t('product_not_found_barcode') || 'ოკ'}: ${code}`); }
+  }, [products, t]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'F1') { e.preventDefault(); if (cart.length > 0) setPaymentOpen(true); }
@@ -439,7 +444,7 @@ export default function POSPage() {
             {currentShift && (
               <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
                 <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-xs font-medium text-primary">მოლარე: {currentShift.cashierName}</span>
+                <span className="text-xs font-medium text-primary">{t('sales_cashier')}: {currentShift.cashierName}</span>
               </div>
             )}
             <NetworkStatus onSync={syncOfflineQueue} />
@@ -453,14 +458,14 @@ export default function POSPage() {
                 onClick={() => setSelectedCategory('all')}
                 className="rounded-full whitespace-nowrap whitespace-nowrap text-sm h-8 px-4"
               >
-                ყველა
+                {t('all')}
               </Button>
               <Button
                 variant={selectedCategory === 'bundles' ? 'default' : 'outline'}
                 onClick={() => setSelectedCategory('bundles')}
                 className="rounded-full whitespace-nowrap whitespace-nowrap text-sm h-8 px-4 font-bold text-primary border-primary/20"
               >
-                🎉 კომბოები (Bundles)
+                🎉 {t('pos_bundles') || 'ოკ'}
               </Button>
               {categories.map((c) => (
                 <Button
@@ -479,24 +484,24 @@ export default function POSPage() {
           <div className="flex items-center gap-2 mb-2">
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="ძიება / ბარკოდი..." className={`pl-9 ${isMobile ? 'h-9 text-sm' : ''}`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && filteredProducts.length === 1) { addToCart(filteredProducts[0]); setSearchQuery(''); } }} />
+              <Input placeholder={t('pos_search_products')} className={`pl-9 ${isMobile ? 'h-9 text-sm' : ''}`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && filteredProducts.length === 1) { addToCart(filteredProducts[0]); setSearchQuery(''); } }} />
             </div>
             {!isMobile && (
               <>
-                <Button size="sm" onClick={() => cart.length > 0 && setPaymentOpen(true)}>გადახდა F1</Button>
-                <Button size="sm" variant="outline" onClick={() => setScannerOpen(true)}><ScanLine className="mr-1 h-4 w-4" />სკანერი F2</Button>
-                <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>ისტორია F3</Button>
+                <Button size="sm" onClick={() => cart.length > 0 && setPaymentOpen(true)}>{t('pos_checkout_f1') || 'ოკ'}</Button>
+                <Button size="sm" variant="outline" onClick={() => setScannerOpen(true)}><ScanLine className="mr-1 h-4 w-4" />{t('pos_scanner_f2') || 'ოკ'}</Button>
+                <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>{t('pos_history_f3') || 'ოკ'}</Button>
                 <Popover>
                   <PopoverTrigger asChild><Button size="sm" variant="ghost"><Keyboard className="h-4 w-4" /></Button></PopoverTrigger>
                   <PopoverContent className="w-64 text-sm">
-                    <p className="font-semibold mb-2">მალსახმობები</p>
+                    <p className="font-semibold mb-2">{t('pos_shortcuts') || 'ოკ'}</p>
                     <div className="space-y-1 text-xs">
-                      <div className="flex justify-between"><span>F1</span><span>გადახდა</span></div>
-                      <div className="flex justify-between"><span>F2</span><span>სკანერი</span></div>
-                      <div className="flex justify-between"><span>F3</span><span>ისტორია</span></div>
-                      <div className="flex justify-between"><span>F4</span><span>ცვლა</span></div>
-                      <div className="flex justify-between"><span>Esc</span><span>გასუფთავება</span></div>
-                      <div className="flex justify-between"><span>Enter</span><span>სწრაფი დამატება</span></div>
+                      <div className="flex justify-between"><span>F1</span><span>{t('pos_checkout')}</span></div>
+                      <div className="flex justify-between"><span>F2</span><span>{t('pos_scanner') || 'ოკ'}</span></div>
+                      <div className="flex justify-between"><span>F3</span><span>{t('pos_history') || 'ოკ'}</span></div>
+                      <div className="flex justify-between"><span>F4</span><span>{t('pos_shift') || 'ოკ'}</span></div>
+                      <div className="flex justify-between"><span>Esc</span><span>{t('pos_clear') || 'ოკ'}</span></div>
+                      <div className="flex justify-between"><span>Enter</span><span>{t('pos_quick_add') || 'ოკ'}</span></div>
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -525,13 +530,13 @@ export default function POSPage() {
                     {bundle.items.map(i => products.find(p => p.id === i.product_id)?.name).join(' + ')}
                   </p>
                   <div className="mt-2 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded inline-block">
-                    {bundle.discount_type === 'percentage' ? `-${bundle.discount_value}% ფასდაკლება` : `-₾${bundle.discount_value}`}
+                    {bundle.discount_type === 'percentage' ? `-${bundle.discount_value}% ${t('pos_discount_suffix') || 'ოკ'}` : `-₾${bundle.discount_value}`}
                   </div>
                 </button>
               ))}
               {bundles.filter(b => b.active).length === 0 && (
                 <div className="col-span-full text-center text-gray-400 py-10">
-                  <p>კომბოები ჯერ არდამატებულა.</p>
+                  <p>{t('pos_no_bundles') || 'ოკ'}</p>
                 </div>
               )}
             </div>
@@ -546,7 +551,7 @@ export default function POSPage() {
                 <div className="flex items-center gap-2">
                   <Button className="flex-1 h-12 text-base relative" onClick={() => setCartOpen(true)}>
                     <ShoppingCart className="mr-2 h-5 w-5" />
-                    <span className="mr-1">კალათა</span>
+                    <span className="mr-1">{t('pos_cart')}</span>
                     <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground text-xs mr-2">{cartItemCount}</Badge>
                     <span className="ml-auto font-bold text-base">₾{finalTotal.toFixed(2)}</span>
                   </Button>
@@ -556,7 +561,7 @@ export default function POSPage() {
                 </div>
               ) : (
                 <Button variant="outline" className="w-full h-10 text-muted-foreground" onClick={() => setCartOpen(true)}>
-                  <ShoppingCart className="mr-2 h-4 w-4" /> კალათა ცარიელია
+                  <ShoppingCart className="mr-2 h-4 w-4" /> {t('pos_cart_empty')}
                 </Button>
               )}
             </div>
@@ -616,7 +621,7 @@ export default function POSPage() {
       {/* PIN Dialog */}
       <Dialog open={pinOpen} onOpenChange={setPinOpen}>
         <DialogContent className="max-w-xs">
-          <DialogHeader><DialogTitle className="text-center">PIN კოდი</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-center">{t('pos_pin_code') || 'ოკ'}</DialogTitle></DialogHeader>
           <div className="flex justify-center">
             <InputOTP maxLength={4} value={pin} onChange={setPin} onComplete={handlePinSubmit}>
               <InputOTPGroup>
@@ -624,7 +629,7 @@ export default function POSPage() {
               </InputOTPGroup>
             </InputOTP>
           </div>
-          <p className="text-xs text-muted-foreground text-center">დემო PIN: 1234, 5678, 0000</p>
+          <p className="text-xs text-muted-foreground text-center">{t('pos_demo_pin') || 'ოკ'}</p>
         </DialogContent>
       </Dialog>
 

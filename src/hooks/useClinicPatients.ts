@@ -13,6 +13,9 @@ export interface ClinicPatient {
   allergies: string | null;
   medical_history: string | null;
   emergency_contact: string | null;
+  insurance_provider: string | null;
+  insurance_number: string | null;
+  insurance_expiry: string | null;
   created_at?: string;
 }
 

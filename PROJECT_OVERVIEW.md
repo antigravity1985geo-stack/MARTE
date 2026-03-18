@@ -197,17 +197,22 @@ public/                 # Static assets
 - ✅ Expense entry
 - ⚠️ Needs category-wise analytics
 
-#### 17. **თანამშრომლები (Employees)**
-- ✅ Employee management
-- ⚠️ Missing attendance integration
+#### 17. **თანამშრომლები (Employees)** ✅ HR Module სრული
+- ✅ Employee CRUD management
+- ✅ Attendance tracking (daily check-in/out + history)
+- ✅ **Payroll** — payslip generation with Georgian tax calc (20% income tax, 2% pension)
+- ✅ **Leaves** — vacation/sick leave requests with approve/reject flow
+- ✅ **Performance Reviews** — ⭐ star-rated evaluations per employee
 
 #### 18. **დასწრება (Attendance)**
 - ✅ Basic check-in/out
+- ✅ Attendance history log
 - ⚠️ Needs biometric support
 
-#### 19. **ხელფასები (Salary)**
-- ✅ Basic salary calculation
-- ⚠️ Missing payroll automation
+#### 19. **ხელფასები (Salary)** ✅ Completed (Phase 2)
+- ✅ Payslip generation (base + bonus + deductions)
+- ✅ Georgian tax automation (20% income + 2% pension)
+- ✅ Pay salary → mark as paid workflow
 
 #### 20. **საწყობები (Warehouse Management)**
 - ✅ Multi-warehouse structure
@@ -237,9 +242,9 @@ public/                 # Static assets
 - ✅ Queue management UI
 - ⚠️ Needs real-time updates
 
-#### 27. **ქვითარი (Receipt Settings)**
+#### 27. **ქვითარი (Receipt Settings)** ✅ Updated
 - ✅ Receipt customization
-- ⚠️ Missing logo upload
+- ✅ Logo upload (via FileUpload component + Supabase Storage)
 
 #### 28. **ადმინის პანელი (Admin Panel)**
 - ✅ User management
@@ -312,14 +317,18 @@ public/                 # Static assets
 - ✅ Auth check client და server side დაცულია
 
 ### 3. **Real-time Features**
-- ❌ Supabase Realtime არ მუშაობს
-- ❌ notifications არ ინახება DB-ში
-- ❌ POS multi-device sync არ არის
+- ✅ Supabase Realtime ჩართულია (Migration applied)
+- ✅ `useRealtimeSync` hook — Postgres change listener მოქმედებს
+- ✅ POS multi-device sync — products, transactions, shift_sales, queue_tickets
+- ✅ WarehouseManagementPage — live stock alerts
+- ✅ InventoryCountPage — live inventory changes
 
 ### 4. **File Storage**
-- ❌ Supabase Storage არ არის კონფიგურირებული
-- ❌ product images არ იტვირთება
-- ❌ receipts არ ინახება
+- ✅ Supabase Storage კონფიგურირებულია (4 bucket: avatars, product-images, tenant-assets, documents)
+- ✅ Product image upload (“FileUpload” component)
+- ✅ Tenant logo upload (ReceiptSettingsPage)
+- ✅ Avatar upload (ProfilePage)
+- ✅ Tenant-isolation RLS policies დადასტურებულია
 
 ### 5. **Edge Functions**
 - ✅ RS.GE proxy Deployed (Production Ready)
@@ -632,9 +641,14 @@ npm install -D @testing-library/jest-dom
 
 ---
 
-**Last Updated:** 2026-03-08  
-**Status:** Development (70% complete, 30% production-ready)  
-**Next Milestone:** Lovable Cloud Integration
+**Last Updated:** 2026-03-18  
+**Status:** Development (85% complete)  
+**Next Milestone:** CRM & Loyalty System (Phase 4)
+
+> **Phase 2 Complete (2026-03-18):**
+> ✅ File Storage — 4 Supabase buckets + FileUpload component + tenant RLS
+> ✅ Realtime Sync — `useRealtimeSync` hook live on POS / Warehouse / Inventory
+> ✅ HR Module — Payroll (Georgian tax), Leave Management, Performance Reviews
 
 ---
 

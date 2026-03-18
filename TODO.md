@@ -89,12 +89,20 @@
   - [ ] Customer purchase history
   - [ ] Cashier performance report
   
-- [ ] **File Storage**
-  - [ ] Configure Supabase Storage buckets
-  - [ ] Add product image upload
-  - [ ] Add receipt logo upload
-  - [ ] Add expense receipt upload
-  - [ ] Add employee document upload
+- [x] **File Storage** ✅ Completed (Phase 2)
+  - [x] Configure Supabase Storage buckets (`avatars`, `product-images`, `tenant-assets`, `documents`)
+  - [x] Add product image upload (FileUpload component)
+  - [x] Add receipt logo upload (ReceiptSettingsPage)
+  - [x] Add employee document upload (ProfilePage avatars)
+  - [x] Implement RLS policies for tenant isolation on all buckets
+  - [x] Reusable `FileUpload` component with drag-and-drop
+
+- [x] **Realtime Sync** ✅ Completed (Phase 2)
+  - [x] Enable Supabase Realtime on `products`, `transactions`, `inventory_counts`, `queue_tickets`, `shift_sales`
+  - [x] Implement `useRealtimeSync` hook (Postgres change listener)
+  - [x] Inject into POSPage (multi-device sync)
+  - [x] Inject into WarehouseManagementPage (live stock alerts)
+  - [x] Inject into InventoryCountPage (live inventory changes)
 
 ---
 
@@ -115,11 +123,11 @@
   - [ ] Add customer segmentation
   - [ ] Add referral program
   
-- [ ] **HR Features**
+- [x] **HR Features** ✅ Completed (Phase 2)
   - [ ] Add biometric attendance integration
-  - [ ] Add leave management
-  - [ ] Add payroll automation
-  - [ ] Add performance reviews
+  - [x] Add leave management (`employee_leaves` table + UI)
+  - [x] Add payroll automation (`salary_slips` table + payslip UI)
+  - [x] Add performance reviews (`employee_reviews` table + star-rating UI)
   - [ ] Add training records
   
 - [ ] **E-Commerce Integration**
@@ -258,4 +266,4 @@
 - [~] In progress
 - [!] Blocked
 
-**Last Updated:** 2026-03-08
+**Last Updated:** 2026-03-18 (Phase 2 complete — File Storage + Realtime + HR)

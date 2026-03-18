@@ -1,41 +1,23 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { PageTransition } from '@/components/PageTransition';
 import { useReceiptConfig } from '@/hooks/useReceiptConfig';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { FileUpload } from '@/components/ui/file-upload';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QRCodeSVG } from 'qrcode.react';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ReceiptSettingsPage() {
   const { receiptConfig, updateConfig } = useReceiptConfig();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('მხოლოდ სურათის ფაილი');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('ფაილი ძალიან დიდია (მაქს. 2MB)');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      updateConfig.mutate({ logoUrl: ev.target?.result as string });
-      toast.success('ლოგო ატვირთულია');
-    };
-    reader.readAsDataURL(file);
-  };
+  const { activeTenantId } = useAuthStore();
 
   const removeLogo = () => {
     updateConfig.mutate({ logoUrl: '' });
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -46,49 +28,21 @@ export default function ReceiptSettingsPage() {
           {/* Settings */}
           <div className="stat-card space-y-4">
             {/* Logo upload */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label>კომპანიის ლოგო</Label>
-              <div className="flex items-center gap-3">
-                {receiptConfig.logoUrl ? (
-                  <div className="relative">
-                    <img
-                      src={receiptConfig.logoUrl}
-                      alt="ლოგო"
-                      className="h-16 w-16 object-contain rounded-lg border bg-muted/30 p-1"
-                    />
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
-                      onClick={removeLogo}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="h-16 w-16 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                    <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
-                  </div>
-                )}
-                <div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleLogoUpload}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="h-3.5 w-3.5" />
-                    {receiptConfig.logoUrl ? 'შეცვლა' : 'ატვირთვა'}
+              <div className="max-w-sm">
+                <FileUpload
+                  bucket="tenant-assets"
+                  path={activeTenantId || 'public'}
+                  onUploadSuccess={(url) => updateConfig.mutate({ logoUrl: url })}
+                  currentImageUrl={receiptConfig.logoUrl}
+                  className="h-32 mb-2"
+                />
+                {receiptConfig.logoUrl && (
+                  <Button variant="ghost" size="sm" onClick={removeLogo} className="text-destructive w-full">
+                    <X className="h-4 w-4 mr-1" /> ლოგოს წაშლა
                   </Button>
-                  <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG • მაქს. 2MB</p>
-                </div>
+                )}
               </div>
             </div>
 

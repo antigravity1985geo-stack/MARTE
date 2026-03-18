@@ -13,105 +13,49 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Users, Crown, Star, Gift, Percent, TrendingUp, Search,
-  Plus, ShoppingBag, Heart, Award, Tag, History, UserPlus,
-  Phone, Mail, Calendar, BarChart3, Target, Zap, ChevronRight,
-  Loader2
+  Plus, Heart, Award, Tag, History, Phone, Mail, Calendar,
+  BarChart3, Target, Zap, ChevronRight, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClients } from '@/hooks/useClients';
-
-interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  segment: 'vip' | 'regular' | 'new' | 'at_risk' | 'lost';
-  totalPurchases: number;
-  totalSpent: number;
-  avgOrderValue: number;
-  lastPurchase: string;
-  firstPurchase: string;
-  loyaltyPoints: number;
-  loyaltyTier: 'bronze' | 'silver' | 'gold' | 'platinum';
-  notes?: string;
-}
-
-interface PurchaseHistory {
-  id: string;
-  customerId: string;
-  date: string;
-  items: string[];
-  total: number;
-  pointsEarned: number;
-  discountApplied?: number;
-}
+import { useI18n } from '@/hooks/useI18n';
 
 interface LoyaltyTier {
-  name: string;
+  name_ka: string;
+  name_en: string;
   key: string;
   minPoints: number;
   discountPercent: number;
   pointsMultiplier: number;
   color: string;
   icon: React.ElementType;
-  perks: string[];
-}
-
-interface Promotion {
-  id: string;
-  name: string;
-  type: 'percentage' | 'fixed' | 'bogo' | 'points_multiplier';
-  value: number;
-  targetSegment: string;
-  startDate: string;
-  endDate: string;
-  active: boolean;
-  usageCount: number;
-  code?: string;
+  perks_ka: string[];
+  perks_en: string[];
 }
 
 const LOYALTY_TIERS: LoyaltyTier[] = [
-  { name: 'ბრინჯაო', key: 'bronze', minPoints: 0, discountPercent: 2, pointsMultiplier: 1, color: 'hsl(30, 60%, 50%)', icon: Star, perks: ['2% ფასდაკლება', '1x ქულები'] },
-  { name: 'ვერცხლი', key: 'silver', minPoints: 2000, discountPercent: 5, pointsMultiplier: 1.5, color: 'hsl(0, 0%, 65%)', icon: Star, perks: ['5% ფასდაკლება', '1.5x ქულები', 'დაბადების დღის ბონუსი'] },
-  { name: 'ოქრო', key: 'gold', minPoints: 10000, discountPercent: 10, pointsMultiplier: 2, color: 'hsl(45, 100%, 50%)', icon: Crown, perks: ['10% ფასდაკლება', '2x ქულები', 'უფასო მიწოდება'] },
-  { name: 'პლატინა', key: 'platinum', minPoints: 25000, discountPercent: 15, pointsMultiplier: 3, color: 'hsl(220, 20%, 60%)', icon: Award, perks: ['15% ფასდაკლება', '3x ქულები', 'VIP მომსახურება'] },
-];
-
-const DEMO_CUSTOMERS: Customer[] = [
-  { id: 'C1', name: 'ანა გელაშვილი', phone: '+995 555 11 22 33', email: 'ana@mail.ge', segment: 'vip', totalPurchases: 156, totalSpent: 12450, avgOrderValue: 79.8, lastPurchase: '2026-03-07', firstPurchase: '2024-06-15', loyaltyPoints: 6200, loyaltyTier: 'platinum' },
-  { id: 'C2', name: 'გიორგი ხარაზი', phone: '+995 555 44 55 66', email: 'giorgi@mail.ge', segment: 'regular', totalPurchases: 45, totalSpent: 3200, avgOrderValue: 71.1, lastPurchase: '2026-03-05', firstPurchase: '2025-02-10', loyaltyPoints: 2100, loyaltyTier: 'gold' },
-  { id: 'C3', name: 'მარიამ ჯავახი', phone: '+995 555 77 88 99', email: 'mariam@mail.ge', segment: 'regular', totalPurchases: 28, totalSpent: 1850, avgOrderValue: 66.1, lastPurchase: '2026-03-01', firstPurchase: '2025-06-20', loyaltyPoints: 980, loyaltyTier: 'silver' },
-  { id: 'C4', name: 'ლევან წიქარიშვილი', phone: '+995 555 00 11 22', email: 'levan@mail.ge', segment: 'new', totalPurchases: 3, totalSpent: 245, avgOrderValue: 81.7, lastPurchase: '2026-03-06', firstPurchase: '2026-02-28', loyaltyPoints: 120, loyaltyTier: 'bronze' },
-  { id: 'C5', name: 'ნინო ბერიძე', phone: '+995 555 33 44 55', email: 'nino@mail.ge', segment: 'at_risk', totalPurchases: 22, totalSpent: 1600, avgOrderValue: 72.7, lastPurchase: '2025-12-15', firstPurchase: '2025-03-10', loyaltyPoints: 750, loyaltyTier: 'silver', notes: '3 თვეა არ ყიდულობს' },
-  { id: 'C6', name: 'დავით მამულაშვილი', phone: '+995 555 66 77 88', email: 'davit@mail.ge', segment: 'vip', totalPurchases: 89, totalSpent: 8900, avgOrderValue: 100, lastPurchase: '2026-03-08', firstPurchase: '2024-11-01', loyaltyPoints: 4500, loyaltyTier: 'gold' },
-  { id: 'C7', name: 'თამარ ნოზაძე', phone: '+995 555 99 00 11', email: 'tamar@mail.ge', segment: 'lost', totalPurchases: 5, totalSpent: 380, avgOrderValue: 76, lastPurchase: '2025-08-20', firstPurchase: '2025-06-01', loyaltyPoints: 190, loyaltyTier: 'bronze', notes: '6 თვეზე მეტია არ ყიდულობს' },
-  { id: 'C8', name: 'ნიკა თავაძე', phone: '+995 555 22 33 44', email: 'nika@mail.ge', segment: 'regular', totalPurchases: 34, totalSpent: 2100, avgOrderValue: 61.8, lastPurchase: '2026-02-28', firstPurchase: '2025-05-15', loyaltyPoints: 1050, loyaltyTier: 'silver' },
-];
-
-const DEMO_HISTORY: PurchaseHistory[] = [
-  { id: 'PH1', customerId: 'C1', date: '2026-03-07', items: ['სუშის ნაკრები', 'წვენი 1ლ'], total: 52, pointsEarned: 156, discountApplied: 15 },
-  { id: 'PH2', customerId: 'C1', date: '2026-03-03', items: ['პიცა მარგარიტა x2', 'კოკა-კოლა'], total: 34, pointsEarned: 102 },
-  { id: 'PH3', customerId: 'C2', date: '2026-03-05', items: ['ბურგერი კომბო', 'კარტოფილი ფრი'], total: 24.4, pointsEarned: 49 },
-  { id: 'PH4', customerId: 'C6', date: '2026-03-08', items: ['სტეიკი', 'ღვინო', 'დესერტი'], total: 125, pointsEarned: 250, discountApplied: 10 },
-  { id: 'PH5', customerId: 'C4', date: '2026-03-06', items: ['სალათი', 'წყალი'], total: 18, pointsEarned: 18 },
-];
-
-const DEMO_PROMOTIONS: Promotion[] = [
-  { id: 'PR1', name: 'VIP 20% ფასდაკლება', type: 'percentage', value: 20, targetSegment: 'vip', startDate: '2026-03-01', endDate: '2026-03-31', active: true, usageCount: 34, code: 'VIP20' },
-  { id: 'PR2', name: 'ახალი კლიენტის ბონუსი', type: 'fixed', value: 10, targetSegment: 'new', startDate: '2026-01-01', endDate: '2026-12-31', active: true, usageCount: 89, code: 'WELCOME10' },
-  { id: 'PR3', name: 'ორშაბათის x3 ქულები', type: 'points_multiplier', value: 3, targetSegment: 'all', startDate: '2026-03-01', endDate: '2026-03-31', active: true, usageCount: 120 },
-  { id: 'PR4', name: 'დაბრუნების შეთავაზება', type: 'percentage', value: 15, targetSegment: 'at_risk', startDate: '2026-03-01', endDate: '2026-04-30', active: true, usageCount: 5, code: 'COMEBACK15' },
+  { name_ka: 'ბრინჯაო', name_en: 'Bronze', key: 'bronze', minPoints: 0, discountPercent: 2, pointsMultiplier: 1, color: 'hsl(30, 60%, 50%)', icon: Star, perks_ka: ['2% ფასდაკლება', '1x ქულები'], perks_en: ['2% Discount', '1x Points'] },
+  { name_ka: 'ვერცხლი', name_en: 'Silver', key: 'silver', minPoints: 2000, discountPercent: 5, pointsMultiplier: 1.5, color: 'hsl(0, 0%, 65%)', icon: Star, perks_ka: ['5% ფასდაკლება', '1.5x ქულები', 'დაბადების დღის ბონუსი'], perks_en: ['5% Discount', '1.5x Points', 'Birthday Bonus'] },
+  { name_ka: 'ოქრო', name_en: 'Gold', key: 'gold', minPoints: 10000, discountPercent: 10, pointsMultiplier: 2, color: 'hsl(45, 100%, 50%)', icon: Crown, perks_ka: ['10% ფასდაკლება', '2x ქულები', 'უფასო მიწოდება'], perks_en: ['10% Discount', '2x Points', 'Free Delivery'] },
+  { name_ka: 'პლატინა', name_en: 'Platinum', key: 'platinum', minPoints: 25000, discountPercent: 15, pointsMultiplier: 3, color: 'hsl(220, 20%, 60%)', icon: Award, perks_ka: ['15% ფასდაკლება', '3x ქულები', 'VIP მომსახურება'], perks_en: ['15% Discount', '3x Points', 'VIP Service'] },
 ];
 
 export default function CRMPage() {
   const { clients, promotions, isLoading, addPromotion: addPromoMutation, runSegmentationUpdate, sendCampaign } = useClients();
-  const [history] = useState<any[]>([]); // TODO: Implement real purchase history
+  const { t, lang } = useI18n();
+  const [history] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('all');
   const [tierFilter, setTierFilter] = useState('all');
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [promoDialog, setPromoDialog] = useState(false);
+  const [campaignDialog, setCampaignDialog] = useState(false);
+  const [selectedSegForCampaign, setSelectedSegForCampaign] = useState('all');
   const [newPromo, setNewPromo] = useState({ name: '', type: 'percentage' as any, value: '', target_segment: 'all', start_date: '', end_date: '', promo_code: '' });
+
+  // Helper: tier name for current language
+  const tierName = (tier: LoyaltyTier) => lang === 'en' ? tier.name_en : tier.name_ka;
+  const tierPerks = (tier: LoyaltyTier) => lang === 'en' ? tier.perks_en : tier.perks_ka;
 
   const filtered = clients.filter(c => {
     if (searchTerm && !c.name.toLowerCase().includes(searchTerm.toLowerCase()) && !c.phone.includes(searchTerm) && !c.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -122,61 +66,52 @@ export default function CRMPage() {
 
   const handleRunSegmentation = () => {
     toast.promise(runSegmentationUpdate.mutateAsync(), {
-      loading: 'სეგმენტაცია მიმდინარეობს...',
-      success: 'სეგმენტები განახლდა წარმატებით!',
-      error: 'შეცდომა განახლებისას'
+      loading: t('crm_segmentation_running'),
+      success: t('crm_segmentation_done'),
+      error: t('error'),
     });
   };
 
   const handleSendCampaign = (campaign: any) => {
     toast.promise(sendCampaign.mutateAsync(campaign), {
-      loading: 'კამპანია იგზავნება...',
-      success: 'კამპანია გაიგზავნა!',
-      error: 'შეცდომა გაგზავნისას'
+      loading: '...',
+      success: t('success'),
+      error: t('error'),
     });
   };
 
   const handleAddPromotion = () => {
     if (!newPromo.name || !newPromo.value) return;
     addPromoMutation.mutate({
-      name: newPromo.name,
-      type: newPromo.type,
-      value: Number(newPromo.value),
-      target_segment: newPromo.target_segment,
-      start_date: newPromo.start_date || null,
-      end_date: newPromo.end_date || null,
-      promo_code: newPromo.promo_code || null,
+      name: newPromo.name, type: newPromo.type, value: Number(newPromo.value),
+      target_segment: newPromo.target_segment, start_date: newPromo.start_date || null,
+      end_date: newPromo.end_date || null, promo_code: newPromo.promo_code || null,
     }, {
       onSuccess: () => {
         setPromoDialog(false);
         setNewPromo({ name: '', type: 'percentage', value: '', target_segment: 'all', start_date: '', end_date: '', promo_code: '' });
-        toast.success('აქცია შეიქმნა');
-      }
+        toast.success(t('crm_promo_created'));
+      },
     });
   };
 
-  const [campaignDialog, setCampaignDialog] = useState(false);
-  const [selectedSegForCampaign, setSelectedSegForCampaign] = useState('all');
+  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
-  if (isLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  }
-
-  const segmentBadge = (segment: Customer['segment']) => {
+  const segmentBadge = (segment: string) => {
     const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
       vip: { label: '👑 VIP', variant: 'default' },
-      regular: { label: 'რეგულარული', variant: 'secondary' },
-      new: { label: '🆕 ახალი', variant: 'outline' },
-      at_risk: { label: '⚠️ რისკის ზონა', variant: 'destructive' },
-      lost: { label: '❌ დაკარგული', variant: 'destructive' },
+      regular: { label: t('crm_segment_regular'), variant: 'secondary' },
+      new: { label: `🆕 ${t('crm_segment_new')}`, variant: 'outline' },
+      at_risk: { label: t('crm_segment_at_risk'), variant: 'destructive' },
+      lost: { label: t('crm_segment_lost'), variant: 'destructive' },
     };
-    const s = map[segment];
+    const s = map[segment] || { label: segment, variant: 'outline' as const };
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
   const tierBadge = (tier: any) => {
-    const t = LOYALTY_TIERS.find(lt => lt.key === tier)!;
-    return <Badge variant="outline" style={{ borderColor: t?.color, color: t?.color }}>{t?.name || tier}</Badge>;
+    const tObj = LOYALTY_TIERS.find(lt => lt.key === tier);
+    return <Badge variant="outline" style={{ borderColor: tObj?.color, color: tObj?.color }}>{tObj ? tierName(tObj) : tier}</Badge>;
   };
 
   const segmentCounts = {
@@ -191,38 +126,39 @@ export default function CRMPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">CRM & ლოიალობა</h1>
-          <p className="text-muted-foreground">კლიენტების სეგმენტაცია, ისტორია, ლოიალობის პროგრამა და აქციები</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('crm_title')}</h1>
+          <p className="text-muted-foreground">{t('crm_subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleRunSegmentation} disabled={runSegmentationUpdate.isPending}>
             <Zap className={`h-4 w-4 mr-1 ${runSegmentationUpdate.isPending ? 'animate-pulse text-yellow-500' : ''}`} />
-            სეგმენტაციის განახლება
+            {t('crm_run_segmentation')}
           </Button>
           <Dialog open={campaignDialog} onOpenChange={setCampaignDialog}>
-            <DialogTrigger asChild><Button onClick={() => setCampaignDialog(true)}><Mail className="h-4 w-4 mr-1" />კამპანიის გაშვება</Button></DialogTrigger>
+            <DialogTrigger asChild><Button onClick={() => setCampaignDialog(true)}><Mail className="h-4 w-4 mr-1" />{t('crm_run_campaign')}</Button></DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>მარკეტინგული კამპანია</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t('crm_campaign_title')}</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label>სამიზნე აუდიტორია</Label>
+                  <Label>{t('crm_campaign_target')}</Label>
                   <Select value={selectedSegForCampaign} onValueChange={setSelectedSegForCampaign}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">ყველა კლიენტი</SelectItem>
-                      <SelectItem value="vip">მხოლოდ VIP</SelectItem>
-                      <SelectItem value="at_risk">რისკის ქვეშ მყოფები</SelectItem>
+                      <SelectItem value="all">{t('crm_campaign_all')}</SelectItem>
+                      <SelectItem value="vip">{t('crm_campaign_vip')}</SelectItem>
+                      <SelectItem value="at_risk">{t('crm_campaign_at_risk')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>შეტყობინების ტექსტი</Label>
-                  <Textarea placeholder="მაგ: სპეციალური 20% ფასდაკლება მხოლოდ თქვენთვის..." rows={4} />
+                  <Label>{t('crm_campaign_message')}</Label>
+                  <Textarea rows={4} />
                 </div>
                 <Button className="w-full" onClick={() => { handleSendCampaign({ name: 'CRM Promo', target: selectedSegForCampaign }); setCampaignDialog(false); }}>
-                  გაგზავნა (SMS/Email)
+                  {t('crm_campaign_send')}
                 </Button>
               </div>
             </DialogContent>
@@ -230,11 +166,11 @@ export default function CRMPage() {
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Summary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10"><Users className="h-5 w-5 text-primary" /></div>
-          <div><p className="text-2xl font-bold">{clients.length}</p><p className="text-xs text-muted-foreground">სულ კლიენტი</p></div>
+          <div><p className="text-2xl font-bold">{clients.length}</p><p className="text-xs text-muted-foreground">{t('crm_total_clients')}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10"><Crown className="h-5 w-5 text-primary" /></div>
@@ -242,24 +178,24 @@ export default function CRMPage() {
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-destructive/10"><Target className="h-5 w-5 text-destructive" /></div>
-          <div><p className="text-2xl font-bold">{segmentCounts.at_risk}</p><p className="text-xs text-muted-foreground">რისკის ზონა</p></div>
+          <div><p className="text-2xl font-bold">{segmentCounts.at_risk}</p><p className="text-xs text-muted-foreground">{t('crm_risk_zone')}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10"><TrendingUp className="h-5 w-5 text-primary" /></div>
-          <div><p className="text-2xl font-bold">{totalRevenueVal.toLocaleString()} ₾</p><p className="text-xs text-muted-foreground">სულ შემოსავალი</p></div>
+          <div><p className="text-2xl font-bold">{totalRevenueVal.toLocaleString()} ₾</p><p className="text-xs text-muted-foreground">{t('crm_total_revenue')}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-muted"><Heart className="h-5 w-5 text-muted-foreground" /></div>
-          <div><p className="text-2xl font-bold">{avgLifetimeValue} ₾</p><p className="text-xs text-muted-foreground">საშ. LTV</p></div>
+          <div><p className="text-2xl font-bold">{avgLifetimeValue} ₾</p><p className="text-xs text-muted-foreground">{t('crm_avg_ltv')}</p></div>
         </CardContent></Card>
       </div>
 
       <Tabs defaultValue="customers">
         <TabsList>
-          <TabsTrigger value="customers"><Users className="h-4 w-4 mr-1" />კლიენტები</TabsTrigger>
-          <TabsTrigger value="loyalty"><Star className="h-4 w-4 mr-1" />ლოიალობა</TabsTrigger>
-          <TabsTrigger value="promotions"><Gift className="h-4 w-4 mr-1" />აქციები</TabsTrigger>
-          <TabsTrigger value="segments"><BarChart3 className="h-4 w-4 mr-1" />სეგმენტები</TabsTrigger>
+          <TabsTrigger value="customers"><Users className="h-4 w-4 mr-1" />{t('crm_tab_clients')}</TabsTrigger>
+          <TabsTrigger value="loyalty"><Star className="h-4 w-4 mr-1" />{t('crm_tab_loyalty')}</TabsTrigger>
+          <TabsTrigger value="promotions"><Gift className="h-4 w-4 mr-1" />{t('crm_tab_promotions')}</TabsTrigger>
+          <TabsTrigger value="segments"><BarChart3 className="h-4 w-4 mr-1" />{t('crm_tab_segments')}</TabsTrigger>
         </TabsList>
 
         {/* CUSTOMERS TAB */}
@@ -267,24 +203,24 @@ export default function CRMPage() {
           <div className="flex gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-9" placeholder="სახელი, ტელეფონი, ელ.ფოსტა..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+              <Input className="pl-9" placeholder={t('crm_search')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
             <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="სეგმენტი" /></SelectTrigger>
+              <SelectTrigger className="w-40"><SelectValue placeholder={t('crm_segment')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">ყველა</SelectItem>
-                <SelectItem value="vip">VIP</SelectItem>
-                <SelectItem value="regular">რეგულარული</SelectItem>
-                <SelectItem value="new">ახალი</SelectItem>
-                <SelectItem value="at_risk">რისკის ზონა</SelectItem>
-                <SelectItem value="lost">დაკარგული</SelectItem>
+                <SelectItem value="all">{t('crm_segment_all')}</SelectItem>
+                <SelectItem value="vip">{t('crm_segment_vip')}</SelectItem>
+                <SelectItem value="regular">{t('crm_segment_regular')}</SelectItem>
+                <SelectItem value="new">{t('crm_segment_new')}</SelectItem>
+                <SelectItem value="at_risk">{t('crm_segment_at_risk')}</SelectItem>
+                <SelectItem value="lost">{t('crm_segment_lost')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={tierFilter} onValueChange={setTierFilter}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="დონე" /></SelectTrigger>
+              <SelectTrigger className="w-36"><SelectValue placeholder={t('crm_tier')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">ყველა დონე</SelectItem>
-                {LOYALTY_TIERS.map(t => <SelectItem key={t.key} value={t.key}>{t.name}</SelectItem>)}
+                <SelectItem value="all">{t('crm_segment_all')} {t('crm_tier')}</SelectItem>
+                {LOYALTY_TIERS.map(tr => <SelectItem key={tr.key} value={tr.key}>{tierName(tr)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -294,47 +230,55 @@ export default function CRMPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">{selectedCustomer.name}</CardTitle>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(null)}>დახურვა</Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(null)}>{t('close')}</Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
                   {segmentBadge(selectedCustomer.segment)}
                   {tierBadge(selectedCustomer.loyalty_tier)}
-                  <Badge variant="outline"><Star className="h-3 w-3 mr-1" />{selectedCustomer.loyalty_points} ქულა</Badge>
+                  <Badge variant="outline"><Star className="h-3 w-3 mr-1" />{selectedCustomer.loyalty_points} {t('crm_points')}</Badge>
                 </div>
                 <div className="grid md:grid-cols-3 gap-4 text-sm">
                   <div className="space-y-1">
                     <p><Phone className="h-3 w-3 inline mr-1" />{selectedCustomer.phone}</p>
                     <p><Mail className="h-3 w-3 inline mr-1" />{selectedCustomer.email}</p>
-                    <p><Calendar className="h-3 w-3 inline mr-1" />კლიენტი: {selectedCustomer.first_purchase?.split('T')[0]}-დან</p>
+                    <p><Calendar className="h-3 w-3 inline mr-1" />{t('clients_since')} {selectedCustomer.first_purchase?.split('T')[0]}</p>
                   </div>
                   <div className="space-y-1">
-                    <p>სულ შეკვეთა: <strong>{selectedCustomer.total_purchases}</strong></p>
-                    <p>სულ დახარჯული: <strong>{(selectedCustomer.total_spent || 0).toLocaleString()} ₾</strong></p>
-                    <p>საშუალო ჩეკი: <strong>{selectedCustomer.total_purchases > 0 ? (selectedCustomer.total_spent / selectedCustomer.total_purchases).toFixed(1) : 0} ₾</strong></p>
+                    <p>{t('clients_total_orders')} <strong>{selectedCustomer.total_purchases}</strong></p>
+                    <p>{t('clients_total_spent')} <strong>{(selectedCustomer.total_spent || 0).toLocaleString()} ₾</strong></p>
+                    <p>{t('clients_avg_check')} <strong>{selectedCustomer.total_purchases > 0 ? (selectedCustomer.total_spent / selectedCustomer.total_purchases).toFixed(1) : 0} ₾</strong></p>
                   </div>
                   <div className="space-y-1">
-                    <p>ბოლო შეძენა: <strong>{selectedCustomer.last_purchase?.split('T')[0] || '-'}</strong></p>
-                    <p>ლოიალობის ქულები: <strong>{selectedCustomer.loyalty_points}</strong></p>
+                    <p>{t('clients_last_purchase')} <strong>{selectedCustomer.last_purchase?.split('T')[0] || '-'}</strong></p>
+                    <p>{t('clients_loyalty_points')} <strong>{selectedCustomer.loyalty_points}</strong></p>
                     {selectedCustomer.notes && <p className="text-muted-foreground italic">{selectedCustomer.notes}</p>}
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2 flex items-center gap-1"><History className="h-4 w-4" />შეძენის ისტორია</h4>
+                  <h4 className="font-semibold mb-2 flex items-center gap-1"><History className="h-4 w-4" />{t('crm_purchase_history')}</h4>
                   <Table>
-                    <TableHeader><TableRow><TableHead>თარიღი</TableHead><TableHead>პროდუქტები</TableHead><TableHead className="text-right">ჯამი</TableHead><TableHead>ქულები</TableHead><TableHead>ფასდაკლება</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow>
+                      <TableHead>{t('date')}</TableHead>
+                      <TableHead>{t('products_title')}</TableHead>
+                      <TableHead className="text-right">{t('total')}</TableHead>
+                      <TableHead>{t('crm_earned_points')}</TableHead>
+                      <TableHead>{t('crm_discount_applied')}</TableHead>
+                    </TableRow></TableHeader>
                     <TableBody>
-                      {history.filter(h => h.customerId === selectedCustomer.id).map(h => (
+                      {history.filter((h: any) => h.customerId === selectedCustomer.id).map((h: any) => (
                         <TableRow key={h.id}>
                           <TableCell>{h.date}</TableCell>
-                          <TableCell className="text-sm">{h.items.join(', ')}</TableCell>
-                          <TableCell className="text-right font-medium">{h.total.toFixed(2)} ₾</TableCell>
+                          <TableCell className="text-sm">{Array.isArray(h.items) ? h.items.join(', ') : h.items}</TableCell>
+                          <TableCell className="text-right font-medium">{h.total?.toFixed(2)} ₾</TableCell>
                           <TableCell><Badge variant="outline" className="text-xs">+{h.pointsEarned}</Badge></TableCell>
                           <TableCell>{h.discountApplied ? <span className="text-primary">-{h.discountApplied}%</span> : '—'}</TableCell>
                         </TableRow>
                       ))}
-                      {history.filter(h => h.customerId === selectedCustomer.id).length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">ისტორია არ მოიძებნა</TableCell></TableRow>}
+                      {history.filter((h: any) => h.customerId === selectedCustomer.id).length === 0 && (
+                        <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">{t('crm_history_empty')}</TableCell></TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -346,22 +290,21 @@ export default function CRMPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>კლიენტი</TableHead>
-                      <TableHead>სეგმენტი</TableHead>
-                      <TableHead>დონე</TableHead>
-                      <TableHead className="text-right">სულ დახარჯული</TableHead>
-                      <TableHead>შეკვეთები</TableHead>
-                      <TableHead>ქულები</TableHead>
-                      <TableHead>ბოლო შეძენა</TableHead>
+                      <TableHead>{t('crm_client_col')}</TableHead>
+                      <TableHead>{t('crm_segment')}</TableHead>
+                      <TableHead>{t('crm_tier')}</TableHead>
+                      <TableHead className="text-right">{t('crm_total_spent')}</TableHead>
+                      <TableHead>{t('crm_orders_count')}</TableHead>
+                      <TableHead>{t('crm_points')}</TableHead>
+                      <TableHead>{t('crm_last_purchase')}</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.map(c => {
-                      const tier = LOYALTY_TIERS.find(t => t.key === c.loyalty_tier)!;
-                      const nextTier = LOYALTY_TIERS[LOYALTY_TIERS.indexOf(tier) + 1];
-                      const progress = nextTier ? ((c.total_spent - (LOYALTY_TIERS[LOYALTY_TIERS.indexOf(tier)].minPoints || 0)) / (nextTier.minPoints - (LOYALTY_TIERS[LOYALTY_TIERS.indexOf(tier)].minPoints || 0))) * 100 : 100;
-
+                      const tier = LOYALTY_TIERS.find(tr => tr.key === c.loyalty_tier)!;
+                      const nextTier = tier ? LOYALTY_TIERS[LOYALTY_TIERS.indexOf(tier) + 1] : undefined;
+                      const progress = nextTier && tier ? ((c.total_spent - (tier.minPoints || 0)) / (nextTier.minPoints - (tier.minPoints || 0))) * 100 : 100;
                       return (
                         <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedCustomer(c)}>
                           <TableCell><div><p className="font-medium">{c.name}</p><p className="text-xs text-muted-foreground">{c.phone}</p></div></TableCell>
@@ -400,13 +343,13 @@ export default function CRMPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Icon className="h-5 w-5" style={{ color: tier.color }} />
-                        <h3 className="font-bold">{tier.name}</h3>
+                        <h3 className="font-bold">{tierName(tier)}</h3>
                       </div>
-                      <Badge variant="outline">{count} კლიენტი</Badge>
+                      <Badge variant="outline">{count} {t('crm_tab_clients')}</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">{tier.minPoints}+ ქულა</p>
+                    <p className="text-xs text-muted-foreground">{tier.minPoints}+ {t('crm_points')}</p>
                     <div className="space-y-1">
-                      {tier.perks.map((perk, i) => (
+                      {tierPerks(tier).map((perk, i) => (
                         <p key={i} className="text-sm flex items-center gap-1"><Zap className="h-3 w-3 text-primary" />{perk}</p>
                       ))}
                     </div>
@@ -415,14 +358,13 @@ export default function CRMPage() {
               );
             })}
           </div>
-
           <Card>
-            <CardHeader><CardTitle className="text-base">ლოიალობის რეიტინგი</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t('crm_loyalty_rating')}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {[...clients].sort((a, b) => b.loyalty_points - a.loyalty_points).map((c, i) => {
-                const tier = LOYALTY_TIERS.find(t => t.key === c.loyalty_tier)!;
-                const nextTier = LOYALTY_TIERS[LOYALTY_TIERS.indexOf(tier) + 1];
-                const progress = nextTier ? ((c.loyalty_points - tier.minPoints) / (nextTier.minPoints - tier.minPoints)) * 100 : 100;
+                const tier = LOYALTY_TIERS.find(tr => tr.key === c.loyalty_tier)!;
+                const nextTier = tier ? LOYALTY_TIERS[LOYALTY_TIERS.indexOf(tier) + 1] : undefined;
+                const progress = nextTier && tier ? ((c.loyalty_points - tier.minPoints) / (nextTier.minPoints - tier.minPoints)) * 100 : 100;
                 return (
                   <div key={c.id} className="flex items-center gap-3">
                     <span className="text-lg font-bold w-6 text-muted-foreground">{i + 1}</span>
@@ -432,11 +374,11 @@ export default function CRMPage() {
                           <span className="font-medium">{c.name}</span>
                           {tierBadge(c.loyalty_tier)}
                         </div>
-                        <span className="font-bold" style={{ color: tier.color }}>{c.loyalty_points} ქულა</span>
+                        <span className="font-bold" style={{ color: tier?.color }}>{c.loyalty_points} {t('crm_points')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Progress value={progress} className="h-1.5 flex-1" />
-                        {nextTier && <span className="text-[10px] text-muted-foreground">{nextTier.minPoints - c.loyalty_points} → {nextTier.name}</span>}
+                        {nextTier && <span className="text-[10px] text-muted-foreground">{nextTier.minPoints - c.loyalty_points} → {tierName(nextTier)}</span>}
                       </div>
                     </div>
                   </div>
@@ -450,41 +392,41 @@ export default function CRMPage() {
         <TabsContent value="promotions" className="space-y-4">
           <div className="flex justify-end">
             <Dialog open={promoDialog} onOpenChange={setPromoDialog}>
-              <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />ახალი აქცია</Button></DialogTrigger>
+              <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />{t('crm_add_promotion')}</Button></DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>ახალი აქცია</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{t('crm_add_promotion')}</DialogTitle></DialogHeader>
                 <div className="space-y-3">
-                  <div><Label>სახელი</Label><Input value={newPromo.name} onChange={e => setNewPromo(p => ({ ...p, name: e.target.value }))} /></div>
-                  <div><Label>ტიპი</Label>
+                  <div><Label>{t('crm_promo_name')}</Label><Input value={newPromo.name} onChange={e => setNewPromo(p => ({ ...p, name: e.target.value }))} /></div>
+                  <div><Label>{t('crm_promo_type')}</Label>
                     <Select value={newPromo.type} onValueChange={v => setNewPromo(p => ({ ...p, type: v as any }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="percentage">% ფასდაკლება</SelectItem>
-                        <SelectItem value="fixed">ფიქსირებული ფასდაკლება</SelectItem>
-                        <SelectItem value="bogo">1+1</SelectItem>
-                        <SelectItem value="points_multiplier">ქულების მულტიპლიკატორი</SelectItem>
+                        <SelectItem value="percentage">{t('crm_promo_type_pct')}</SelectItem>
+                        <SelectItem value="fixed">{t('crm_promo_type_fixed')}</SelectItem>
+                        <SelectItem value="bogo">{t('crm_promo_type_bogo')}</SelectItem>
+                        <SelectItem value="points_multiplier">{t('crm_promo_type_multiplier')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div><Label>მნიშვნელობა</Label><Input type="number" value={newPromo.value} onChange={e => setNewPromo(p => ({ ...p, value: e.target.value }))} /></div>
-                  <div><Label>სამიზნე სეგმენტი</Label>
+                  <div><Label>{t('crm_promo_value')}</Label><Input type="number" value={newPromo.value} onChange={e => setNewPromo(p => ({ ...p, value: e.target.value }))} /></div>
+                  <div><Label>{t('crm_promo_target')}</Label>
                     <Select value={newPromo.target_segment} onValueChange={v => setNewPromo(p => ({ ...p, target_segment: v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">ყველა</SelectItem>
-                        <SelectItem value="vip">VIP</SelectItem>
-                        <SelectItem value="regular">რეგულარული</SelectItem>
-                        <SelectItem value="new">ახალი</SelectItem>
-                        <SelectItem value="at_risk">რისკის ზონა</SelectItem>
+                        <SelectItem value="all">{t('crm_segment_all')}</SelectItem>
+                        <SelectItem value="vip">{t('crm_segment_vip')}</SelectItem>
+                        <SelectItem value="regular">{t('crm_segment_regular')}</SelectItem>
+                        <SelectItem value="new">{t('crm_segment_new')}</SelectItem>
+                        <SelectItem value="at_risk">{t('crm_segment_at_risk')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div><Label>დაწყება</Label><Input type="date" value={newPromo.start_date} onChange={e => setNewPromo(p => ({ ...p, start_date: e.target.value }))} /></div>
-                    <div><Label>დასრულება</Label><Input type="date" value={newPromo.end_date} onChange={e => setNewPromo(p => ({ ...p, end_date: e.target.value }))} /></div>
+                    <div><Label>{t('crm_promo_start')}</Label><Input type="date" value={newPromo.start_date} onChange={e => setNewPromo(p => ({ ...p, start_date: e.target.value }))} /></div>
+                    <div><Label>{t('crm_promo_end')}</Label><Input type="date" value={newPromo.end_date} onChange={e => setNewPromo(p => ({ ...p, end_date: e.target.value }))} /></div>
                   </div>
-                  <div><Label>პრომო კოდი (არასავალდებულო)</Label><Input value={newPromo.promo_code} onChange={e => setNewPromo(p => ({ ...p, promo_code: e.target.value }))} /></div>
-                  <Button className="w-full" onClick={handleAddPromotion}>შექმნა</Button>
+                  <div><Label>{t('crm_promo_code')}</Label><Input value={newPromo.promo_code} onChange={e => setNewPromo(p => ({ ...p, promo_code: e.target.value }))} /></div>
+                  <Button className="w-full" onClick={handleAddPromotion}>{t('crm_promo_create')}</Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -498,13 +440,13 @@ export default function CRMPage() {
                     <Switch checked={promo.is_active} disabled />
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <Badge variant="outline"><Percent className="h-3 w-3 mr-0.5" />{promo.type === 'percentage' ? `${promo.value}%` : promo.type === 'fixed' ? `${promo.value}₾` : promo.type === 'points_multiplier' ? `x${promo.value} ქულა` : '1+1'}</Badge>
-                    <Badge variant="secondary"><Target className="h-3 w-3 mr-0.5" />{promo.target_segment === 'all' ? 'ყველა' : promo.target_segment}</Badge>
+                    <Badge variant="outline"><Percent className="h-3 w-3 mr-0.5" />{promo.type === 'percentage' ? `${promo.value}%` : promo.type === 'fixed' ? `${promo.value}₾` : promo.type === 'points_multiplier' ? `x${promo.value} ${t('crm_points')}` : '1+1'}</Badge>
+                    <Badge variant="secondary"><Target className="h-3 w-3 mr-0.5" />{promo.target_segment === 'all' ? t('crm_segment_all') : promo.target_segment}</Badge>
                     {promo.promo_code && <Badge variant="outline"><Tag className="h-3 w-3 mr-0.5" />{promo.promo_code}</Badge>}
                   </div>
                   <div className="text-xs text-muted-foreground flex justify-between">
                     <span>{promo.start_date?.split('T')[0] || '-'} → {promo.end_date?.split('T')[0] || '-'}</span>
-                    <span>გამოყენებული: {promo.usage_count}-ჯერ</span>
+                    <span>{t('crm_used')}: {promo.usage_count}{t('crm_times')}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -516,11 +458,11 @@ export default function CRMPage() {
         <TabsContent value="segments" className="space-y-4">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { key: 'vip', label: '👑 VIP კლიენტები', desc: 'მაღალი LTV, ხშირი შეკვეთები', color: 'hsl(45, 100%, 50%)' },
-              { key: 'regular', label: 'რეგულარული', desc: 'სტაბილური მყიდველები', color: 'hsl(200, 70%, 50%)' },
-              { key: 'new', label: '🆕 ახალი კლიენტები', desc: 'ბოლო 30 დღეში დარეგისტრირებული', color: 'hsl(145, 70%, 45%)' },
-              { key: 'at_risk', label: '⚠️ რისკის ზონა', desc: '60+ დღე არ ყიდულობს', color: 'hsl(30, 100%, 50%)' },
-              { key: 'lost', label: '❌ დაკარგული', desc: '180+ დღე არ ყიდულობს', color: 'hsl(0, 70%, 50%)' },
+              { key: 'vip', label: '👑 VIP', desc_ka: 'მაღალი LTV, ხშირი შეკვეთები', desc_en: 'High LTV, frequent orders', color: 'hsl(45, 100%, 50%)' },
+              { key: 'regular', label: t('crm_segment_regular'), desc_ka: 'სტაბილური მყიდველები', desc_en: 'Stable buyers', color: 'hsl(200, 70%, 50%)' },
+              { key: 'new', label: `🆕 ${t('crm_segment_new')}`, desc_ka: 'ბოლო 30 დღეში', desc_en: 'Joined in last 30 days', color: 'hsl(145, 70%, 45%)' },
+              { key: 'at_risk', label: t('crm_segment_at_risk'), desc_ka: '60+ დღე არ ყიდულობს', desc_en: '60+ days inactive', color: 'hsl(30, 100%, 50%)' },
+              { key: 'lost', label: t('crm_segment_lost'), desc_ka: '180+ დღე არ ყიდულობს', desc_en: '180+ days inactive', color: 'hsl(0, 70%, 50%)' },
             ].map(seg => {
               const segCustomers = clients.filter(c => c.segment === seg.key);
               const segRevenue = segCustomers.reduce((s, c) => s + (c.total_spent || 0), 0);
@@ -532,11 +474,11 @@ export default function CRMPage() {
                       <h3 className="font-semibold">{seg.label}</h3>
                       <span className="text-2xl font-bold">{segCustomers.length}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">{seg.desc}</p>
+                    <p className="text-xs text-muted-foreground">{lang === 'en' ? seg.desc_en : seg.desc_ka}</p>
                     <Progress value={pct} className="h-2" />
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div><span className="text-muted-foreground">წილი</span><p className="font-medium">{pct}%</p></div>
-                      <div><span className="text-muted-foreground">შემოსავალი</span><p className="font-medium">{segRevenue.toLocaleString()} ₾</p></div>
+                      <div><span className="text-muted-foreground">{t('crm_share')}</span><p className="font-medium">{pct}%</p></div>
+                      <div><span className="text-muted-foreground">{t('crm_total_revenue')}</span><p className="font-medium">{segRevenue.toLocaleString()} ₾</p></div>
                     </div>
                     <div className="text-xs space-y-0.5">
                       {segCustomers.slice(0, 3).map(c => <p key={c.id} className="text-muted-foreground">{c.name} — {(c.total_spent || 0).toLocaleString()} ₾</p>)}

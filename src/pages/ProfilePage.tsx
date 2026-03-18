@@ -59,23 +59,17 @@ export default function ProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [settings, setSettings] = useState<AppSettings>(() => {
-    const stored = localStorage.getItem('app_settings');
-    return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS;
-  });
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   useEffect(() => {
     if (user) fetchProfile();
   }, [user]);
 
-  useEffect(() => {
-    localStorage.setItem('app_settings', JSON.stringify(settings));
-  }, [settings]);
-
   const fetchProfile = async () => {
     const { data } = await supabase
       .from('profiles')
-      .select('full_name, phone, address, company, bio, avatar_url')
+      .select('full_name, phone, address, company, bio, avatar_url, settings')
       .eq('id', user!.id)
       .single();
 
@@ -88,8 +82,25 @@ export default function ProfilePage() {
         bio: data.bio || '',
         avatar_url: data.avatar_url || '',
       });
+      // Load settings from Supabase (cloud-persistent, cross-device)
+      if (data.settings && typeof data.settings === 'object') {
+        setSettings({ ...DEFAULT_SETTINGS, ...(data.settings as Partial<AppSettings>) });
+      }
+      setSettingsLoaded(true);
     }
   };
+
+  // Persist settings changes to Supabase (debounced via useEffect)
+  useEffect(() => {
+    if (!settingsLoaded || !user?.id) return;
+    const timer = setTimeout(() => {
+      supabase
+        .from('profiles')
+        .update({ settings: settings as any })
+        .eq('id', user.id);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [settings, settingsLoaded, user?.id]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -115,26 +126,7 @@ export default function ProfilePage() {
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        // Fallback: store as data URL if storage bucket doesn't exist
-        const reader = new FileReader();
-        reader.onload = async (ev) => {
-          const dataUrl = ev.target?.result as string;
-          // Try saving to profile
-          try {
-            await supabase
-              .from('profiles')
-              .update({ avatar_url: dataUrl })
-              .eq('id', user.id);
-            setProfile((p) => ({ ...p, avatar_url: dataUrl }));
-            toast.success('ფოტო განახლდა!');
-          } catch {
-            // Store locally as last resort
-            localStorage.setItem(`avatar_${user.id}`, dataUrl);
-            setProfile((p) => ({ ...p, avatar_url: dataUrl }));
-            toast.success('ფოტო განახლდა (ლოკალურად)');
-          }
-        };
-        reader.readAsDataURL(file);
+        toast.error(`ატვირთვის შეცდომა: ${uploadError.message}`);
         return;
       }
 
@@ -211,7 +203,7 @@ export default function ProfilePage() {
     ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
-  const avatarSrc = profile.avatar_url || localStorage.getItem(`avatar_${user?.id}`) || '';
+  const avatarSrc = profile.avatar_url || '';
 
   return (
     <PageTransition>
@@ -447,7 +439,7 @@ export default function ProfilePage() {
                     variant="outline"
                     size="sm"
                     className="gap-1.5"
-                    onClick={() => { resetOnboarding(); window.location.href = '/'; }}
+                    onClick={async () => { await resetOnboarding(user?.id); window.location.href = '/'; }}
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                     თავიდან

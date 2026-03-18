@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { PageTransition } from '@/components/PageTransition';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { FileUpload } from '@/components/ui/file-upload';
 import { useProducts, type ProductInsert } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/button';
@@ -18,15 +20,18 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SwipeToDelete } from '@/components/SwipeToDelete';
 import * as XLSX from 'xlsx';
 import { BarcodeLabelPrinter } from '@/components/BarcodeLabelPrinter';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function ProductsPage() {
   const { categories } = useCategories();
   const { products, isLoading, addProduct, updateProduct, deleteProduct } = useProducts();
   const isMobile = useIsMobile();
+  const { t } = useI18n();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ name: '', barcode: '', buyPrice: '', sellPrice: '', category: '', unit: 'ცალი', minStock: '10', stock: '0' });
+  const { activeTenantId } = useAuthStore();
+  const [form, setForm] = useState({ name: '', barcode: '', buyPrice: '', sellPrice: '', category: '', unit: 'ცალი', minStock: '10', stock: '0', images: [] as string[] });
   const [importOpen, setImportOpen] = useState(false);
   const [importData, setImportData] = useState<{ name: string; barcode: string; buyPrice: number; sellPrice: number; unit: string; stock: number; minStock: number; category: string }[]>([]);
   const [importing, setImporting] = useState(false);
@@ -39,7 +44,7 @@ export default function ProductsPage() {
 
   const openNew = () => {
     setEditingId(null);
-    setForm({ name: '', barcode: crypto.randomUUID().slice(0, 13), buyPrice: '', sellPrice: '', category: categories[0]?.id || '', unit: 'ცალი', minStock: '10', stock: '0' });
+    setForm({ name: '', barcode: crypto.randomUUID().slice(0, 13), buyPrice: '', sellPrice: '', category: categories[0]?.id || '', unit: 'ცალი', minStock: '10', stock: '0', images: [] });
     setDialogOpen(true);
   };
 
@@ -54,13 +59,14 @@ export default function ProductsPage() {
       unit: p.unit,
       minStock: String(p.min_stock),
       stock: String(p.stock),
+      images: p.images || [],
     });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!form.name || !form.buyPrice || !form.sellPrice) {
-      toast.error('შეავსეთ ყველა ველი');
+      toast.error(t('fill_all_fields') || 'Fill all fields');
       return;
     }
 
@@ -73,17 +79,17 @@ export default function ProductsPage() {
       unit: form.unit,
       min_stock: parseInt(form.minStock) || 0,
       stock: parseInt(form.stock) || 0,
-      images: [],
+      images: form.images,
       warehouse_id: null,
     };
 
     try {
       if (editingId) {
         await updateProduct.mutateAsync({ id: editingId, updates: data });
-        toast.success('პროდუქტი განახლდა');
+        toast.success(t('product_updated') || 'Product updated');
       } else {
         await addProduct.mutateAsync(data);
-        toast.success('პროდუქტი დაემატა');
+        toast.success(t('product_added') || 'Product added');
       }
       setDialogOpen(false);
     } catch (err: any) {
@@ -94,7 +100,7 @@ export default function ProductsPage() {
   const handleDelete = async (id: string) => {
     try {
       await deleteProduct.mutateAsync(id);
-      toast.success('წაშლილია');
+      toast.success(t('deleted') || 'Deleted');
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -111,7 +117,7 @@ export default function ProductsPage() {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
 
-        if (rows.length === 0) { toast.error('ფაილი ცარიელია'); return; }
+        if (rows.length === 0) { toast.error(t('file_is_empty') || 'File is empty'); return; }
 
         const mapped = rows.map((row) => {
           // Flexible column name mapping (Georgian + English)
@@ -126,13 +132,13 @@ export default function ProductsPage() {
           return { name: String(name).trim(), barcode: barcode.trim(), buyPrice, sellPrice, unit: String(unit), stock, minStock, category: String(category) };
         }).filter((r) => r.name);
 
-        if (mapped.length === 0) { toast.error('ვერცერთი პროდუქტი ვერ ამოიცნო'); return; }
+        if (mapped.length === 0) { toast.error(t('no_products_recognized') || 'No products recognized'); return; }
 
         setImportData(mapped);
         setImportOpen(true);
-        toast.success(`${mapped.length} პროდუქტი ამოიკითხა ფაილიდან`);
+        toast.success(`${mapped.length} ${t('products_read') || 'products read from file'}`);
       } catch {
-        toast.error('ფაილის წაკითხვა ვერ მოხერხდა');
+        toast.error(t('failed_to_read_file') || 'Failed to read file');
       }
     };
     reader.readAsArrayBuffer(file);
@@ -178,7 +184,7 @@ export default function ProductsPage() {
     setImporting(false);
     setImportOpen(false);
     setImportData([]);
-    toast.success(`იმპორტი დასრულდა: ${success} დამატებულია, ${skipped} განახლდა/გამოტოვდა`);
+    toast.success(`${t('import_finished') || 'Import finished:'} ${success} ${t('added') || 'added'}, ${skipped} ${t('updated_skipped') || 'updated/skipped'}`);
   };
 
   const downloadTemplate = () => {
@@ -206,7 +212,7 @@ export default function ProductsPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'პროდუქტები');
     XLSX.writeFile(wb, `პროდუქტები_${new Date().toLocaleDateString('ka-GE')}.xlsx`);
-    toast.success(`${products.length} პროდუქტი ექსპორტირდა`);
+    toast.success(`${products.length} ${t('products_exported') || 'products exported'}`);
   };
 
   return (
@@ -220,34 +226,34 @@ export default function ProductsPage() {
             <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>{lowStock.length} პროდუქტს</strong> აქვს დაბალი მარაგი:{' '}
+                <strong>{lowStock.length} {t('low_stock_products') || 'products'}</strong> {t('have_low_stock') || 'have low stock:'}{' '}
                 {lowStock.slice(0, 3).map((p) => p.name).join(', ')}
-                {lowStock.length > 3 && ` და კიდევ ${lowStock.length - 3}...`}
+                {lowStock.length > 3 && ` ${t('and_more') || 'and'} ${lowStock.length - 3}...`}
               </AlertDescription>
             </Alert>
           );
         })()}
 
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h1 className="text-2xl font-bold">პროდუქტები</h1>
+          <h1 className="text-2xl font-bold">{t('products')}</h1>
           <div className="flex gap-2 flex-wrap">
-            <PrintButton title="პროდუქტების სია" />
+            <PrintButton title={t('products_list') || 'Products List'} />
             <Button variant="outline" onClick={exportProducts}>
-              <Download className="mr-2 h-4 w-4" />ექსპორტი
+              <Download className="mr-2 h-4 w-4" />{t('export') || 'Export'}
             </Button>
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileUpload} />
             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="mr-2 h-4 w-4" />იმპორტი
+              <Upload className="mr-2 h-4 w-4" />{t('import') || 'Import'}
             </Button>
             <Button variant="outline" onClick={() => setLabelsOpen(true)}>
-              <Tags className="mr-2 h-4 w-4" />ეტიკეტები
+              <Tags className="mr-2 h-4 w-4" />{t('labels') || 'Labels'}
             </Button>
-            <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />დამატება</Button>
+            <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />{t('add') || 'Add'}</Button>
           </div>
         </div>
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="ძიება..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input placeholder={t('search_dots') || 'Search...'} className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
         {isLoading ? (
@@ -260,7 +266,7 @@ export default function ProductsPage() {
             {isMobile ? (
               <div className="space-y-2">
                 {filtered.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">პროდუქტები ვერ მოიძებნა</p>
+                  <p className="text-center text-muted-foreground py-8">{t('no_products_found') || 'No products found'}</p>
                 ) : (
                   filtered.map((p) => (
                     <SwipeToDelete key={p.id} onDelete={() => handleDelete(p.id)}>
@@ -269,7 +275,7 @@ export default function ProductsPage() {
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{p.name}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {categories.find((c) => c.id === p.category_id)?.name || 'კატეგორია არ არის'}
+                              {categories.find((c) => c.id === p.category_id)?.name || (t('no_category') || 'No category')}
                             </p>
                           </div>
                           <Badge variant={p.stock <= p.min_stock ? 'destructive' : 'secondary'} className="text-[10px] shrink-0">
@@ -278,8 +284,8 @@ export default function ProductsPage() {
                         </div>
                         <div className="flex items-center justify-between mt-2">
                           <div className="flex gap-3 text-sm">
-                            <span className="text-muted-foreground">შეს: <span className="text-foreground font-medium">₾{p.buy_price.toFixed(2)}</span></span>
-                            <span className="text-muted-foreground">გას: <span className="text-primary font-bold">₾{p.sell_price.toFixed(2)}</span></span>
+                            <span className="text-muted-foreground">{t('buy_short') || 'Buy:'} <span className="text-foreground font-medium">₾{p.buy_price.toFixed(2)}</span></span>
+                            <span className="text-muted-foreground">{t('sell_short') || 'Sell:'} <span className="text-primary font-bold">₾{p.sell_price.toFixed(2)}</span></span>
                           </div>
                           <div className="flex gap-1">
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil className="h-3.5 w-3.5" /></Button>
@@ -297,13 +303,13 @@ export default function ProductsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>სახელი</TableHead>
-                      <TableHead>ბარკოდი</TableHead>
-                      <TableHead>კატეგორია</TableHead>
-                      <TableHead>შესყიდვა</TableHead>
-                      <TableHead>გასაყიდი</TableHead>
-                      <TableHead>მარაგი</TableHead>
-                      <TableHead>ერთეული</TableHead>
+                      <TableHead>{t('name') || 'Name'}</TableHead>
+                      <TableHead>{t('barcode') || 'Barcode'}</TableHead>
+                      <TableHead>{t('category') || 'Category'}</TableHead>
+                      <TableHead>{t('buy_price') || 'Buy price'}</TableHead>
+                      <TableHead>{t('sell_price') || 'Sell price'}</TableHead>
+                      <TableHead>{t('stock') || 'Stock'}</TableHead>
+                      <TableHead>{t('unit') || 'Unit'}</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -311,7 +317,7 @@ export default function ProductsPage() {
                     {filtered.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                          პროდუქტები ვერ მოიძებნა
+                          {t('no_products_found') || 'No products found'}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -343,35 +349,46 @@ export default function ProductsPage() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editingId ? 'რედაქტირება' : 'ახალი პროდუქტი'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? (t('edit') || 'Edit') : (t('new_product') || 'New product')}</DialogTitle></DialogHeader>
           <div className="grid gap-3">
-            <div className="space-y-1"><Label>სახელი</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={200} /></div>
+            <div className="space-y-1"><Label>{t('name') || 'Name'}</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={200} /></div>
             <div className="space-y-1">
-              <Label>ბარკოდი</Label>
+              <Label>{t('barcode') || 'Barcode'}</Label>
               <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} maxLength={50} />
               {form.barcode && <BarcodeDisplay value={form.barcode} width={1.2} height={35} fontSize={11} />}
             </div>
             <div className="space-y-1">
-              <Label>კატეგორია</Label>
+              <Label>{t('category') || 'Category'}</Label>
               <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>შესყიდვის ფასი</Label><Input type="number" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: e.target.value })} /></div>
-              <div className="space-y-1"><Label>გასაყიდი ფასი</Label><Input type="number" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t('buy_price') || 'Buy price'}</Label><Input type="number" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t('sell_price') || 'Sell price'}</Label><Input type="number" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>ერთეული</Label><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></div>
-              <div className="space-y-1"><Label>რაოდენობა</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t('unit') || 'Unit'}</Label><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t('quantity') || 'Quantity'}</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
             </div>
-            <div className="space-y-1"><Label>მინ. მარაგი</Label><Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} /></div>
+            <div className="space-y-1"><Label>{t('min_stock') || 'Min stock'}</Label><Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} /></div>
+            
+            <div className="space-y-1 mt-2">
+              <Label>{t('image') || 'Image'}</Label>
+              <FileUpload
+                bucket="product-images"
+                path={activeTenantId || 'public'}
+                onUploadSuccess={(url) => setForm({ ...form, images: [url] })}
+                currentImageUrl={form.images[0]}
+                className="h-32"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button onClick={handleSave} disabled={addProduct.isPending || updateProduct.isPending}>
               {(addProduct.isPending || updateProduct.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingId ? 'განახლება' : 'დამატება'}
+              {editingId ? (t('update') || 'Update') : (t('add') || 'Add')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -383,26 +400,26 @@ export default function ProductsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5 text-primary" />
-              Excel-დან იმპორტი ({importData.length} პროდუქტი)
+              {t('import_from_excel') || 'Import from Excel'} ({importData.length})
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={downloadTemplate}>
                 <FileSpreadsheet className="h-4 w-4 mr-1" />
-                შაბლონის ჩამოტვირთვა
+                {t('download_template') || 'Download template'}
               </Button>
             </div>
             <div className="border rounded-lg overflow-auto max-h-[50vh]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>სახელი</TableHead>
-                    <TableHead>ბარკოდი</TableHead>
-                    <TableHead>შესყიდვა</TableHead>
-                    <TableHead>გასაყიდი</TableHead>
-                    <TableHead>მარაგი</TableHead>
-                    <TableHead>სტატუსი</TableHead>
+                    <TableHead>{t('name') || 'Name'}</TableHead>
+                    <TableHead>{t('barcode') || 'Barcode'}</TableHead>
+                    <TableHead>{t('buy_price') || 'Buy price'}</TableHead>
+                    <TableHead>{t('sell_price') || 'Sell price'}</TableHead>
+                    <TableHead>{t('stock') || 'Stock'}</TableHead>
+                    <TableHead>{t('status') || 'Status'}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -417,9 +434,9 @@ export default function ProductsPage() {
                         <TableCell>{item.stock}</TableCell>
                         <TableCell>
                           {exists ? (
-                            <Badge variant="secondary" className="text-xs">არსებობს - განახლდება</Badge>
+                            <Badge variant="secondary" className="text-xs">{t('exists_will_update') || 'Exists - will be updated'}</Badge>
                           ) : (
-                            <Badge className="text-xs bg-primary/10 text-primary border-primary/20">ახალი</Badge>
+                            <Badge className="text-xs bg-primary/10 text-primary border-primary/20">{t('new') || 'New'}</Badge>
                           )}
                         </TableCell>
                       </TableRow>
@@ -429,16 +446,16 @@ export default function ProductsPage() {
               </Table>
             </div>
             <p className="text-xs text-muted-foreground">
-              * უკვე არსებული ბარკოდის პროდუქტებს მარაგი დაემატება, ახალი პროდუქტები შეიქმნება
+              * {t('import_notice') || 'Existing barcode products will have stock updated, new products will be created'}
             </p>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => { setImportOpen(false); setImportData([]); }}>
-              <X className="h-4 w-4 mr-1" />გაუქმება
+              <X className="h-4 w-4 mr-1" />{t('cancel') || 'Cancel'}
             </Button>
             <Button onClick={handleImport} disabled={importing}>
               {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
-              {importing ? 'იმპორტი...' : `${importData.length} პროდუქტის იმპორტი`}
+              {importing ? (t('importing') || 'Importing...') : (t('import_n_products') || 'Import products').replace('{length}', importData.length.toString())}
             </Button>
           </DialogFooter>
         </DialogContent>

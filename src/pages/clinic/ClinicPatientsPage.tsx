@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Phone, Mail, Loader2, AlertTriangle, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, Phone, Mail, Loader2, AlertTriangle, FileText, Shield } from 'lucide-react';
 import { PrintButton } from '@/components/PrintButton';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -24,7 +24,10 @@ const emptyForm: Omit<ClinicPatient, 'id' | 'created_at'> = {
   blood_type: '',
   allergies: '',
   emergency_contact: '',
-  medical_history: ''
+  medical_history: '',
+  insurance_provider: '',
+  insurance_number: '',
+  insurance_expiry: ''
 };
 
 export default function ClinicPatientsPage() {
@@ -49,7 +52,10 @@ export default function ClinicPatientsPage() {
       blood_type: p.blood_type || '',
       allergies: p.allergies || '',
       emergency_contact: p.emergency_contact || '',
-      medical_history: p.medical_history || ''
+      medical_history: p.medical_history || '',
+      insurance_provider: p.insurance_provider || '',
+      insurance_number: p.insurance_number || '',
+      insurance_expiry: p.insurance_expiry || ''
     }); 
     setDialogOpen(true); 
   };
@@ -150,7 +156,7 @@ export default function ClinicPatientsPage() {
                   <TableHead>პირადი ნომერი</TableHead>
                   <TableHead>ტელეფონი</TableHead>
                   <TableHead>დაბ. თარიღი</TableHead>
-                  <TableHead>ალერგიები</TableHead>
+                  <TableHead>დაზღვევა</TableHead>
                   <TableHead className="text-right">მოქმედება</TableHead>
                 </TableRow>
               </TableHeader>
@@ -162,11 +168,11 @@ export default function ClinicPatientsPage() {
                     <TableCell>{p.phone || '-'}</TableCell>
                     <TableCell>{p.date_of_birth || '-'}</TableCell>
                     <TableCell>
-                      {p.allergies ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-destructive/10 text-destructive">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          კი
-                        </span>
+                      {p.insurance_provider ? (
+                        <div className="flex items-center gap-1.5">
+                          <Shield className="h-3.5 w-3.5 text-blue-500" />
+                          <span className="text-sm font-medium">{p.insurance_provider}</span>
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
@@ -216,6 +222,11 @@ export default function ClinicPatientsPage() {
             
             <div className="space-y-1.5"><Label>სისხლის ჯგუფი / რეზუსი</Label><Input placeholder="მაგ: II (A) Rh+" value={form.blood_type} onChange={(e) => setForm({ ...form, blood_type: e.target.value })} /></div>
             <div className="space-y-1.5"><Label>საკონტაქტო პირი (საგანგებო)</Label><Input placeholder="სახელი, ტელეფონი" value={form.emergency_contact} onChange={(e) => setForm({ ...form, emergency_contact: e.target.value })} /></div>
+
+            {/* Insurance Section */}
+            <div className="space-y-1.5"><Label>დაზღვევის პროვაიდერი</Label><Input placeholder="მაგ: არდი, იმედი L" value={form.insurance_provider} onChange={(e) => setForm({ ...form, insurance_provider: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label>პოლისის ნომერი</Label><Input placeholder="P-XXXXXXX" value={form.insurance_number} onChange={(e) => setForm({ ...form, insurance_number: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label>დაზღვევის ვადა</Label><Input type="date" value={form.insurance_expiry} onChange={(e) => setForm({ ...form, insurance_expiry: e.target.value })} /></div>
             
             <div className="space-y-1.5 md:col-span-2">
                 <Label className="text-destructive font-semibold flex items-center gap-1"><AlertTriangle className="h-4 w-4"/> ალერგიები</Label>

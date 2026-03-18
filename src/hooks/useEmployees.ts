@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActivityLog } from '@/hooks/useActivityLog';
+import { toast } from 'sonner';
 
 export interface Employee {
   id: string;
@@ -47,6 +48,25 @@ export interface SalarySlip {
   status: 'draft' | 'paid' | 'cancelled';
   paid_at?: string;
   journal_entry_id?: string;
+}
+
+export interface Leave {
+  id: string;
+  employee_id: string;
+  leave_type: 'vacation' | 'sick_leave' | 'unpaid' | 'other';
+  start_date: string;
+  end_date: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reason?: string;
+}
+
+export interface PerformanceReview {
+  id: string;
+  employee_id: string;
+  review_date: string;
+  performance_score: number;
+  comments?: string;
+  reviewer_name?: string;
 }
 
 export function useEmployees() {
@@ -209,6 +229,77 @@ export function useEmployees() {
     },
   });
 
+  // ---- Leaves ----
+  const leavesQuery = useQuery({
+    queryKey: ['employee_leaves'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('employee_leaves')
+        .select('*')
+        .order('start_date', { ascending: false });
+      if (error && error.code !== '42P01') throw error; // Ignore table not found if not run migration yet
+      return (data || []) as Leave[];
+    },
+  });
+
+  const requestLeave = useMutation({
+    mutationFn: async (leave: Omit<Leave, 'id' | 'status'>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from('employee_leaves')
+        .insert({ ...leave, user_id: user?.id, status: 'pending' })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee_leaves'] });
+      toast?.success?.('შვებულების მოთხოვნა გაიგზავნა');
+    },
+  });
+
+  const updateLeaveStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: Leave['status'] }) => {
+      const { error } = await supabase.from('employee_leaves').update({ status }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee_leaves'] });
+      toast?.success?.('სტატუსი განახლდა');
+    },
+  });
+
+  // ---- Performance Reviews ----
+  const reviewsQuery = useQuery({
+    queryKey: ['employee_reviews'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('employee_reviews')
+        .select('*')
+        .order('review_date', { ascending: false });
+      if (error && error.code !== '42P01') throw error;
+      return (data || []) as PerformanceReview[];
+    },
+  });
+
+  const addPerformanceReview = useMutation({
+    mutationFn: async (review: Omit<PerformanceReview, 'id'>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from('employee_reviews')
+        .insert({ ...review, user_id: user?.id })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee_reviews'] });
+      toast?.success?.('შეფასება დაემატა');
+    },
+  });
+
   const authenticateByPin = async (pin: string): Promise<Employee | null> => {
     const employees = query.data || [];
     return employees.find((e) => e.pin_code === pin && e.is_active) || null;
@@ -216,15 +307,20 @@ export function useEmployees() {
 
   return {
     employees: query.data || [],
-    isLoading: query.isLoading || attendanceQuery.isLoading || salaryQuery.isLoading,
+    isLoading: query.isLoading || attendanceQuery.isLoading || salaryQuery.isLoading || leavesQuery.isLoading || reviewsQuery.isLoading,
     attendance: attendanceQuery.data || [],
     salarySlips: salaryQuery.data || [],
+    leaves: leavesQuery.data || [],
+    reviews: reviewsQuery.data || [],
     addEmployee,
     updateEmployee,
     deleteEmployee,
     logAttendance,
     createSalarySlip,
     paySalary,
+    requestLeave,
+    updateLeaveStatus,
+    addPerformanceReview,
     authenticateByPin,
   };
 }

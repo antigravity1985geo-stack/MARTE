@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { PageTransition, staggerContainer, staggerItem } from '@/components/PageTransition';
-import { AnimatedNumber } from '@/components/AnimatedNumber';
 import { useProducts } from '@/hooks/useProducts';
 import { useClients } from '@/hooks/useClients';
 import { useTransactions } from '@/hooks/useTransactions';
@@ -15,29 +14,30 @@ import { useAccounting } from '@/hooks/useAccounting';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAnomalies } from '@/hooks/useAnomalies';
 import { useActivityLogs, ACTION_LABELS, ENTITY_LABELS } from '@/hooks/useActivityLog';
+import { useI18n } from '@/hooks/useI18n';
 import {
   ShoppingCart, DollarSign, Package, Users, TrendingUp, TrendingDown,
-  AlertTriangle, Percent, Zap, ArrowRight, RefreshCw, Clock, CreditCard,
+  AlertTriangle, Zap, ArrowRight, RefreshCw, Clock, CreditCard,
   Banknote, Activity, BarChart3, Heart, Crown, UserCheck,
   Star, ShoppingBag, Timer, Wallet, Brain, Sparkles, ChevronRight,
-  ShieldAlert, Eye, Search, Trash2, Plus
+  ShieldAlert, Trash2, Plus
 } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CyberCard } from '@/components/CyberCard';
+import { StatCard } from '@/components/StatCard';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { AVAILABLE_FEATURES, isFeatureLocked, IndustryType, PlanType } from '@/config/features';
 
 const PIE_COLORS = [
-  'hsl(162 72% 38%)',
-  'hsl(32 95% 52%)',
-  'hsl(210 92% 45%)',
-  'hsl(4 76% 54%)',
-  'hsl(280 60% 50%)',
+  'hsl(221 83% 53%)',
+  'hsl(239 84% 67%)',
+  'hsl(199 89% 48%)',
+  'hsl(142 71% 45%)',
+  'hsl(215 25% 27%)',
 ];
 
 import RealEstateDashboard from './real-estate/RealEstateDashboard';
@@ -56,6 +56,7 @@ export default function DashboardPage() {
   const { anomalies } = useAnomalies();
   const { data: activityLogs } = useActivityLogs(20);
   const { user, tenants, activeTenantId } = useAuthStore();
+  const { t } = useI18n();
 
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
@@ -66,18 +67,13 @@ export default function DashboardPage() {
   const industry = (activeTenant?.industry || 'retail') as IndustryType;
   const plan = (activeTenant?.subscription_plan || 'free') as PlanType;
   const features = activeTenant?.features || {};
-  
+
   const isEnabled = (id: string) => {
-    // 1. Feature must be toggled on
     if (features[id] === false) return false;
-    
-    // 2. Feature must belong to this industry
     const config = AVAILABLE_FEATURES.find(f => f.id === id);
     if (!config) return true;
     return config.industries.includes(industry);
   };
-
-  const isLocked = (id: string) => isFeatureLocked(id, plan, user?.isSuperadmin);
 
   const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -110,19 +106,16 @@ export default function DashboardPage() {
   const todaySales = salesTransactions.filter((t) => t.date.startsWith(today));
   const todayRevenue = todaySales.reduce((s, t) => s + t.total, 0);
 
-  // Accounting Stats
   const { revenue: accRevenue, expenses: accExpenses, netIncome } = getProfitLoss();
   const bankBalance = accounts.find(a => a.code === '2320')?.balance || 0;
   const cashBalance = accounts.find(a => a.code === '2310')?.balance || 0;
 
-  // HR Stats
   const activeEmps = employees.filter(e => e.is_active);
   const todayAttendance = attendance.filter(a => a.date === today);
   const presentCount = todayAttendance.filter(a => a.status === 'present').length;
   const absentCount = todayAttendance.filter(a => a.status === 'absent').length;
   const attendancePct = activeEmps.length > 0 ? Math.round((presentCount / activeEmps.length) * 100) : 0;
 
-  // Yesterday comparison
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -131,15 +124,6 @@ export default function DashboardPage() {
   const revenueChange = yesterdayRevenue > 0 ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 : 0;
   const salesChange = yesterdaySales.length > 0 ? ((todaySales.length - yesterdaySales.length) / yesterdaySales.length) * 100 : 0;
 
-  const totalRevenue = salesTransactions.reduce((s, t) => s + t.total, 0);
-  const totalCost = salesTransactions.reduce((s, t) =>
-    s + (t.items || []).reduce((is: number, item: any) => {
-      const product = products.find((p) => p.id === item.product_id);
-      return is + (product ? product.buy_price * item.quantity : 0);
-    }, 0), 0);
-  const totalProfit = totalRevenue - totalCost;
-  const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
   const avgOrderValue = todaySales.length > 0 ? todayRevenue / todaySales.length : 0;
 
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -147,7 +131,6 @@ export default function DashboardPage() {
     d.setDate(d.getDate() - (6 - i));
     const dateStr = d.toISOString().split('T')[0];
     const daySales = salesTransactions.filter((t) => t.date.startsWith(dateStr));
-    const dayNames = ['კვი', 'ორშ', 'სამ', 'ოთხ', 'ხუთ', 'პარ', 'შაბ'];
     const dayCost = daySales.reduce((s, t) =>
       s + (t.items || []).reduce((is: number, item: any) => {
         const product = products.find((p) => p.id === item.product_id);
@@ -155,7 +138,7 @@ export default function DashboardPage() {
       }, 0), 0);
     const dayRevenue = daySales.reduce((s, t) => s + t.total, 0);
     return {
-      day: dayNames[d.getDay()],
+      day: format(d, 'EEE'), // Mapped in Recharts tooltip if needed, or rely on date
       sales: daySales.length,
       revenue: dayRevenue,
       profit: dayRevenue - dayCost,
@@ -166,52 +149,10 @@ export default function DashboardPage() {
   const cardSales = salesTransactions.filter((t) => t.payment_method === 'card');
   const combinedSales = salesTransactions.filter((t) => t.payment_method === 'combined');
   const paymentData = [
-    { name: 'ნაღდი', value: cashSales.length, amount: cashSales.reduce((s, t) => s + t.total, 0) },
-    { name: 'ბარათი', value: cardSales.length, amount: cardSales.reduce((s, t) => s + t.total, 0) },
-    { name: 'კომბინ.', value: combinedSales.length, amount: combinedSales.reduce((s, t) => s + t.total, 0) },
+    { name: t('sales_cash'), value: cashSales.length, amount: cashSales.reduce((s, t) => s + t.total, 0) },
+    { name: t('sales_card'), value: cardSales.length, amount: cardSales.reduce((s, t) => s + t.total, 0) },
+    { name: t('sales_combined'), value: combinedSales.length, amount: combinedSales.reduce((s, t) => s + t.total, 0) },
   ].filter((d) => d.value > 0);
-
-  const stats = [
-    {
-      title: 'დღის გაყიდვები',
-      value: todaySales.length,
-      icon: ShoppingCart,
-      gradient: 'from-primary/20 to-primary/5',
-      iconBg: 'bg-primary/15',
-      iconColor: 'text-primary',
-      change: salesChange,
-    },
-    {
-      title: 'დღის შემოსავალი',
-      value: todayRevenue,
-      prefix: '₾',
-      icon: DollarSign,
-      gradient: 'from-success/20 to-success/5',
-      iconBg: 'bg-success/15',
-      iconColor: 'text-success',
-      decimals: 2,
-      change: revenueChange,
-    },
-    {
-      title: 'საშ. ჩეკი',
-      value: avgOrderValue,
-      prefix: '₾',
-      icon: Activity,
-      gradient: 'from-info/20 to-info/5',
-      iconBg: 'bg-info/15',
-      iconColor: 'text-info',
-      decimals: 2,
-    },
-    {
-      title: 'პროდუქტები',
-      value: products.length,
-      icon: Package,
-      gradient: 'from-accent/20 to-accent/5',
-      iconBg: 'bg-accent/15',
-      iconColor: 'text-accent',
-      subtitle: `${lowStockCount} დაბალი მარაგით`,
-    },
-  ];
 
   if (industry === 'real_estate' || user?.isSuperadmin) {
     return <RealEstateDashboard />;
@@ -223,73 +164,79 @@ export default function DashboardPage() {
         <motion.div variants={staggerItem} className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-foreground">დეშბორდი</h1>
-              <div className="flex items-center gap-2 mt-0.5">
+              <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">{t('nav_dashboard')}</h1>
+              <div className="flex items-center gap-2 mt-1">
                 <Badge
-                  variant={currentShift ? 'default' : 'secondary'}
-                  className={`text-[10px] ${currentShift ? 'glow-pulse' : ''}`}
+                  variant={currentShift ? 'outline' : 'secondary'}
+                  className={`text-[10px] uppercase tracking-wider font-bold py-0.5 ${currentShift ? 'border-emerald-500/50 text-emerald-500 bg-emerald-500/5' : ''}`}
                 >
-                  {currentShift ? '● ცვლა გახსნილია' : '○ ცვლა დახურულია'}
+                  {currentShift ? t('pos_shift_active') : t('pos_shift_closed')}
                 </Badge>
                 {currentShift && (
-                  <span className="text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3 inline mr-0.5" />
+                  <span className="text-xs text-muted-foreground font-medium">
+                    <Clock className="h-3 w-3 inline mr-1" />
                     {currentShift.cashierName}
                   </span>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-full px-3 py-1.5">
-              <RefreshCw className="h-3 w-3" />
-              <span>{countdown}წმ</span>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 text-[11px] font-bold text-muted-foreground bg-muted/20 border border-border rounded-lg px-3 py-1.5 uppercase tracking-wide">
+              <RefreshCw className="h-3 w-3 animate-spin-slow" />
+              <span>{countdown}S</span>
             </div>
-            <Button size="sm" variant="outline" className="gap-1.5 h-8 rounded-full" onClick={refresh}>
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline text-xs">განახლება</span>
+            <Button size="sm" variant="outline" className="gap-2 h-9 rounded-lg border-border bg-background hover:bg-accent transition-all font-semibold" onClick={refresh}>
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline text-xs">{t('refresh')}</span>
             </Button>
           </div>
         </motion.div>
 
         {/* AI Executive Narrative */}
         <motion.div variants={staggerItem}>
-          <Card className="border-primary/20 bg-primary/5 overflow-hidden relative border-l-4">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Brain className="h-24 w-24 text-primary" />
+          <Card className="border-primary/20 bg-primary/5 overflow-hidden relative border-l-4 rounded-xl shadow-sm">
+            <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+              <Brain className="h-28 w-28 text-primary" />
             </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                AI ბიზნეს-ანალიზი (Executive Summary)
+            <CardHeader className="pb-3 px-6 pt-5">
+              <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-widest text-[11px]">
+                <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                {t('dashboard_ai_title')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="pb-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+            <CardContent className="pb-6 px-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase text-primary/70 tracking-wider flex items-center gap-1.5">
-                    <Users className="h-3 w-3" /> მარკეტინგი & კლიენტები
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-2">
+                    <Users className="h-3.5 w-3.5 text-primary/60" /> {t('marketing_clients')}
                   </p>
-                  <p className="text-sm">თქვენი ტოპ კლიენტია <span className="font-bold underline decoration-primary/30 decoration-2 underline-offset-2">{ltvData[0]?.client_name || '...'}</span>, რომელმაც ჯამში {ltvData[0]?.total_spent.toFixed(0) || 0} ₾ დახარჯა. ლოიალობის პროგრამაში ჩართულობა სტაბილურია.</p>
+                  <p className="text-sm text-foreground/80 leading-relaxed">
+                    {t('top_client_is')} <span className="font-bold text-foreground underline decoration-primary/40 decoration-2 underline-offset-4">{ltvData[0]?.client_name || '...'}</span>, {t('who_spent')} {ltvData[0]?.total_spent.toFixed(0) || 0} ₾.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase text-primary/70 tracking-wider flex items-center gap-1.5">
-                    <Package className="h-3 w-3" /> მარაგების ოპტიმიზაცია
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-2">
+                    <Package className="h-3.5 w-3.5 text-primary/60" /> {t('inventory_optimization')}
                   </p>
-                  <p className="text-sm">პროდუქტების <span className="font-bold">{(abcData.filter(a => a.abc_category === 'A').length / (abcData.length || 1) * 100).toFixed(0)}%</span> (A კატეგორია) გენერირებს შემოსავლის დიდ წილს. ყურადღება მიაქციეთ მათ ნაშთებს.</p>
+                  <p className="text-sm text-foreground/80 leading-relaxed">
+                    {t('products')} <span className="font-bold text-foreground">{(abcData.filter(a => a.abc_category === 'A').length / (abcData.length || 1) * 100).toFixed(0)}%</span> (A {t('category')}) {t('generates_most_revenue')}.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase text-primary/70 tracking-wider flex items-center gap-1.5">
-                    <TrendingUp className="h-3 w-3" /> პროგნოზი (Forecast)
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-2">
+                    <TrendingUp className="h-3.5 w-3.5 text-primary/60" /> {t('forecast')}
                   </p>
-                  <p className="text-sm">გუშინდელთან შედარებით შემოსავალი {revenueChange > 0 ? 'გაიზარდა' : 'შემცირდა'} {Math.abs(revenueChange).toFixed(1)}%-ით. მომდევნო 7 დღისთვის მოსალოდნელია სტაბილური ტრენდი.</p>
+                  <p className="text-sm text-foreground/80 leading-relaxed">
+                    {t('compared_to_yesterday')} {revenueChange > 0 ? t('increased') : t('decreased')} <span className={revenueChange >= 0 ? "text-emerald-500 font-bold" : "text-red-500 font-bold"}>{Math.abs(revenueChange).toFixed(1)}%</span>.
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Anomalies & AI Alerts - Show only if Analytics/Audit enabled */}
+        {/* Anomalies & AI Alerts */}
         {(anomalies.length > 0 && isEnabled('analytics')) && (
           <motion.div variants={staggerItem}>
             <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-4 flex items-center justify-between">
@@ -298,12 +245,12 @@ export default function DashboardPage() {
                   <ShieldAlert className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-destructive">AI ანომალიების აღმოჩენა ({anomalies.length})</h3>
+                  <h3 className="text-sm font-bold text-destructive">{t('ai_anomalies')} ({anomalies.length})</h3>
                   <p className="text-xs text-muted-foreground">{anomalies[0].description}</p>
                 </div>
               </div>
               <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 h-8">
-                დეტალები <ChevronRight className="h-4 w-4 ml-1" />
+                {t('details')} <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
           </motion.div>
@@ -315,11 +262,11 @@ export default function DashboardPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-6">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
-                აუდიტის ისტორია
+                {t('audit_history')}
               </CardTitle>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/app/activity-log" className="text-xs flex items-center gap-1 hover:text-primary transition-colors">
-                  ყველა <ChevronRight className="h-3 w-3" />
+                  {t('view_all')} <ChevronRight className="h-3 w-3" />
                 </Link>
               </Button>
             </CardHeader>
@@ -351,7 +298,7 @@ export default function DashboardPage() {
                 ))}
                 {!activityLogs?.length && (
                   <div className="py-8 text-center text-muted-foreground text-sm">
-                    აქტივობა არ მოიძებნა
+                    {t('no_activity')}
                   </div>
                 )}
               </div>
@@ -359,16 +306,15 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
 
-        {/* ABC & LTV Summary Widgets - Show only if Sales enabled */}
+        {/* ABC & LTV Summary Widgets */}
         {isEnabled('sales') && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             <motion.div variants={staggerItem} className="lg:col-span-1">
-              {/* ... ABC Analysis Card content ... */}
               <Card className="shadow-elegant border-primary/10 h-full card-hover">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <BarChart3 className="h-4 w-4 text-primary" />
-                    ABC ანალიზი (მოგების წილი)
+                    {t('abc_analysis')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -381,16 +327,9 @@ export default function DashboardPage() {
                       ]} layout="vertical">
                         <XAxis type="number" hide />
                         <YAxis dataKey="name" type="category" fontSize={10} stroke="hsl(var(--muted-foreground))" width={50} tickLine={false} axisLine={false} />
-                        <Tooltip
-                          cursor={{ fill: 'transparent' }}
-                          contentStyle={{ background: 'hsl(var(--card))', borderRadius: '12px', fontSize: '12px' }}
-                        />
+                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ background: 'hsl(var(--card))', borderRadius: '12px', fontSize: '12px' }} />
                         <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                          {[
-                            { color: 'hsl(162 72% 38%)' },
-                            { color: 'hsl(32 95% 52%)' },
-                            { color: 'hsl(210 92% 45%)' },
-                          ].map((entry, index) => (
+                          {[{ color: 'hsl(162 72% 38%)' }, { color: 'hsl(32 95% 52%)' }, { color: 'hsl(210 92% 45%)' }].map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Bar>
@@ -398,7 +337,7 @@ export default function DashboardPage() {
                     </ResponsiveContainer>
                   </div>
                   <div className="mt-4 p-2 bg-muted/40 rounded-lg">
-                    <p className="text-[10px] text-muted-foreground text-center italic">"A კატეგორია" - პროდუქტები, რომლებიც ქმნიან თქვენს ძირითად მოგებას</p>
+                    <p className="text-[10px] text-muted-foreground text-center italic">{t('abc_a_desc')}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -409,27 +348,25 @@ export default function DashboardPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <Crown className="h-4 w-4 text-accent" />
-                    ტოპ კლიენტები (LTV)
+                    {t('top_clients_ltv')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-2">
                   {ltvData.slice(0, 4).length > 0 ? ltvData.slice(0, 4).map((client, i) => (
                     <div key={client.client_id} className="flex items-center justify-between group p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-primary/5 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/10">
-                          #{i + 1}
-                        </div>
+                        <div className="w-7 h-7 rounded-lg bg-primary/5 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/10">#{i + 1}</div>
                         <span className="text-xs font-medium truncate max-w-[100px]">{client.client_name}</span>
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-bold text-foreground">₾{client.total_spent.toFixed(0)}</p>
-                        <p className="text-[9px] text-muted-foreground">{client.total_orders} შეკვეთა</p>
+                        <p className="text-[9px] text-muted-foreground">{client.total_orders} {t('orders')}</p>
                       </div>
                     </div>
                   )) : (
                     <div className="h-full flex flex-col items-center justify-center py-6 text-muted-foreground">
                       <Users className="h-8 w-8 mb-2 opacity-20" />
-                      <p className="text-[10px]">მონაცემები არ არის</p>
+                      <p className="text-[10px]">{t('no_data')}</p>
                     </div>
                   )}
                 </CardContent>
@@ -441,14 +378,14 @@ export default function DashboardPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <ShoppingBag className="h-4 w-4 text-info" />
-                    Cross-sell რეკომენდაცია
+                    {t('cross_sell_recommendations')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 pt-2">
                   {basketData.slice(0, 3).length > 0 ? basketData.slice(0, 3).map((pair, i) => (
                     <div key={i} className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/30 border border-border/40 hover:border-info/30 transition-colors">
                       <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-bold text-info uppercase tracking-wider">ხშირი წყვილი</span>
+                        <span className="text-[9px] font-bold text-info uppercase tracking-wider">{t('frequent_pair')}</span>
                         <Badge variant="outline" className="text-[9px] bg-background border-info/20 px-1 py-0">{pair.frequency}x</Badge>
                       </div>
                       <div className="flex flex-col gap-0.5">
@@ -459,35 +396,34 @@ export default function DashboardPage() {
                   )) : (
                     <div className="h-full flex flex-col items-center justify-center py-6 text-muted-foreground">
                       <Zap className="h-8 w-8 mb-2 opacity-20" />
-                      <p className="text-[10px]">ანალიზი მუშავდება...</p>
+                      <p className="text-[10px]">{t('processing_analysis')}</p>
                     </div>
                   )}
-                  <p className="text-[9px] text-center text-muted-foreground italic mt-2">დაფუძნებულია Market Basket Analysis-ზე</p>
+                  <p className="text-[9px] text-center text-muted-foreground italic mt-2">{t('based_on_mba')}</p>
                 </CardContent>
               </Card>
             </motion.div>
           </div>
         )}
 
-        {/* Main Stats - Cyber Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          <CyberCard title="დღის გაყიდვები" value={todaySales.length.toString()} icon={ShoppingCart} color="primary" subtitle={salesChange !== 0 ? `${salesChange > 0 ? '+' : ''}${salesChange.toFixed(0)}% გუშინთან` : undefined} />
-          <CyberCard title="დღის შემოსავალი" value={todayRevenue} prefix="₾" icon={DollarSign} color="success" subtitle={revenueChange !== 0 ? `${revenueChange > 0 ? '+' : ''}${revenueChange.toFixed(0)}% გუშინთან` : undefined} />
-          <CyberCard title="საშუალო ჩეკი" value={avgOrderValue} prefix="₾" icon={Activity} color="info" />
-          <CyberCard title="პროდუქტები" value={products.length.toString()} icon={Package} color="accent" subtitle={`${lowStockCount} დაბალი მარაგით`} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard title={t('dashboard_daily_sales')} value={todaySales.length} icon={ShoppingCart} color="primary" change={salesChange} />
+          <StatCard title={t('dashboard_daily_revenue')} value={todayRevenue} prefix="₾" icon={DollarSign} color="success" change={revenueChange} />
+          <StatCard title={t('dashboard_avg_check')} value={avgOrderValue} prefix="₾" icon={Activity} color="info" />
+          <StatCard title={t('dashboard_products')} value={products.length} icon={Package} color="accent" subtitle={`${lowStockCount} ${t('low_stock_suffix')}`} />
         </div>
 
-        {/* Financial Summary Row - Show only if Accounting enabled */}
+        {/* Financial Summary Row */}
         {isEnabled('accounting') && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4 mt-4">
-            <CyberCard title="ბანკი" value={bankBalance} prefix="₾" icon={Wallet} color="info" subtitle="საბანკო ნაშთი (2320)" />
-            <CyberCard title="სალარო" value={cashBalance} prefix="₾" icon={Banknote} color="success" subtitle="ნაღდი ფული (2310)" />
-            <CyberCard title="მოგება (P&L)" value={netIncome} prefix="₾" icon={netIncome >= 0 ? TrendingUp : TrendingDown} color={netIncome >= 0 ? 'success' : 'destructive'} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <StatCard title={t('accounting_bank')} value={bankBalance} prefix="₾" icon={Wallet} color="info" subtitle={t('accounting_bank_desc')} />
+            <StatCard title={t('accounting_cash')} value={cashBalance} prefix="₾" icon={Banknote} color="success" subtitle={t('accounting_cash_desc')} />
+            <StatCard title={t('accounting_pl')} value={netIncome} prefix="₾" icon={netIncome >= 0 ? TrendingUp : TrendingDown} color={netIncome >= 0 ? 'success' : 'destructive'} />
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mt-4">
-          <CyberCard title="კლიენტები" value={clients.length.toString()} icon={Users} color="accent" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          <StatCard title={t('nav_clients')} value={clients.length} icon={Users} color="accent" />
         </div>
 
         {/* Low Stock Alert */}
@@ -497,7 +433,7 @@ export default function DashboardPage() {
               <CardHeader className="pb-3 pt-4 px-4">
                 <CardTitle className="text-sm font-semibold text-destructive flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  დაბალი მარაგი ({lowStockCount})
+                  {t('low_stock_alert')} ({lowStockCount})
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 pt-0">
@@ -514,7 +450,7 @@ export default function DashboardPage() {
                 {lowStockCount > 6 && (
                   <Link to="/app/products" className="block mt-2">
                     <Button variant="ghost" size="sm" className="text-destructive text-xs w-full">
-                      ყველას ნახვა ({lowStockCount}) <ArrowRight className="h-3 w-3 ml-1" />
+                      {t('view_all')} ({lowStockCount}) <ArrowRight className="h-3 w-3 ml-1" />
                     </Button>
                   </Link>
                 )}
@@ -532,17 +468,11 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <BarChart3 className="h-4 w-4 text-primary" />
-                    ბოლო 7 დღე
+                    {t('last_7_days')}
                   </CardTitle>
                   <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      შემოსავალი
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-accent" />
-                      მოგება
-                    </div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary" /> {t('revenue')}</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-accent" /> {t('profit')}</div>
                   </div>
                 </div>
               </CardHeader>
@@ -551,27 +481,23 @@ export default function DashboardPage() {
                   <AreaChart data={last7Days}>
                     <defs>
                       <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(162 72% 38%)" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="hsl(162 72% 38%)" stopOpacity={0} />
+                        <stop offset="5%" stopColor="hsl(221 83% 53%)" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="hsl(221 83% 53%)" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(32 95% 52%)" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="hsl(32 95% 52%)" stopOpacity={0} />
+                        <stop offset="5%" stopColor="hsl(239 84% 67%)" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="hsl(239 84% 67%)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.5} />
+                    <XAxis dataKey="day" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} dy={8} />
+                    <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} dx={-8} />
                     <Tooltip
-                      contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', boxShadow: 'var(--shadow-card-hover)' }}
-                      formatter={(value: number, name: string) => [
-                        `₾${value.toFixed(2)}`,
-                        name === 'revenue' ? 'შემოსავალი' : 'მოგება',
-                      ]}
+                      contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)' }}
+                      formatter={(value: number, name: string) => [`₾${value.toFixed(2)}`, name === 'revenue' ? t('revenue') : t('profit')]}
                     />
-                    <Area type="monotone" dataKey="revenue" stroke="hsl(162 72% 38%)" fill="url(#revenueGrad)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 2, fill: 'hsl(var(--card))' }} />
-                    <Area type="monotone" dataKey="profit" stroke="hsl(32 95% 52%)" fill="url(#profitGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2, fill: 'hsl(var(--card))' }} />
-                    <Line type="monotone" dataKey="revenue" stroke="hsl(162 72% 38%)" strokeDasharray="5 5" strokeWidth={1} dot={false} opacity={0.3} />
+                    <Area type="monotone" dataKey="revenue" stroke="hsl(221 83% 53%)" fill="url(#revenueGrad)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 2, fill: '#1e293b' }} />
+                    <Area type="monotone" dataKey="profit" stroke="hsl(239 84% 67%)" fill="url(#profitGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2, fill: '#1e293b' }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -580,11 +506,11 @@ export default function DashboardPage() {
 
           {/* Payment Methods Pie */}
           <motion.div variants={staggerItem}>
-            <Card className="shadow-[var(--shadow-card)] h-full">
+            <Card className="shadow-sm border-[#334155]/50 bg-[#1e293b] h-full">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-accent" />
-                  გადახდის მეთოდები
+                <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-300 uppercase tracking-wider text-[11px]">
+                  <CreditCard className="h-4 w-4 text-indigo-400" />
+                  {t('payment_methods')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pb-4">
@@ -596,9 +522,9 @@ export default function DashboardPage() {
                           data={paymentData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={isMobile ? 35 : 50}
-                          outerRadius={isMobile ? 60 : 75}
-                          paddingAngle={4}
+                          innerRadius={isMobile ? 35 : 55}
+                          outerRadius={isMobile ? 60 : 80}
+                          paddingAngle={6}
                           dataKey="value"
                           strokeWidth={0}
                         >
@@ -606,10 +532,7 @@ export default function DashboardPage() {
                             <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip
-                          contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }}
-                          formatter={(value: number) => [value, 'ტრანზაქცია']}
-                        />
+                        <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }} formatter={(value: number) => [value, t('transactions_count')]} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="space-y-2 mt-2">
@@ -617,11 +540,11 @@ export default function DashboardPage() {
                         <div key={item.name} className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
-                            <span className="text-muted-foreground">{item.name}</span>
+                            <span className="text-slate-300">{item.name}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{item.value}</span>
-                            <span className="text-muted-foreground">₾{item.amount.toFixed(0)}</span>
+                            <span className="font-medium text-slate-300">{item.value}</span>
+                            <span className="text-slate-400">₾{item.amount.toFixed(0)}</span>
                           </div>
                         </div>
                       ))}
@@ -630,7 +553,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
                     <Banknote className="h-8 w-8 mb-2 opacity-40" />
-                    <p className="text-xs">მონაცემები არ არის</p>
+                    <p className="text-xs">{t('no_data')}</p>
                   </div>
                 )}
               </CardContent>
@@ -640,11 +563,10 @@ export default function DashboardPage() {
 
         {/* KPI WIDGETS ROW */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Top Products */}
           <motion.div variants={staggerItem}>
             <Card className="shadow-[var(--shadow-card)] h-full card-hover">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2"><Star className="h-4 w-4 text-primary" />ტოპ პროდუქტები</CardTitle>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2"><Star className="h-4 w-4 text-primary" />{t('top_products')}</CardTitle>
               </CardHeader>
               <CardContent className="pb-4 space-y-2">
                 {(() => {
@@ -654,14 +576,11 @@ export default function DashboardPage() {
                       productSales[item.product_name] = (productSales[item.product_name] || 0) + item.quantity;
                     });
                   });
-                  const top = Object.entries(productSales)
-                    .sort(([, a], [, b]) => b - a)
-                    .slice(0, 4);
-
+                  const top = Object.entries(productSales).sort(([, a], [, b]) => b - a).slice(0, 4);
                   return top.map(([name, qty]) => (
                     <div key={name} className="flex items-center justify-between text-xs">
                       <span className="truncate max-w-[120px] text-muted-foreground">{name}</span>
-                      <span className="font-bold">{qty} ერთ.</span>
+                      <span className="font-bold">{qty} {t('sales_units')}</span>
                     </div>
                   ));
                 })()}
@@ -669,13 +588,12 @@ export default function DashboardPage() {
             </Card>
           </motion.div>
 
-          {/* Attendance */}
           <motion.div variants={staggerItem}>
             <Card className="shadow-[var(--shadow-card)] h-full card-hover">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2"><UserCheck className="h-4 w-4 text-primary" />დასწრება (დღეს)</CardTitle>
-                  <Link to="/app/attendance"><Button size="sm" variant="ghost" className="h-6 text-[10px]">ვრცლად <ArrowRight className="h-3 w-3 ml-0.5" /></Button></Link>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2"><UserCheck className="h-4 w-4 text-primary" />{t('attendance')} ({t('today')})</CardTitle>
+                  <Link to="/app/attendance"><Button size="sm" variant="ghost" className="h-6 text-[10px]">{t('view_all')} <ArrowRight className="h-3 w-3 ml-0.5" /></Button></Link>
                 </div>
               </CardHeader>
               <CardContent className="pb-4">
@@ -689,19 +607,18 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-1 text-center text-[10px]">
-                  <div className="rounded bg-primary/10 p-1.5"><p className="font-bold text-sm text-primary">{presentCount}</p>დამსწრე</div>
-                  <div className="rounded bg-destructive/10 p-1.5"><p className="font-bold text-sm text-destructive">{absentCount}</p>გაცდენა</div>
-                  <div className="rounded bg-muted p-1.5"><p className="font-bold text-sm">{activeEmps.length - presentCount - absentCount}</p>აღურიცხ.</div>
+                  <div className="rounded bg-primary/10 p-1.5"><p className="font-bold text-sm text-primary">{presentCount}</p>{t('present')}</div>
+                  <div className="rounded bg-destructive/10 p-1.5"><p className="font-bold text-sm text-destructive">{absentCount}</p>{t('absent')}</div>
+                  <div className="rounded bg-muted p-1.5"><p className="font-bold text-sm">{activeEmps.length - presentCount - absentCount}</p>{t('unrecorded')}</div>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Stock Status */}
           <motion.div variants={staggerItem}>
             <Card className="shadow-[var(--shadow-card)] h-full card-hover">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2"><Package className="h-4 w-4 text-primary" />მარაგის სტატუსი</CardTitle>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2"><Package className="h-4 w-4 text-primary" />{t('stock_status')}</CardTitle>
               </CardHeader>
               <CardContent className="pb-4 space-y-2.5">
                 {(() => {
@@ -710,9 +627,9 @@ export default function DashboardPage() {
                   const outOfStock = products.filter(p => p.stock <= 0).length;
                   const total = products.length || 1;
                   return [
-                    { label: 'მარაგშია', count: inStock, pct: Math.round((inStock / total) * 100), color: 'bg-primary' },
-                    { label: 'დაბალი მარაგი', count: low, pct: Math.round((low / total) * 100), color: 'bg-yellow-500' },
-                    { label: 'ამოწურული', count: outOfStock, pct: Math.round((outOfStock / total) * 100), color: 'bg-destructive' },
+                    { label: t('in_stock'), count: inStock, pct: Math.round((inStock / total) * 100), color: 'bg-primary' },
+                    { label: t('low_stock_status'), count: low, pct: Math.round((low / total) * 100), color: 'bg-yellow-500' },
+                    { label: t('out_of_stock'), count: outOfStock, pct: Math.round((outOfStock / total) * 100), color: 'bg-destructive' },
                   ].map(item => (
                     <div key={item.label} className="space-y-1">
                       <div className="flex justify-between text-xs"><span className="text-muted-foreground">{item.label}</span><span className="font-medium">{item.count} ({item.pct}%)</span></div>
@@ -724,13 +641,12 @@ export default function DashboardPage() {
             </Card>
           </motion.div>
 
-          {/* Channels */}
           <motion.div variants={staggerItem}>
             <Card className="shadow-[var(--shadow-card)] h-full card-hover">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-primary" />არხები</CardTitle>
-                  <Link to="/app/ecommerce"><Button size="sm" variant="ghost" className="h-6 text-[10px]">ვრცლად <ArrowRight className="h-3 w-3 ml-0.5" /></Button></Link>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-primary" />{t('channels')}</CardTitle>
+                  <Link to="/app/ecommerce"><Button size="sm" variant="ghost" className="h-6 text-[10px]">{t('view_all')} <ArrowRight className="h-3 w-3 ml-0.5" /></Button></Link>
                 </div>
               </CardHeader>
               <CardContent className="pb-4 space-y-2">
@@ -738,11 +654,11 @@ export default function DashboardPage() {
                   { label: 'Glovo', orders: 23, revenue: '1,845₾', color: 'bg-yellow-500' },
                   { label: 'Wolt', orders: 18, revenue: '1,120₾', color: 'bg-blue-500' },
                   { label: 'Extra.ge', orders: 7, revenue: '521₾', color: 'bg-green-500' },
-                  { label: 'პირდაპირი', orders: todaySales.length, revenue: `${todayRevenue.toFixed(0)}₾`, color: 'bg-primary' },
+                  { label: t('direct_channel'), orders: todaySales.length, revenue: `${todayRevenue.toFixed(0)}₾`, color: 'bg-primary' },
                 ].map(ch => (
                   <div key={ch.label} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${ch.color}`} /><span className="text-muted-foreground">{ch.label}</span></div>
-                    <div className="flex items-center gap-2 text-xs"><span>{ch.orders} შეკვ.</span><span className="font-bold">{ch.revenue}</span></div>
+                    <div className="flex items-center gap-2 text-xs"><span>{ch.orders} {t('orders')}</span><span className="font-bold">{ch.revenue}</span></div>
                   </div>
                 ))}
               </CardContent>
@@ -754,7 +670,7 @@ export default function DashboardPage() {
         <motion.div variants={staggerItem}>
           <Card className="shadow-[var(--shadow-card)]">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2"><Timer className="h-4 w-4 text-primary" />საათობრივი გაყიდვები (დღეს)</CardTitle>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2"><Timer className="h-4 w-4 text-primary" />{t('hourly_sales_today')}</CardTitle>
             </CardHeader>
             <CardContent className="pb-4">
               <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
@@ -766,29 +682,29 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="hour" fontSize={10} tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" />
                   <YAxis fontSize={10} tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }} formatter={(value: number) => [`₾${value.toFixed(2)}`, 'შემოსავალი']} />
+                  <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }} formatter={(value: number) => [`₾${value.toFixed(2)}`, t('revenue')]} />
                   <Bar dataKey="revenue" fill="hsl(162 72% 38%)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </motion.div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-          {/* Auto Orders */}
           <motion.div variants={staggerItem}>
             <Card className="shadow-[var(--shadow-card)] h-full">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <Zap className="h-4 w-4 text-primary" />
-                    ავტო-შეკვეთები
+                    {t('auto_orders')}
                     <Badge variant={globalEnabled ? 'default' : 'secondary'} className="text-[10px]">
-                      {globalEnabled ? 'ჩართული' : 'გამორთული'}
+                      {globalEnabled ? t('enabled') : t('disabled')}
                     </Badge>
                   </CardTitle>
                   <Link to="/app/orders">
                     <Button size="sm" variant="ghost" className="gap-1 text-xs h-7">
-                      ვრცლად <ArrowRight className="h-3 w-3" />
+                      {t('view_all')} <ArrowRight className="h-3 w-3" />
                     </Button>
                   </Link>
                 </div>
@@ -796,9 +712,9 @@ export default function DashboardPage() {
               <CardContent className="pb-4">
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   {[
-                    { label: 'შეკვეთა', val: totalAutoOrders, color: 'text-primary' },
-                    { label: 'ღირებულება', val: `₾${totalAutoAmount.toFixed(0)}`, color: 'text-accent' },
-                    { label: 'წესი', val: activeRules, color: 'text-info' },
+                    { label: t('order'), val: totalAutoOrders, color: 'text-primary' },
+                    { label: t('value'), val: `₾${totalAutoAmount.toFixed(0)}`, color: 'text-accent' },
+                    { label: t('rule'), val: activeRules, color: 'text-info' },
                   ].map((item) => (
                     <div key={item.label} className="rounded-xl bg-muted/40 p-3 text-center">
                       <p className={`text-lg lg:text-xl font-bold ${item.color}`}>{item.val}</p>
@@ -808,35 +724,34 @@ export default function DashboardPage() {
                 </div>
                 {history.length > 0 ? (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">ბოლო შეკვეთები</p>
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{t('recent_orders')}</p>
                     {history.slice(0, 3).map((h) => (
                       <div key={h.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30 text-sm">
                         <span className="truncate font-medium">{h.productName}</span>
                         <span className="text-xs text-muted-foreground ml-2 shrink-0">
-                          {h.quantity} ერთ. • ₾{h.totalAmount.toFixed(2)}
+                          {h.quantity} {t('sales_units')} • ₾{h.totalAmount.toFixed(2)}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground text-center py-4">ავტო-შეკვეთები ჯერ არ არის</p>
+                  <p className="text-xs text-muted-foreground text-center py-4">{t('no_auto_orders')}</p>
                 )}
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Recent Transactions */}
           <motion.div variants={staggerItem}>
             <Card className="shadow-[var(--shadow-card)] h-full">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <Activity className="h-4 w-4 text-success" />
-                    ბოლო ტრანზაქციები
+                    {t('recent_transactions')}
                   </CardTitle>
                   <Link to="/app/sales">
                     <Button size="sm" variant="ghost" className="gap-1 text-xs h-7">
-                      ყველა <ArrowRight className="h-3 w-3" />
+                      {t('view_all')} <ArrowRight className="h-3 w-3" />
                     </Button>
                   </Link>
                 </div>
@@ -845,33 +760,33 @@ export default function DashboardPage() {
                 {transactions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                     <ShoppingCart className="h-8 w-8 mb-2 opacity-40" />
-                    <p className="text-xs">ტრანზაქციები ჯერ არ არის</p>
+                    <p className="text-xs">{t('no_trx_yet')}</p>
                     <Link to="/app/pos" className="mt-2">
                       <Button size="sm" variant="outline" className="text-xs">
-                        POS-ზე გადასვლა
+                        {t('go_to_pos')}
                       </Button>
                     </Link>
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {transactions.slice(0, 5).map((t, idx) => (
+                    {transactions.slice(0, 5).map((tx, idx) => (
                       <motion.div
-                        key={t.id}
+                        key={tx.id}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.05 }}
                         className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-muted/40 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`p-1.5 rounded-lg ${t.payment_method === 'cash' ? 'bg-success/10 text-success' : t.payment_method === 'card' ? 'bg-info/10 text-info' : 'bg-accent/10 text-accent'}`}>
-                            {t.payment_method === 'cash' ? <Banknote className="h-3.5 w-3.5" /> : <CreditCard className="h-3.5 w-3.5" />}
+                          <div className={`p-1.5 rounded-lg ${tx.payment_method === 'cash' ? 'bg-success/10 text-success' : tx.payment_method === 'card' ? 'bg-info/10 text-info' : 'bg-accent/10 text-accent'}`}>
+                            {tx.payment_method === 'cash' ? <Banknote className="h-3.5 w-3.5" /> : <CreditCard className="h-3.5 w-3.5" />}
                           </div>
                           <div>
-                            <p className="text-sm font-medium">{(t.items || []).length} პროდუქტი</p>
-                            <p className="text-[10px] text-muted-foreground">{new Date(t.date).toLocaleString('ka-GE', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</p>
+                            <p className="text-sm font-medium">{(tx.items || []).length} {t('products_title')}</p>
+                            <p className="text-[10px] text-muted-foreground">{new Date(tx.date).toLocaleString('ka-GE', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</p>
                           </div>
                         </div>
-                        <p className="font-semibold text-sm text-foreground">₾{t.total.toFixed(2)}</p>
+                        <p className="font-semibold text-sm text-foreground">₾{tx.total.toFixed(2)}</p>
                       </motion.div>
                     ))}
                   </div>
@@ -881,6 +796,6 @@ export default function DashboardPage() {
           </motion.div>
         </div>
       </motion.div>
-    </PageTransition >
+    </PageTransition>
   );
 }

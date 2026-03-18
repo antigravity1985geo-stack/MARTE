@@ -6,6 +6,8 @@ import {
   LayoutDashboard, Monitor, Package, TrendingUp, Users,
   Receipt, Printer, ChevronRight, ChevronLeft, X, Sparkles, PartyPopper
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 interface TourStep {
   title: string;
@@ -20,86 +22,99 @@ const tourSteps: TourStep[] = [
     title: 'მოგესალმებით! 👋',
     description: 'MARTE არის სრული ბიზნეს მართვის სისტემა. მოდით, გაგაცნოთ ძირითადი ფუნქციები.',
     icon: Sparkles,
-    route: '/',
+    route: '/app',
     tip: 'ტური ნებისმიერ დროს შეგიძლიათ გამოტოვოთ',
   },
   {
     title: 'მთავარი Dashboard',
     description: 'აქ ნახავთ ბიზნესის მთავარ მეტრიკებს — შემოსავალი, მოგება, მარჟა და გაყიდვების ტრენდები რეალურ დროში.',
     icon: LayoutDashboard,
-    route: '/',
+    route: '/app',
     tip: 'Dashboard ავტომატურად განახლდება ახალი გაყიდვების დამატებისას',
   },
   {
     title: 'POS სისტემა',
     description: 'გაყიდვების პუნქტი — სწრაფად მოძებნეთ პროდუქტი, დაასკანერეთ ბარკოდი და გააფორმეთ გაყიდვა.',
     icon: Monitor,
-    route: '/pos',
+    route: '/app/pos',
     tip: 'შეგიძლიათ ბარკოდის სკანერი გამოიყენოთ სწრაფი დამატებისთვის',
   },
   {
     title: 'პროდუქტები',
     description: 'მართეთ პროდუქტების კატალოგი — დაამატეთ ახალი, განაახლეთ ფასები, აკონტროლეთ მარაგი.',
     icon: Package,
-    route: '/products',
+    route: '/app/products',
     tip: 'როცა მარაგი მინიმუმს ჩამოსცდება, ავტომატურად მიიღებთ შეტყობინებას',
   },
   {
     title: 'გაყიდვები და ინვოისები',
     description: 'ნახეთ ყველა გაყიდვის ისტორია, გამოიტანეთ Excel/PDF ანგარიშები და შექმენით ინვოისები კლიენტებისთვის.',
     icon: TrendingUp,
-    route: '/sales',
+    route: '/app/sales',
     tip: 'თითოეული გაყიდვიდან შეგიძლიათ PDF ინვოისის გენერაცია',
   },
   {
     title: 'კლიენტები და მომწოდებლები',
     description: 'შეინახეთ კლიენტებისა და მომწოდებლების მონაცემები — სახელი, ტელეფონი, მისამართი, საიდენტ. ნომერი.',
     icon: Users,
-    route: '/clients',
+    route: '/app/clients',
     tip: 'კლიენტის მიბმა გაყიდვაზე ინვოისის ავტომატურ გენერაციას გაამარტივებს',
   },
   {
     title: 'ხარჯები და ფინანსები',
     description: 'აღრიცხეთ ხარჯები, ნახეთ მოგება-ზარალი და მართეთ მომწოდებლებთან ანგარიშსწორება.',
     icon: Receipt,
-    route: '/expenses',
+    route: '/app/expenses',
     tip: 'ბუღალტერიის სექციაში ნახავთ სრულ ფინანსურ სურათს',
   },
   {
     title: 'მზად ხართ! 🎉',
     description: 'სისტემა მზად არის გამოსაყენებლად. დაიწყეთ პროდუქტების დამატებით ან პირდაპირ POS-დან გაყიდვით!',
     icon: PartyPopper,
-    route: '/',
+    route: '/app',
     tip: 'ნებისმიერ დროს შეგიძლიათ ტურის თავიდან გაშვება პროფილის პარამეტრებიდან',
   },
 ];
-
-const ONBOARDING_KEY = 'marte-onboarding-complete';
 
 export function OnboardingTour() {
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
-    const completed = localStorage.getItem(ONBOARDING_KEY);
-    if (!completed) {
-      const timer = setTimeout(() => setIsActive(true), 800);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+    if (!user?.id) return;
+    // Check onboarding status from Supabase (cloud-first, cross-device)
+    supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (!data?.onboarding_completed) {
+          const timer = setTimeout(() => setIsActive(true), 800);
+          return () => clearTimeout(timer);
+        }
+      });
+  }, [user?.id]);
 
   const step = tourSteps[currentStep];
   const isFirst = currentStep === 0;
   const isLast = currentStep === tourSteps.length - 1;
   const progress = ((currentStep + 1) / tourSteps.length) * 100;
 
-  const complete = useCallback(() => {
-    localStorage.setItem(ONBOARDING_KEY, 'true');
+  const complete = useCallback(async () => {
     setIsActive(false);
     navigate('/');
-  }, [navigate]);
+    // Persist completion to Supabase so it works across devices
+    if (user?.id) {
+      await supabase
+        .from('profiles')
+        .update({ onboarding_completed: true })
+        .eq('id', user.id);
+    }
+  }, [navigate, user?.id]);
 
   const next = useCallback(() => {
     if (isLast) {
@@ -135,24 +150,25 @@ export function OnboardingTour() {
     <AnimatePresence>
       {isActive && (
         <>
-          {/* Overlay */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-foreground/60 backdrop-blur-sm"
-            onClick={skip}
-          />
+          {/* Overlay and Wrapper to center the card */}
+          <div className="fixed inset-0 z-[100] flex items-center justify-center pb-20 pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-foreground/60 backdrop-blur-sm pointer-events-auto"
+              onClick={skip}
+            />
 
-          {/* Tour card */}
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed z-[101] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md"
-          >
+            {/* Tour card */}
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative z-[101] w-[90vw] max-w-md pointer-events-auto"
+            >
             <div className="rounded-2xl bg-card border border-border shadow-2xl overflow-hidden">
               {/* Progress bar */}
               <div className="h-1 bg-muted">
@@ -253,7 +269,8 @@ export function OnboardingTour() {
                 </div>
               </div>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
@@ -261,6 +278,10 @@ export function OnboardingTour() {
 }
 
 /** Call this to reset onboarding so the tour runs again */
-export function resetOnboarding() {
-  localStorage.removeItem(ONBOARDING_KEY);
+export async function resetOnboarding(userId?: string) {
+  if (userId) {
+    await import('@/integrations/supabase/client').then(({ supabase }) =>
+      supabase.from('profiles').update({ onboarding_completed: false }).eq('id', userId)
+    );
+  }
 }

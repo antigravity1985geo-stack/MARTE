@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PageTransition } from '@/components/PageTransition';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { useProducts } from '@/hooks/useProducts';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { generateInternalWaybill } from '@/lib/waybillGenerator';
 
 export default function WarehouseManagementPage() {
+  useRealtimeSync(['products']);
   const { warehouses, writeOffs, transfers, currencies, isLoading, addWarehouse, deleteWarehouse, addWriteOff, addTransfer, updateCurrency } = useWarehouses();
   const { products } = useProducts();
   const queryClient = useQueryClient();

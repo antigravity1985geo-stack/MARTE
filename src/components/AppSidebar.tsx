@@ -1,23 +1,31 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Monitor, Package, Tags, Download, TrendingUp,
+  LayoutDashboard, Monitor, Package, Download, TrendingUp,
   ClipboardList, Warehouse, Factory, Users, Truck, Receipt,
-  HandCoins, Calculator, BadgePercent, FileText, BarChart3, PieChart,
-  UserCog, Clock, ListOrdered, Printer, BookOpen, LogOut,
-  Menu, X, Shield, Activity, HardDriveDownload, Wallet,
-  RotateCcw, Globe, Building2, Building, Layers, ArrowDownLeft, Landmark, Heart, Bell, PackagePlus,
-  Settings2, FileSearch, ShieldCheck, CalendarDays, Lock, Home, Key
+  Calculator, FileText, BarChart3,
+  UserCog, Clock, ListOrdered, LogOut,
+  Menu, X, Activity,
+  Globe, Building2, Building,
+  ShieldCheck, CalendarDays, Lock, Home, Key, Stethoscope, Wallet2, Settings
 } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { AVAILABLE_FEATURES, isFeatureLocked, IndustryType, PlanType } from '@/config/features';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const getSections = (industry: IndustryType, features: any = {}, plan: PlanType = 'free', isSuperadmin: boolean = false) => {
+const getSections = (
+  industry: IndustryType,
+  features: any = {},
+  plan: PlanType = 'free',
+  isSuperadmin: boolean = false,
+  t: (k: any) => string
+) => {
   const isEnabled = (id: string) => {
     if (isSuperadmin) return true;
     if (features[id] === true) return true;
@@ -28,131 +36,85 @@ const getSections = (industry: IndustryType, features: any = {}, plan: PlanType 
   };
 
   const shouldLock = (id: string) => isFeatureLocked(id, plan as PlanType, isSuperadmin);
+  const sections: any[] = [];
 
-  const sections = [];
-
-  // Main
+  // 1. Main
   sections.push({
-    title: 'მთავარი',
+    title: t('nav_section_main'),
     items: [
-      { title: 'მთავარი', icon: LayoutDashboard, path: '/app' },
-      ...(isEnabled('pos') ? [{ title: 'POS სისტემა', icon: Monitor, path: '/app/pos' }] : []),
+      { title: t('nav_dashboard'), icon: LayoutDashboard, path: '/app' },
+      ...(isEnabled('pos') ? [{ title: t('nav_pos'), icon: Monitor, path: '/app/pos' }] : []),
+      ...(isEnabled('real_estate') || isSuperadmin ? [{ title: 'Real Estate Home', icon: Home, path: '/app/real-estate' }] : []),
+      ...(isEnabled('clinic') || isSuperadmin ? [{ title: t('nav_clinic_calendar'), icon: CalendarDays, path: '/app/clinic/calendar' }] : []),
+      ...(isEnabled('salon') || isSuperadmin ? [{ title: t('nav_salon'), icon: CalendarDays, path: '/app/salon/calendar' }] : []),
     ],
   });
 
-  // Real Estate
+  // 2. Business Operations
+  const operationItems: any[] = [];
+  if (isEnabled('clinic') || isSuperadmin) operationItems.push({ title: t('nav_clients'), icon: Users, path: '/app/clinic/patients' });
+  if (isEnabled('sales') || isSuperadmin) {
+    operationItems.push({ title: t('nav_sales'), icon: TrendingUp, path: '/app/sales' });
+    operationItems.push({ title: t('nav_orders'), icon: ListOrdered, path: '/app/orders' });
+  }
+  if (isEnabled('crm') || isSuperadmin) operationItems.push({ title: t('nav_clients'), icon: Heart, path: '/app/clients' });
   if (isEnabled('real_estate') || isSuperadmin) {
-    sections.push({
-      title: 'MARTEHOME (უძრავი ქონება)',
-      items: [
-        { title: 'დეშბორდი', icon: LayoutDashboard, path: '/app/real-estate' },
-        { title: 'განცხადებები / ბინები', icon: Home, path: '/app/real-estate/properties' },
-        { title: 'გირაო / იპოთეკა', icon: Key, path: '/app/real-estate/mortgages' },
-        { title: 'MarteHome (საჯარო)', icon: Globe, path: '/martehome' },
-      ],
-    });
+    operationItems.push({ title: 'ბინები / უძრავი ქონება', icon: Building, path: '/app/real-estate/properties' });
+    operationItems.push({ title: 'იპოთეკა / გირაო', icon: Key, path: '/app/real-estate/mortgages' });
   }
-
-  // Clinic
-  if (isEnabled('clinic') || isSuperadmin) {
-    sections.push({
-      title: 'კლინიკა და ჯანდაცვა',
-      items: [
-        { title: 'ვიზიტების კალენდარი', icon: CalendarDays, path: '/app/clinic/calendar' },
-        { title: 'პაციენტების ბაზა', icon: Users, path: '/app/clinic/patients' },
-      ],
-    });
+  if (isEnabled('ecommerce') || isSuperadmin) {
+    operationItems.push({ title: t('nav_ecommerce'), icon: Globe, path: '/app/ecommerce' });
   }
+  if (operationItems.length > 0) sections.push({ title: t('nav_section_operations'), items: operationItems });
 
-  // Logistics & Sales
-  sections.push({
-    title: (isEnabled('clinic') && !isSuperadmin) ? 'ლოჯისტიკა და მარაგები' : 'გაყიდვები & შემოსავლები',
-    items: [
-      ...(isEnabled('inventory') ? [{ title: 'პროდუქტები (მარაგი)', icon: Package, path: '/app/products' }] : []),
-      ...(isEnabled('sales') ? [
-        { title: 'კომბოები (Bundles)', icon: PackagePlus, path: '/app/bundles' },
-        { title: 'ფასდაკლებები', icon: BadgePercent, path: '/app/price-rules' }
-      ] : []),
-      ...(isEnabled('inventory') ? [{ title: 'კატეგორიები', icon: Tags, path: '/app/categories' }] : []),
-    ],
-  });
-
-  // Operations
-  sections.push({
-    title: 'ოპერაციები',
-    items: [
-      ...(isEnabled('purchases') ? [{ 
-        title: 'შესყიდვების მიღება', 
-        icon: Download, 
-        path: '/app/receiving',
-        isLocked: shouldLock('purchases')
-      }] : []),
-      ...(isEnabled('sales') ? [
-        { title: 'გაყიდვები / სერვისები', icon: TrendingUp, path: '/app/sales' },
-        { title: 'დაბრუნებები', icon: RotateCcw, path: '/app/returns' },
-        { title: 'ინვოისები', icon: FileText, path: '/app/invoices' },
-        { title: 'შეკვეთები', icon: ClipboardList, path: '/app/orders' }
-      ] : []),
-      ...(isEnabled('inventory') ? [{ title: 'საწყობები', icon: Warehouse, path: '/app/warehouse-management' }] : []),
-      ...(isEnabled('production') ? [
-        { title: 'წარმოება', icon: Factory, path: '/app/production', isLocked: shouldLock('production') },
-      ] : []),
-    ],
-  });
-
-  // CRM
-  if (isEnabled('crm') || isEnabled('purchases') || isSuperadmin) {
-    sections.push({
-      title: (isEnabled('crm') || isSuperadmin) ? 'კონტაქტები' : 'მომწოდებლები',
-      items: [
-        ...(isEnabled('crm') ? [
-          { title: 'კლიენტები', icon: Users, path: '/app/clients' },
-          { title: 'CRM & ლოიალობა', icon: Heart, path: '/app/crm', isLocked: shouldLock('crm') }
-        ] : []),
-        ...(isEnabled('purchases') ? [{ title: 'მომწოდებლები', icon: Truck, path: '/app/suppliers' }] : []),
-      ],
-    });
+  // 3. Inventory & Management
+  const managementItems: any[] = [];
+  if (isEnabled('inventory') || isSuperadmin) {
+    managementItems.push({ title: t('nav_products'), icon: Package, path: '/app/products' });
+    if (isEnabled('clinic') || isSuperadmin) managementItems.push({ title: 'სამედიცინო სერვისები', icon: Stethoscope, path: '/app/clinic/services' });
+    managementItems.push({ title: t('nav_warehouses'), icon: Warehouse, path: '/app/warehouse-management' });
+    managementItems.push({ title: t('nav_inventory'), icon: ClipboardList, path: '/app/inventory-count' });
   }
-
-  // Salon
-  if (isEnabled('salon') || isSuperadmin) {
-    sections.push({
-      title: 'მომსახურება / სალონი',
-      items: [
-        { title: 'ჯავშნები (Calendar)', icon: CalendarDays, path: '/app/salon/calendar' },
-      ],
-    });
+  if (isEnabled('purchases') || isSuperadmin) {
+    managementItems.push({ title: t('nav_receiving'), icon: Download, path: '/app/receiving' });
+    managementItems.push({ title: t('nav_suppliers'), icon: Truck, path: '/app/suppliers' });
   }
-
-  // Finance
-  if (isEnabled('accounting') || isEnabled('hr') || isSuperadmin) {
-    sections.push({
-      title: 'ფინანსები',
-      items: [
-        ...(isEnabled('accounting') ? [
-          { title: 'ხარჯები', icon: Receipt, path: '/app/expenses' },
-          { title: 'ანგარიშსწორება', icon: HandCoins, path: '/app/supplier-settlements' },
-          { title: 'ბუღალტერია', icon: Calculator, path: '/app/accounting', isLocked: shouldLock('accounting') },
-          { title: 'ფინანსური ანგარიშგება', icon: ArrowDownLeft, path: '/app/cash-flow', isLocked: shouldLock('accounting') },
-          { title: 'საბანკო ინტეგრაცია', icon: Landmark, path: '/app/bank-integration', isLocked: shouldLock('accounting') },
-          { title: 'საბანკო შედარება', icon: FileSearch, path: '/app/reconciliation', isLocked: shouldLock('accounting') },
-        ] : []),
-        ...(isEnabled('hr') ? [
-          { title: 'ხელფასები & HR', icon: Wallet, path: '/app/salary', isLocked: shouldLock('hr') }
-        ] : []),
-      ],
-    });
+  if (isEnabled('production') || isSuperadmin) {
+    managementItems.push({ title: t('nav_production'), icon: Factory, path: '/app/production', isLocked: shouldLock('production') });
   }
+  if (isEnabled('distribution') || isSuperadmin) {
+    managementItems.push({ title: t('nav_distribution'), icon: Truck, path: '/app/distribution' });
+  }
+  if (managementItems.length > 0) sections.push({ title: t('nav_section_inventory'), items: managementItems });
 
-  // Admin
-  sections.push({
-    title: 'ადმინისტრირება',
-    items: [
-      ...(isEnabled('hr') ? [{ title: 'თანამშრომლები', icon: UserCog, path: '/app/employees', isLocked: shouldLock('hr') }] : []),
-      ...(isEnabled('hr') ? [{ title: 'ფილიალები', icon: Building2, path: '/app/branches', isLocked: shouldLock('hr') }] : []),
-      { title: 'აქტივობის ლოგი', icon: Activity, path: '/app/activity-log' },
-    ],
-  });
+  // 4. Finance
+  const financeItems: any[] = [];
+  if (isEnabled('accounting') || isSuperadmin) {
+    financeItems.push({ title: t('nav_expenses'), icon: Receipt, path: '/app/expenses' });
+    financeItems.push({ title: t('nav_invoices'), icon: FileText, path: '/app/invoices' });
+    financeItems.push({ title: t('nav_accounting'), icon: Calculator, path: '/app/accounting', isLocked: shouldLock('accounting') });
+    financeItems.push({ title: t('nav_reports'), icon: BarChart3, path: '/app/cash-flow' });
+    financeItems.push({ title: t('nav_rsge'), icon: Globe, path: '/app/rsge' });
+    if (isEnabled('analytics') || isSuperadmin) {
+      financeItems.push({ title: t('nav_analytics'), icon: Activity, path: '/app/reports' });
+    }
+  }
+  if (isEnabled('hr') || isSuperadmin) financeItems.push({ title: t('nav_salary'), icon: Wallet2, path: '/app/salary' });
+  if (financeItems.length > 0) sections.push({ title: t('nav_section_finance'), items: financeItems });
+
+  // 5. Administration
+  const adminItems: any[] = [];
+  if (isEnabled('hr') || isSuperadmin) {
+    adminItems.push({ title: t('nav_employees'), icon: UserCog, path: '/app/employees' });
+    adminItems.push({ title: t('nav_attendance'), icon: Clock, path: '/app/attendance' });
+  }
+  adminItems.push({ title: t('nav_branches'), icon: Building2, path: '/app/branches' });
+  adminItems.push({ title: t('nav_settings'), icon: Settings, path: '/app/admin-panel' });
+  if (isSuperadmin) {
+    adminItems.push({ title: t('nav_system_monitor'), icon: Activity, path: '/app/system-monitor' });
+    adminItems.push({ title: t('nav_activity_log'), icon: ClipboardList, path: '/app/activity-log' });
+  }
+  sections.push({ title: t('nav_section_admin'), items: adminItems });
 
   return sections;
 };
@@ -163,73 +125,58 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user, logout, tenants, activeTenantId, setActiveTenant } = useAuthStore();
   const { hasAccess, isLoading: roleLoading, roleName } = useUserRole();
+  const { t, lang, setLang } = useI18n();
 
   const handleLogout = () => {
     logout();
     navigate('/auth');
   };
 
-  const activeTenant = tenants.find(t => t.id === activeTenantId);
+  const activeTenant = tenants.find(tn => tn.id === activeTenantId);
   const industry = (activeTenant?.industry || 'retail') as IndustryType;
   const plan = (activeTenant?.subscription_plan || 'free') as PlanType;
-  const dynamicSections = getSections(industry, activeTenant?.features, plan, user?.isSuperadmin || false);
+  const dynamicSections = getSections(industry, activeTenant?.features, plan, user?.isSuperadmin || false, t);
 
-  // ფილტრაცია როლის მიხედვით
-  const filteredSections = user?.isSuperadmin 
-    ? dynamicSections 
-    : dynamicSections.map((section) => ({
-        ...section,
-        items: section.items.filter((item) => hasAccess(item.path)),
-      })).filter((section) => section.items.length > 0);
+  const filteredSections = user?.isSuperadmin
+    ? dynamicSections
+    : dynamicSections
+        .map(section => ({ ...section, items: section.items.filter((item: any) => hasAccess(item.path)) }))
+        .filter(section => section.items.length > 0);
 
-  // Inject Superadmin
   if (user?.isSuperadmin) {
-    const adminSection = filteredSections.find(s => s.title === 'ადმინისტრირება');
-    if (adminSection && !adminSection.items.find(i => i.path === '/app/super-admin')) {
-      adminSection.items.unshift({ title: 'პლატფორმის მართვა', icon: ShieldCheck, path: '/app/super-admin' });
-    } else if (!adminSection) {
-      filteredSections.push({
-        title: 'ადმინისტრირება',
-        items: [{ title: 'პლატფორმის მართვა', icon: ShieldCheck, path: '/app/super-admin' }]
-      });
+    const adminSection = filteredSections.find(s => s.title === t('nav_section_admin'));
+    if (adminSection && !adminSection.items.find((i: any) => i.path === '/app/super-admin')) {
+      adminSection.items.unshift({ title: t('nav_superadmin'), icon: ShieldCheck, path: '/app/super-admin' });
     }
   }
 
-  const roleBadgeVariant = roleName === 'ადმინი' ? 'default' : 'secondary';
-
   const sidebarContent = (
-    <div className="flex flex-col h-full sidebar-gradient w-64 transition-all duration-300">
+    <div className="flex flex-col h-full bg-sidebar w-64 border-r border-sidebar-border transition-all duration-300">
       {/* Logo */}
-      <div className="flex items-center gap-2 p-4 border-b border-sidebar-border">
-        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/20 shadow-[0_0_12px_hsl(162_72%_38%/0.15)]">
-          <Warehouse className="h-5 w-5 text-sidebar-primary" />
+      <div className="flex items-center gap-2.5 p-6 border-b border-sidebar-border">
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary shadow-lg shadow-primary/20">
+          <Warehouse className="h-4.5 w-4.5 text-primary-foreground" />
         </div>
-        <span className="text-xl font-black gradient-text tracking-tighter">MARTE</span>
+        <span className="text-lg font-bold tracking-tight text-sidebar-foreground uppercase">MARTE</span>
         {!roleLoading && (
-          <Badge variant={roleBadgeVariant} className="ml-auto text-[10px] px-1.5 py-0">
+          <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors">
             {roleName}
           </Badge>
         )}
       </div>
 
       {/* Workspace Switcher */}
-      {tenants.length > 0 && (
-        <div className="p-3 border-b border-sidebar-border bg-sidebar-accent/5">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 mb-1.5 px-1">აქტიური ბիუზნესი:</p>
-          <Select 
-            value={activeTenantId || ''} 
-            onValueChange={(val) => { 
-              setActiveTenant(val); 
-              window.location.reload(); 
-            }}
-          >
-            <SelectTrigger className="w-full bg-sidebar border-sidebar-border h-8 text-xs font-medium focus:ring-1 focus:ring-sidebar-primary/30">
+      {tenants.length > 1 && (
+        <div className="p-4 mx-2 mt-4 mb-2 rounded-xl bg-sidebar-accent/50 border border-sidebar-border group transition-all hover:bg-sidebar-accent">
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-sidebar-foreground/60 mb-2 px-1">{t('nav_company')}</p>
+          <Select value={activeTenantId || ''} onValueChange={val => { setActiveTenant(val); window.location.reload(); }}>
+            <SelectTrigger className="w-full bg-transparent border-none p-1 h-auto text-sm font-semibold text-sidebar-foreground focus:ring-0 shadow-none">
               <SelectValue placeholder="აირჩიეთ ბიზნესი" />
             </SelectTrigger>
-            <SelectContent>
-              {tenants.map(t => (
-                <SelectItem key={t.id} value={t.id} className="text-xs">
-                  {t.name} <span className="text-muted-foreground ml-1">({t.role})</span>
+            <SelectContent className="bg-popover border-border text-popover-foreground">
+              {tenants.map(tn => (
+                <SelectItem key={tn.id} value={tn.id} className="text-xs hover:bg-accent focus:bg-accent focus:text-accent-foreground transition-colors">
+                  {tn.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -237,53 +184,55 @@ export function AppSidebar() {
         </div>
       )}
 
-      {/* Nav */}
-      <ScrollArea className="flex-1 py-2 scrollbar-thin">
-        {filteredSections.map((section) => (
-          <div key={section.title} className="mb-1">
-            <p className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+      <ScrollArea className="flex-1 px-4 py-4 scrollbar-thin">
+        {filteredSections.map((section, idx) => (
+          <div key={section.title} className={idx > 0 ? 'mt-8' : ''}>
+            <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/60">
               {section.title}
             </p>
-            {section.items.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.isLocked ? '#' : item.path}
-                  onClick={(e) => {
-                    if (item.isLocked) {
-                      e.preventDefault();
-                      return;
-                    }
-                    setMobileOpen(false);
-                  }}
-                  className={`group flex items-center gap-3 mx-2 px-3 py-2 rounded-lg text-sm transition-all duration-200
-                    ${item.isLocked ? 'opacity-50 cursor-not-allowed filter grayscale' : ''}
-                    ${isActive
-                      ? 'bg-sidebar-accent text-sidebar-primary font-medium shadow-[inset_0_0_0_1px_hsl(162_72%_38%/0.15)]'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground hover:translate-x-0.5'
-                    }
-                  `}
-                >
-                  <item.icon className={`h-4 w-4 flex-shrink-0 transition-colors ${isActive ? 'text-sidebar-primary' : 'group-hover:text-sidebar-primary/70'}`} />
-                  <span>{item.title}</span>
-                  {item.isLocked && <Lock className="ml-auto h-3 w-3 text-muted-foreground/50" />}
-                  {isActive && !item.isLocked && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary glow-pulse" />}
-                </Link>
-              );
-            })}
+            <div className="space-y-1">
+              {section.items.map((item: any) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.isLocked ? '#' : item.path}
+                    onClick={e => { if (item.isLocked) { e.preventDefault(); return; } setMobileOpen(false); }}
+                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200
+                      ${item.isLocked ? 'opacity-40 cursor-not-allowed grayscale' : ''}
+                      ${isActive
+                        ? 'bg-sidebar-primary/10 text-sidebar-primary font-semibold border border-sidebar-primary/20 shadow-sm'
+                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:translate-x-0.5'
+                      }`}
+                  >
+                    <item.icon className={`h-4 w-4 flex-shrink-0 transition-colors ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/50 group-hover:text-sidebar-primary'}`} />
+                    <span>{item.title}</span>
+                    {item.isLocked && <Lock className="ml-auto h-3 w-3 text-sidebar-foreground/40" />}
+                    {isActive && !item.isLocked && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-sidebar-primary animate-pulse" />}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         ))}
       </ScrollArea>
 
-      {/* Logout */}
-      <div className="border-t border-sidebar-border p-2">
+      {/* Footer: Language Toggle + Logout */}
+      <div className="border-t border-sidebar-border p-4 space-y-1">
+        <button
+          onClick={() => setLang(lang === 'ka' ? 'en' : 'ka')}
+          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"
+        >
+          <Globe className="h-4 w-4" />
+          <span className="flex-1 text-left">{lang === 'ka' ? '🇬🇧 English' : '🇬🇪 ქართული'}</span>
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-sidebar-border uppercase">{lang}</Badge>
+        </button>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive transition-all duration-200"
+          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
         >
           <LogOut className="h-4 w-4" />
-          <span>გამოსვლა</span>
+          <span>{t('logout')}</span>
         </button>
       </div>
     </div>
@@ -291,27 +240,13 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Mobile toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-3 left-3 z-50 lg:hidden"
-        onClick={() => setMobileOpen(!mobileOpen)}
-      >
+      <Button variant="ghost" size="icon" className="fixed top-3 left-3 z-50 lg:hidden text-white hover:bg-slate-800" onClick={() => setMobileOpen(!mobileOpen)}>
         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-foreground/50 lg:hidden" onClick={() => setMobileOpen(false)} />
-      )}
-
-      {/* Mobile sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-40 lg:hidden transform transition-transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      {mobileOpen && <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />}
+      <div className={`fixed inset-y-0 left-0 z-40 lg:hidden transform transition-transform duration-300 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {sidebarContent}
       </div>
-
-      {/* Desktop sidebar */}
       <div className="hidden lg:block fixed inset-y-0 left-0 z-30 w-64">
         {sidebarContent}
       </div>

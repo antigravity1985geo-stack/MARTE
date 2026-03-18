@@ -20,8 +20,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useSmartProcurement } from '@/hooks/useSmartProcurement';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
+import { useI18n } from '@/hooks/useI18n';
 
-const statusMap = { pending: 'მოლოდინში', approved: 'დამტკიცებული', shipped: 'გაგზავნილი', received: 'მიღებული' };
 const statusVariant = { pending: 'secondary' as const, approved: 'default' as const, shipped: 'outline' as const, received: 'default' as const };
 const nextStatus: Record<string, PurchaseOrder['status']> = { pending: 'approved', approved: 'shipped', shipped: 'received' };
 
@@ -42,6 +42,14 @@ export default function OrdersPage() {
   const [ruleQuantity, setRuleQuantity] = useState('');
   const { suggestions } = useSmartProcurement();
   const isMobile = useIsMobile();
+  const { t, lang } = useI18n();
+
+  const statusMap = {
+    pending: t('status_pending') || 'Pending',
+    approved: t('status_approved') || 'Approved',
+    shipped: t('status_shipped') || 'Shipped',
+    received: t('status_received') || 'Received'
+  };
 
   // Stats
   const totalAutoOrders = history.length;
@@ -59,7 +67,7 @@ export default function OrdersPage() {
   const topProducts = Object.values(productOrderCounts).sort((a, b) => b.count - a.count).slice(0, 5);
 
   const handleAdd = () => {
-    if (!supplierId || !productId || !quantity || !price) { toast.error('შეავსეთ ყველა ველი'); return; }
+    if (!supplierId || !productId || !quantity || !price) { toast.error(t('fill_all_fields') || 'Fill all fields'); return; }
     const supplier = suppliers.find((s) => s.id === supplierId);
     const product = products.find((p) => p.id === productId);
     if (!supplier || !product) return;
@@ -69,13 +77,13 @@ export default function OrdersPage() {
       items: [{ product_id: productId, product_name: product.name, quantity: parseInt(quantity), price: parseFloat(price), total: parseInt(quantity) * parseFloat(price) }],
       status: 'pending', total_amount: parseInt(quantity) * parseFloat(price), order_date: new Date().toISOString().split('T')[0], expected_date: new Date().toISOString().split('T')[0],
     });
-    toast.success('შეკვეთა შეიქმნა');
+    toast.success(t('order_created') || 'Order created');
     setDialogOpen(false);
     setSupplierId(''); setProductId(''); setQuantity(''); setPrice('');
   };
 
   const handleAddRule = async () => {
-    if (!ruleProductId || !ruleSupplierId || !ruleQuantity) { toast.error('შეავსეთ ყველა ველი'); return; }
+    if (!ruleProductId || !ruleSupplierId || !ruleQuantity) { toast.error(t('fill_all_fields') || 'Fill all fields'); return; }
     try {
       await addRuleMutation.mutateAsync({
         product_id: ruleProductId,
@@ -83,7 +91,7 @@ export default function OrdersPage() {
         order_quantity: parseInt(ruleQuantity),
         enabled: true,
       });
-      toast.success('ავტო-შეკვეთის წესი დამატებულია');
+      toast.success(t('auto_order_rule_added') || 'Auto-order rule added');
       setRuleDialogOpen(false);
       setRuleProductId(''); setRuleSupplierId(''); setRuleQuantity('');
     } catch (err: any) { toast.error(err.message); }
@@ -95,9 +103,9 @@ export default function OrdersPage() {
     updateOrderStatus.mutate({ id: order.id, status: next });
     if (next === 'received') {
       // Stock update handled via DB
-      toast.success('შეკვეთა მიღებულია');
+      toast.success(t('order_received') || 'Order received');
     } else {
-      toast.success(`სტატუსი: ${statusMap[next]}`);
+      toast.success(`${t('status') || 'Status'}: ${statusMap[next]}`);
     }
   };
 
@@ -106,14 +114,14 @@ export default function OrdersPage() {
       {isMobile ? (
         <div className="space-y-2">
           {purchaseOrders.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">შეკვეთები არ არის</p>
+            <p className="text-center text-muted-foreground py-8">{t('no_orders') || 'No orders'}</p>
           ) : (
             purchaseOrders.map((o) => (
               <div key={o.id} className="stat-card p-3 space-y-2">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium">{o.supplier_name}</p>
-                    <p className="text-xs text-muted-foreground">{o.order_date ? new Date(o.order_date).toLocaleDateString('ka-GE') : ''}</p>
+                    <p className="text-xs text-muted-foreground">{o.order_date ? new Date(o.order_date).toLocaleDateString(lang === 'ka' ? 'ka-GE' : 'en-US') : ''}</p>
                   </div>
                   <p className="text-lg font-bold text-primary">₾{(o.total_amount || 0).toFixed(2)}</p>
                 </div>
@@ -133,12 +141,12 @@ export default function OrdersPage() {
       ) : (
         <div className="stat-card overflow-auto">
           <Table>
-            <TableHeader><TableRow><TableHead>თარიღი</TableHead><TableHead>მომწოდებელი</TableHead><TableHead>პროდუქტები</TableHead><TableHead>ჯამი</TableHead><TableHead>სტატუსი</TableHead><TableHead></TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>{t('date') || 'Date'}</TableHead><TableHead>{t('supplier') || 'Supplier'}</TableHead><TableHead>{t('products') || 'Products'}</TableHead><TableHead>{t('total') || 'Total'}</TableHead><TableHead>{t('status') || 'Status'}</TableHead><TableHead></TableHead></TableRow></TableHeader>
             <TableBody>
-              {purchaseOrders.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">შეკვეთები არ არის</TableCell></TableRow> :
+              {purchaseOrders.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">{t('no_orders') || 'No orders'}</TableCell></TableRow> :
                 purchaseOrders.map((o) => (
                   <TableRow key={o.id}>
-                    <TableCell className="text-xs">{o.order_date ? new Date(o.order_date).toLocaleDateString('ka-GE') : ''}</TableCell>
+                    <TableCell className="text-xs">{o.order_date ? new Date(o.order_date).toLocaleDateString(lang === 'ka' ? 'ka-GE' : 'en-US') : ''}</TableCell>
                     <TableCell>{o.supplier_name}</TableCell>
                     <TableCell>{o.items?.map((i) => `${i.product_name} x${i.quantity}`).join(', ')}</TableCell>
                     <TableCell className="font-semibold">₾{(o.total_amount || 0).toFixed(2)}</TableCell>
@@ -157,18 +165,18 @@ export default function OrdersPage() {
     <PageTransition>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">შეკვეთები</h1>
-          <Button onClick={() => setDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />ახალი</Button>
+          <h1 className="text-2xl font-bold">{t('orders') || 'Orders'}</h1>
+          <Button onClick={() => setDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />{t('new') || 'New'}</Button>
         </div>
 
         <Tabs defaultValue="orders">
           <TabsList>
-            <TabsTrigger value="orders">შეკვეთები</TabsTrigger>
+            <TabsTrigger value="orders">{t('orders') || 'Orders'}</TabsTrigger>
             <TabsTrigger value="auto" className="gap-1.5">
-              <Zap className="h-3.5 w-3.5" />ავტო-შეკვეთები
+              <Zap className="h-3.5 w-3.5" />{t('auto_orders') || 'Auto-orders'}
             </TabsTrigger>
             <TabsTrigger value="ai" className="gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />AI პროგნოზი
+              <Sparkles className="h-3.5 w-3.5 text-primary" />{t('ai_forecast') || 'AI Forecast'}
               {suggestions.length > 0 && (
                 <Badge className="ml-1 h-4 min-w-4 px-1 flex items-center justify-center bg-primary text-[10px]">
                   {suggestions.length}
@@ -176,7 +184,7 @@ export default function OrdersPage() {
               )}
             </TabsTrigger>
             <TabsTrigger value="stats" className="gap-1.5">
-              <TrendingUp className="h-3.5 w-3.5" />სტატისტიკა
+              <TrendingUp className="h-3.5 w-3.5" />{t('statistics') || 'Statistics'}
             </TabsTrigger>
           </TabsList>
 
@@ -190,9 +198,9 @@ export default function OrdersPage() {
                 <div>
                   <h3 className="font-semibold flex items-center gap-2">
                     <Zap className="h-4 w-4 text-primary" />
-                    ავტომატური შეკვეთების სისტემა
+                    {t('auto_order_system') || 'Auto-order system'}
                   </h3>
-                  <p className="text-sm text-muted-foreground">მარაგის მინიმუმზე ჩამოცილებისას ავტომატურად იქმნება შეკვეთა</p>
+                  <p className="text-sm text-muted-foreground">{t('auto_order_description') || 'Orders are automatically created when stock drops below minimum'}</p>
                 </div>
                 <Switch checked={globalEnabled} onCheckedChange={setGlobalEnabled} />
               </CardContent>
@@ -202,16 +210,16 @@ export default function OrdersPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Settings className="h-4 w-4 text-primary" />
-                  შეკვეთის წესები
+                  {t('order_rules') || 'Order Rules'}
                 </CardTitle>
                 <Button size="sm" onClick={() => setRuleDialogOpen(true)}>
-                  <Plus className="mr-1 h-3.5 w-3.5" />წესის დამატება
+                  <Plus className="mr-1 h-3.5 w-3.5" />{t('add_rule') || 'Add Rule'}
                 </Button>
               </CardHeader>
               <CardContent>
                 {rules.length === 0 ? (
                   <p className="text-center text-muted-foreground py-6">
-                    წესები არ არის. დაამატეთ წესი, რომ მარაგის ამოწურვისას ავტომატურად შეიქმნას შეკვეთა.
+                    {t('no_rules_add_one') || 'No rules. Add a rule to automatically create orders when stock runs out.'}
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -221,13 +229,13 @@ export default function OrdersPage() {
                       return (
                         <div key={rule.id} className="flex items-center justify-between rounded-lg border p-3">
                           <div className="flex-1">
-                            <p className="font-medium text-sm">{product?.name || 'უცნობი პროდუქტი'}</p>
+                            <p className="font-medium text-sm">{product?.name || (t('unknown_product') || 'Unknown product')}</p>
                             <p className="text-xs text-muted-foreground">
-                              მომწოდებელი: {supplier?.name || 'უცნობი'} • რაოდენობა: {rule.orderQuantity} {product?.unit || ''}
+                              {t('supplier') || 'Supplier'}: {supplier?.name || (t('unknown') || 'Unknown')} • {t('quantity') || 'Quantity'}: {rule.orderQuantity} {product?.unit || ''}
                             </p>
                             {product && (
                               <p className="text-xs text-muted-foreground">
-                                მიმდინარე მარაგი: {product.stock} / მინ: {product.min_stock}
+                                {t('current_stock') || 'Current stock'}: {product.stock} / {t('min_stock_short') || 'min'}: {product.min_stock}
                               </p>
                             )}
                           </div>
@@ -259,7 +267,7 @@ export default function OrdersPage() {
                   <div>
                     <h3 className="font-bold">Proactive AI Procurement</h3>
                     <p className="text-sm text-muted-foreground">
-                      AI აანალიზებს ბოლო 30 დღის გაყიდვების დინამიკას და გთავაზობთ მარაგების ოპტიმალურ შევსებას.
+                      {t('ai_procurement_desc') || 'AI analyzes the last 30 days of sales dynamics and suggests optimal stock replenishment.'}
                     </p>
                   </div>
                 </div>
@@ -270,7 +278,7 @@ export default function OrdersPage() {
               {suggestions.length === 0 ? (
                 <div className="col-span-full py-12 text-center text-muted-foreground">
                   <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  შესყიდვის რეკომენდაციები ჯერჯერობით არ არის. AI აგროვებს მონაცემებს...
+                  {t('no_ai_recommendations') || 'No purchase recommendations yet. AI is gathering data...'}
                 </div>
               ) : (
                 suggestions.map((s) => (
@@ -290,24 +298,24 @@ export default function OrdersPage() {
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div className="bg-muted p-2 rounded">
-                          <p className="text-muted-foreground">მარაგი</p>
+                          <p className="text-muted-foreground">{t('stock') || 'Stock'}</p>
                           <p className="font-bold">{s.currentStock}</p>
                         </div>
                         <div className="bg-muted p-2 rounded">
-                          <p className="text-muted-foreground">გეყოფათ</p>
-                          <p className="font-bold">{s.daysRemaining === 999 ? '∞' : `${Math.round(s.daysRemaining)} დღე`}</p>
+                          <p className="text-muted-foreground">{t('will_last') || 'Will last'}</p>
+                          <p className="font-bold">{s.daysRemaining === 999 ? '∞' : `${Math.round(s.daysRemaining)} ${t('days') || 'days'}`}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <TrendingUp className="h-3 w-3" />
-                        დღიური გაყიდვა: {s.dailyVelocity.toFixed(2)}
+                        {t('daily_sales') || 'Daily sales:'} {s.dailyVelocity.toFixed(2)}
                       </div>
 
                       <div className="p-2 rounded bg-primary/5 border border-primary/10">
-                        <p className="text-[10px] uppercase text-primary font-bold mb-1">AI რეკომენდაცია</p>
-                        <p className="text-xs font-medium">შეუკვეთეთ {s.suggestedQuantity} ერთეული</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">{s.reason}</p>
+                        <p className="text-[10px] uppercase text-primary font-bold mb-1">{t('ai_recommendation') || 'AI Recommendation'}</p>
+                        <p className="text-xs font-medium">{(t('order_quantity_msg') || 'Order {quantity} units').replace('{quantity}', s.suggestedQuantity.toString())}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">{lang === 'en' && s.reason === 'მარაგი ამოიწურება 10 დღეში (მაღალი რისკი)' ? 'Stock will run out in 10 days (high risk)' : s.reason}</p>
                       </div>
 
                       <Button
@@ -322,7 +330,7 @@ export default function OrdersPage() {
                           setDialogOpen(true);
                         }}
                       >
-                        <Plus className="h-3.5 w-3.5 mr-1" /> შეკვეთა
+                        <Plus className="h-3.5 w-3.5 mr-1" /> {t('order') || 'Order'}
                       </Button>
                     </CardContent>
                   </Card>
@@ -342,7 +350,7 @@ export default function OrdersPage() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">{totalAutoOrders}</p>
-                      <p className="text-xs text-muted-foreground">ავტო-შეკვეთა</p>
+                      <p className="text-xs text-muted-foreground">{t('auto_order') || 'Auto-order'}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -355,7 +363,7 @@ export default function OrdersPage() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">₾{totalAutoAmount.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">ჯამური ღირებულება</p>
+                      <p className="text-xs text-muted-foreground">{t('total_value') || 'Total value'}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -368,7 +376,7 @@ export default function OrdersPage() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">{totalAutoItems}</p>
-                      <p className="text-xs text-muted-foreground">შეკვეთილი ერთეული</p>
+                      <p className="text-xs text-muted-foreground">{t('ordered_units') || 'Ordered units'}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -381,7 +389,7 @@ export default function OrdersPage() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">{uniqueProducts}</p>
-                      <p className="text-xs text-muted-foreground">უნიკალური პროდუქტი</p>
+                      <p className="text-xs text-muted-foreground">{t('unique_product') || 'Unique product'}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -393,14 +401,14 @@ export default function OrdersPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <BarChart3 className="h-4 w-4 text-primary" />
-                  თვეების მიხედვით ავტო-შეკვეთების ტრენდი
+                  {t('auto_orders_monthly_trend') || 'Auto-orders monthly trend'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {history.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-6">მონაცემები არ არის</p>
+                  <p className="text-center text-muted-foreground py-6">{t('no_data') || 'No data'}</p>
                 ) : (
-                  <MonthlyChart history={history} />
+                  <MonthlyChart history={history} lang={lang} t={t} />
                 )}
               </CardContent>
             </Card>
@@ -411,7 +419,7 @@ export default function OrdersPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <TrendingUp className="h-4 w-4 text-primary" />
-                    ყველაზე ხშირად შეკვეთილი პროდუქტები
+                    {t('most_frequently_ordered_products') || 'Most frequently ordered products'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -424,7 +432,7 @@ export default function OrdersPage() {
                           </span>
                           <div>
                             <p className="text-sm font-medium">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.count} შეკვეთა</p>
+                            <p className="text-xs text-muted-foreground">{item.count} {t('order') || 'order'}</p>
                           </div>
                         </div>
                         <p className="text-sm font-semibold">₾{item.total.toFixed(2)}</p>
@@ -440,10 +448,10 @@ export default function OrdersPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <History className="h-4 w-4 text-primary" />
-                  ავტო-შეკვეთების ისტორია
+                  {t('auto_orders_history') || 'Auto-orders history'}
                 </CardTitle>
                 {history.length > 0 && (
-                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => exportHistoryToExcel(history)}>
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => exportHistoryToExcel(history, lang)}>
                     <FileDown className="h-3.5 w-3.5" />Excel
                   </Button>
                 )}
@@ -451,7 +459,7 @@ export default function OrdersPage() {
               <CardContent>
                 {history.length === 0 ? (
                   <p className="text-center text-muted-foreground py-6">
-                    ავტო-შეკვეთების ისტორია ცარიელია
+                    {t('auto_orders_history_empty') || 'Auto-orders history is empty'}
                   </p>
                 ) : isMobile ? (
                   <div className="space-y-2">
@@ -462,10 +470,10 @@ export default function OrdersPage() {
                           <p className="font-semibold text-primary">₾{h.totalAmount.toFixed(2)}</p>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {h.supplierName} • {h.quantity} ერთ.
+                          {h.supplierName} • {h.quantity} {t('unit_short') || 'unit'}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(h.date).toLocaleString('ka-GE')}
+                          {new Date(h.date).toLocaleString(lang === 'ka' ? 'ka-GE' : 'en-US')}
                         </p>
                       </div>
                     ))}
@@ -474,17 +482,17 @@ export default function OrdersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>თარიღი</TableHead>
-                        <TableHead>პროდუქტი</TableHead>
-                        <TableHead>მომწოდებელი</TableHead>
-                        <TableHead>რაოდენობა</TableHead>
-                        <TableHead>ღირებულება</TableHead>
+                        <TableHead>{t('date') || 'Date'}</TableHead>
+                        <TableHead>{t('product') || 'Product'}</TableHead>
+                        <TableHead>{t('supplier') || 'Supplier'}</TableHead>
+                        <TableHead>{t('quantity') || 'Quantity'}</TableHead>
+                        <TableHead>{t('value') || 'Value'}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {history.map((h) => (
                         <TableRow key={h.id}>
-                          <TableCell className="text-xs">{new Date(h.date).toLocaleString('ka-GE')}</TableCell>
+                          <TableCell className="text-xs">{new Date(h.date).toLocaleString(lang === 'ka' ? 'ka-GE' : 'en-US')}</TableCell>
                           <TableCell>{h.productName}</TableCell>
                           <TableCell>{h.supplierName}</TableCell>
                           <TableCell>{h.quantity}</TableCell>
@@ -503,54 +511,52 @@ export default function OrdersPage() {
       {/* New Order Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>ახალი შეკვეთა</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('new_order') || 'New Order'}</DialogTitle></DialogHeader>
           <div className="grid gap-3">
-            <div className="space-y-1"><Label>მომწოდებელი</Label><Select value={supplierId} onValueChange={setSupplierId}><SelectTrigger><SelectValue placeholder="აირჩიეთ" /></SelectTrigger><SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-1"><Label>პროდუქტი</Label><Select value={productId} onValueChange={setProductId}><SelectTrigger><SelectValue placeholder="აირჩიეთ" /></SelectTrigger><SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1"><Label>{t('supplier') || 'Supplier'}</Label><Select value={supplierId} onValueChange={setSupplierId}><SelectTrigger><SelectValue placeholder={t('select') || 'Select'} /></SelectTrigger><SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1"><Label>{t('product') || 'Product'}</Label><Select value={productId} onValueChange={setProductId}><SelectTrigger><SelectValue placeholder={t('select') || 'Select'} /></SelectTrigger><SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>რაოდენობა</Label><Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
-              <div className="space-y-1"><Label>ფასი</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
+              <div className="space-y-1"><Label>{t('quantity') || 'Quantity'}</Label><Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
+              <div className="space-y-1"><Label>{t('price') || 'Price'}</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
             </div>
           </div>
-          <DialogFooter><Button onClick={handleAdd}>შეკვეთის შექმნა</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleAdd}>{t('create_order') || 'Create order'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Add Rule Dialog */}
       <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>ავტო-შეკვეთის წესი</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('auto_order_rule') || 'Auto-order rule'}</DialogTitle></DialogHeader>
           <div className="grid gap-3">
             <div className="space-y-1">
-              <Label>პროდუქტი</Label>
+              <Label>{t('product') || 'Product'}</Label>
               <Select value={ruleProductId} onValueChange={setRuleProductId}>
-                <SelectTrigger><SelectValue placeholder="აირჩიეთ პროდუქტი" /></SelectTrigger>
-                <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (მარაგი: {p.stock})</SelectItem>)}</SelectContent>
+                <SelectTrigger><SelectValue placeholder={t('select_product') || 'Select product'} /></SelectTrigger>
+                <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({t('stock') || 'Stock'}: {p.stock})</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>მომწოდებელი</Label>
+              <Label>{t('supplier') || 'Supplier'}</Label>
               <Select value={ruleSupplierId} onValueChange={setRuleSupplierId}>
-                <SelectTrigger><SelectValue placeholder="აირჩიეთ მომწოდებელი" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('select_supplier') || 'Select supplier'} /></SelectTrigger>
                 <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>შეკვეთის რაოდენობა</Label>
-              <Input type="number" min="1" value={ruleQuantity} onChange={(e) => setRuleQuantity(e.target.value)} placeholder="მაგ: 50" />
-              <p className="text-xs text-muted-foreground">რამდენი უნდა შეიკვეთოს მარაგის ამოწურვისას</p>
+              <Label>{t('order_quantity_label') || 'Order quantity'}</Label>
+              <Input type="number" min="1" value={ruleQuantity} onChange={(e) => setRuleQuantity(e.target.value)} placeholder={t('eg_50') || 'e.g. 50'} />
+              <p className="text-xs text-muted-foreground">{t('how_much_to_order_when_out_of_stock') || 'How many to order when stock runs out'}</p>
             </div>
           </div>
-          <DialogFooter><Button onClick={handleAddRule}>წესის დამატება</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleAddRule}>{t('add_rule') || 'Add Rule'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </PageTransition>
   );
 }
 
-const MONTH_NAMES = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
-
-function MonthlyChart({ history }: { history: { date: string; totalAmount: number; quantity: number }[] }) {
+function MonthlyChart({ history, lang, t }: { history: { date: string; totalAmount: number; quantity: number }[], lang: string, t: any }) {
   const chartData = useMemo(() => {
     const monthMap: Record<string, { orders: number; amount: number; items: number }> = {};
 
@@ -574,9 +580,11 @@ function MonthlyChart({ history }: { history: { date: string; totalAmount: numbe
 
     return Object.entries(monthMap).map(([key, val]) => {
       const [, m] = key.split('-');
-      return { month: MONTH_NAMES[parseInt(m) - 1], ...val };
+      const date = new Date(parseInt(key.split('-')[0]), parseInt(m) - 1, 1);
+      const monthStr = date.toLocaleString(lang === 'ka' ? 'ka-GE' : 'en-US', { month: 'short' });
+      return { month: monthStr, ...val };
     });
-  }, [history]);
+  }, [history, lang]);
 
   return (
     <ResponsiveContainer width="100%" height={280}>
@@ -592,13 +600,13 @@ function MonthlyChart({ history }: { history: { date: string; totalAmount: numbe
             color: 'hsl(var(--foreground))',
           }}
           formatter={(value: number, name: string) => {
-            const labels: Record<string, string> = { orders: 'შეკვეთები', amount: 'ღირებულება (₾)', items: 'ერთეულები' };
+            const labels: Record<string, string> = { orders: t('orders') || 'Orders', amount: `${t('value') || 'Value'} (₾)`, items: t('ordered_units') || 'Units' };
             return [name === 'amount' ? `₾${value.toFixed(2)}` : value, labels[name] || name];
           }}
         />
         <Legend
           formatter={(value: string) => {
-            const labels: Record<string, string> = { orders: 'შეკვეთები', amount: 'ღირებულება (₾)', items: 'ერთეულები' };
+            const labels: Record<string, string> = { orders: t('orders') || 'Orders', amount: `${t('value') || 'Value'} (₾)`, items: t('ordered_units') || 'Units' };
             return labels[value] || value;
           }}
         />
@@ -610,16 +618,16 @@ function MonthlyChart({ history }: { history: { date: string; totalAmount: numbe
   );
 }
 
-function exportHistoryToExcel(history: { date: string; productName: string; supplierName: string; quantity: number; totalAmount: number }[]) {
+function exportHistoryToExcel(history: { date: string; productName: string; supplierName: string; quantity: number; totalAmount: number }[], lang: string) {
   const data = history.map((h) => ({
-    'თარიღი': new Date(h.date).toLocaleString('ka-GE'),
-    'პროდუქტი': h.productName,
-    'მომწოდებელი': h.supplierName,
-    'რაოდენობა': h.quantity,
-    'ღირებულება (₾)': h.totalAmount.toFixed(2),
+    [lang === 'ka' ? 'თარიღი' : 'Date']: new Date(h.date).toLocaleString(lang === 'ka' ? 'ka-GE' : 'en-US'),
+    [lang === 'ka' ? 'პროდუქტი' : 'Product']: h.productName,
+    [lang === 'ka' ? 'მომწოდებელი' : 'Supplier']: h.supplierName,
+    [lang === 'ka' ? 'რაოდენობა' : 'Quantity']: h.quantity,
+    [lang === 'ka' ? 'ღირებულება (₾)' : 'Value (₾)']: h.totalAmount.toFixed(2),
   }));
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'ავტო-შეკვეთები');
-  XLSX.writeFile(wb, `ავტო-შეკვეთები_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, lang === 'ka' ? 'ავტო-შეკვეთები' : 'Auto-orders');
+  XLSX.writeFile(wb, `${lang === 'ka' ? 'ავტო-შეკვეთები' : 'Auto-orders'}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }

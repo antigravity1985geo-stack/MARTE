@@ -13,8 +13,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEmployees, Attendance } from '@/hooks/useEmployees';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function AttendancePage() {
+  const { t, lang } = useI18n();
   const { employees, attendance, isLoading, logAttendance } = useEmployees();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,9 +39,9 @@ export default function AttendancePage() {
         clock_in: new Date().toISOString(),
         status: 'present'
       });
-      toast.success('მოსვლა დაფიქსირდა');
+      toast.success(t('attendance_logged') || 'Attendance logged');
     } catch (e: any) {
-      toast.error('შეცდომა: ' + e.message);
+      toast.error((t('error_colon') || 'Error: ') + e.message);
     }
   };
 
@@ -61,9 +63,9 @@ export default function AttendancePage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Clock className="h-6 w-6 text-primary" />
-            დასწრების აღრიცხვა
+            {t('attendance_tab') || 'Attendance Tracking'}
           </h1>
-          <p className="text-muted-foreground">მოსვლა/წასვლა და სამუშაო საათები</p>
+          <p className="text-muted-foreground">{t('attendance_desc') || 'Clock in/out and working hours'}</p>
         </div>
         <Input
           type="date"
@@ -76,43 +78,43 @@ export default function AttendancePage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10"><Users className="h-5 w-5 text-primary" /></div>
-          <div><p className="text-2xl font-bold">{presentCount}</p><p className="text-xs text-muted-foreground">დამსწრე</p></div>
+          <div><p className="text-2xl font-bold">{presentCount}</p><p className="text-xs text-muted-foreground">{t('present_label') || 'Present'}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-yellow-500/10"><AlertTriangle className="h-5 w-5 text-yellow-600" /></div>
-          <div><p className="text-2xl font-bold">{lateCount}</p><p className="text-xs text-muted-foreground">დაგვიანებული</p></div>
+          <div><p className="text-2xl font-bold">{lateCount}</p><p className="text-xs text-muted-foreground">{t('late_label') || 'Late'}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-destructive/10"><UserX className="h-5 w-5 text-destructive" /></div>
-          <div><p className="text-2xl font-bold">{absentCount}</p><p className="text-xs text-muted-foreground">არმოსული</p></div>
+          <div><p className="text-2xl font-bold">{absentCount}</p><p className="text-xs text-muted-foreground">{t('absent_label') || 'Absent'}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-green-500/10"><Timer className="h-5 w-5 text-green-600" /></div>
-          <div><p className="text-2xl font-bold">{presentCount > 0 ? '100%' : '0%'}</p><p className="text-xs text-muted-foreground">დასწრების კოეფ.</p></div>
+          <div><p className="text-2xl font-bold">{presentCount > 0 ? '100%' : '0%'}</p><p className="text-xs text-muted-foreground">{t('attendance_rate') || 'Attendance Rate'}</p></div>
         </CardContent></Card>
       </div>
 
       <Tabs defaultValue="today">
         <TabsList>
-          <TabsTrigger value="today"><Clock className="h-4 w-4 mr-1" />დღევანდელი</TabsTrigger>
-          <TabsTrigger value="clockin"><LogIn className="h-4 w-4 mr-1" />აღრიცხვა</TabsTrigger>
-          <TabsTrigger value="history"><Calendar className="h-4 w-4 mr-1" />ისტორია</TabsTrigger>
+          <TabsTrigger value="today"><Clock className="h-4 w-4 mr-1" />{t('today_label') || 'Today'}</TabsTrigger>
+          <TabsTrigger value="clockin"><LogIn className="h-4 w-4 mr-1" />{t('tracking_label') || 'Tracking'}</TabsTrigger>
+          <TabsTrigger value="history"><Calendar className="h-4 w-4 mr-1" />{t('history_label') || 'History'}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="today" className="space-y-4">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="ძიება..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            <Input className="pl-9" placeholder={t('search_placeholder') || 'Search...'} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
           <Card>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>თანამშრომელი</TableHead>
-                    <TableHead>მოსვლა</TableHead>
-                    <TableHead>წასვლა</TableHead>
-                    <TableHead>სტატუსი</TableHead>
+                    <TableHead>{t('emp_col') || 'Employee'}</TableHead>
+                    <TableHead>{t('clock_in_col') || 'Clock In'}</TableHead>
+                    <TableHead>{t('clock_out_col') || 'Clock Out'}</TableHead>
+                    <TableHead>{t('status_col') || 'Status'}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -122,15 +124,15 @@ export default function AttendancePage() {
                         <p className="font-medium">{emp.full_name}</p>
                         <p className="text-xs text-muted-foreground">{emp.position}</p>
                       </TableCell>
-                      <TableCell className="font-mono">{record?.clock_in ? new Date(record.clock_in).toLocaleTimeString('ka-GE') : '—'}</TableCell>
-                      <TableCell className="font-mono">{record?.clock_out ? new Date(record.clock_out).toLocaleTimeString('ka-GE') : '—'}</TableCell>
+                      <TableCell className="font-mono">{record?.clock_in ? new Date(record.clock_in).toLocaleTimeString(lang === 'ka' ? 'ka-GE' : 'en-US') : '—'}</TableCell>
+                      <TableCell className="font-mono">{record?.clock_out ? new Date(record.clock_out).toLocaleTimeString(lang === 'ka' ? 'ka-GE' : 'en-US') : '—'}</TableCell>
                       <TableCell>
                         {record ? (
                           <Badge variant={record.status === 'present' ? 'default' : 'destructive'}>
-                            {record.status === 'present' ? 'დამსწრე' : 'გაცდენა'}
+                            {record.status === 'present' ? (t('present_label') || 'Present') : (t('absent_label') || 'Absent')}
                           </Badge>
                         ) : (
-                          <Badge variant="outline">მოლოდინში</Badge>
+                          <Badge variant="outline">{t('status_pending') || 'Pending'}</Badge>
                         )}
                       </TableCell>
                     </TableRow>
@@ -161,7 +163,7 @@ export default function AttendancePage() {
                     onClick={() => handleClockIn(emp.id)}
                   >
                     <LogIn className="h-4 w-4 mr-2" />
-                    {hasClockedIn ? 'აღრიცხულია' : 'მოსვლის დაფიქსირება'}
+                    {hasClockedIn ? (t('already_logged') || 'Already Logged') : (t('mark_arrived') || 'Mark Arrival')}
                   </Button>
                 </CardContent>
               </Card>
@@ -171,14 +173,14 @@ export default function AttendancePage() {
 
         <TabsContent value="history">
           <Card>
-            <CardHeader><CardTitle className="text-lg">ბოლო აქტივობები</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">{t('recent_activities') || 'Recent Activities'}</CardTitle></CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>თარიღი</TableHead>
-                    <TableHead>თანამშრომელი</TableHead>
-                    <TableHead>სტატუსი</TableHead>
+                    <TableHead>{t('date_col') || 'Date'}</TableHead>
+                    <TableHead>{t('emp_col') || 'Employee'}</TableHead>
+                    <TableHead>{t('status_col') || 'Status'}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -190,7 +192,7 @@ export default function AttendancePage() {
                         <TableCell>{emp?.full_name}</TableCell>
                         <TableCell>
                           <Badge variant={rec.status === 'present' ? 'secondary' : 'outline'}>
-                            {rec.status === 'present' ? 'აქ იყო' : 'გააცდინა'}
+                            {rec.status === 'present' ? (t('here') || 'Here') : (t('absent_short') || 'Absent')}
                           </Badge>
                         </TableCell>
                       </TableRow>
