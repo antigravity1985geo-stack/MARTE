@@ -392,6 +392,13 @@ const t = {
   crm_tier_gold: { ka: 'ოქრო', en: 'Gold' },
   crm_tier_platinum: { ka: 'პლატინა', en: 'Platinum' },
   crm_share: { ka: 'წილი', en: 'Share' },
+  crm_campaign_history: { ka: 'კამპანიების ისტორია', en: 'Campaigns History', ru: 'История кампаний', az: 'Kampaniya tarixçəsi' },
+  crm_points_history: { ka: 'ქულების ისტორია', en: 'Points History', ru: 'История баллов', az: 'Balların tarixçəsi' },
+  crm_campaign_name: { ka: 'კამპანიის სახელი', en: 'Campaign Name', ru: 'Название кампании', az: 'Kampaniya adı' },
+  crm_channel: { ka: 'არხი', en: 'Channel', ru: 'Канал', az: 'Kanal' },
+  crm_earn: { ka: 'დარიცხვა', en: 'Earn', ru: 'Начисление', az: 'Qazanmaq' },
+  crm_spend: { ka: 'გახარჯვა', en: 'Spend', ru: 'Списание', az: 'Xərcləmək' },
+  crm_points_short: { ka: 'ქულა', en: 'pts', ru: 'балл', az: 'bal' },
 
   // ─── Expenses ─────────────────────────────────────────────────────────────
   expenses_title: { ka: 'ხარჯები', en: 'Expenses', ru: 'Расходы', az: 'Xərclər' },

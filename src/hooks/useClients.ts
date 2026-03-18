@@ -144,6 +144,43 @@ export function useClients() {
     }
   });
 
+  const pointsHistoryQuery = (clientId: string) => useQuery({
+    queryKey: ['points_history', clientId],
+    enabled: !!clientId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('client_points_history')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const campaignsQuery = useQuery({
+    queryKey: ['loyalty_campaigns'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('loyalty_campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const saveCampaign = useMutation({
+    mutationFn: async (campaign: { name: string; type: string; status: string; target_segment: string; content: string }) => {
+      const { data, error } = await supabase.from('loyalty_campaigns').insert(campaign).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loyalty_campaigns'] });
+    }
+  });
+
   const runSegmentationUpdate = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.rpc('update_customer_segments');
@@ -158,8 +195,18 @@ export function useClients() {
 
   const sendCampaign = useMutation({
     mutationFn: async (campaign: { name: string; target: string; type: string; content: string }) => {
-      // Simulation: Adding to activity log and creating a promotion if needed
+      // 1. Save to DB
+      await saveCampaign.mutateAsync({
+        name: campaign.name,
+        type: campaign.type,
+        status: 'sent',
+        target_segment: campaign.target,
+        content: campaign.content
+      });
+
+      // 2. Simulation of sending (SMS/Email)
       await new Promise(resolve => setTimeout(resolve, 1500));
+      
       log({
         action: 'create',
         entityType: 'promotion' as any,
@@ -195,7 +242,9 @@ export function useClients() {
   return {
     clients: clientsQuery.data || [],
     promotions: promotionsQuery.data || [],
-    isLoading: clientsQuery.isLoading || promotionsQuery.isLoading,
+    campaigns: campaignsQuery.data || [],
+    isLoading: clientsQuery.isLoading || promotionsQuery.isLoading || campaignsQuery.isLoading,
+    pointsHistory: pointsHistoryQuery,
     addClient,
     updateClient,
     deleteClient,

@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Users, Crown, Star, Gift, Percent, TrendingUp, Search,
   Plus, Heart, Award, Tag, History, Phone, Mail, Calendar,
-  BarChart3, Target, Zap, ChevronRight, Loader2
+  BarChart3, Target, Zap, ChevronRight, Loader2, Send
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClients } from '@/hooks/useClients';
@@ -41,9 +41,8 @@ const LOYALTY_TIERS: LoyaltyTier[] = [
 ];
 
 export default function CRMPage() {
-  const { clients, promotions, isLoading, addPromotion: addPromoMutation, runSegmentationUpdate, sendCampaign } = useClients();
+  const { clients, promotions, campaigns, isLoading, addPromotion: addPromoMutation, runSegmentationUpdate, sendCampaign, pointsHistory } = useClients();
   const { t, lang } = useI18n();
-  const [history] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('all');
   const [tierFilter, setTierFilter] = useState('all');
@@ -51,6 +50,9 @@ export default function CRMPage() {
   const [promoDialog, setPromoDialog] = useState(false);
   const [campaignDialog, setCampaignDialog] = useState(false);
   const [selectedSegForCampaign, setSelectedSegForCampaign] = useState('all');
+  const [campaignType, setCampaignType] = useState('sms');
+  const [campaignContent, setCampaignContent] = useState('');
+  const [campaignName, setCampaignName] = useState('');
   const [newPromo, setNewPromo] = useState({ name: '', type: 'percentage' as any, value: '', target_segment: 'all', start_date: '', end_date: '', promo_code: '' });
 
   // Helper: tier name for current language
@@ -72,10 +74,24 @@ export default function CRMPage() {
     });
   };
 
-  const handleSendCampaign = (campaign: any) => {
-    toast.promise(sendCampaign.mutateAsync(campaign), {
-      loading: '...',
-      success: t('success'),
+  const handleSendCampaign = () => {
+    if (!campaignName || !campaignContent) {
+      toast.error('გთხოვთ შეავსოთ კამპანიის სახელი და ტექსტი');
+      return;
+    }
+    toast.promise(sendCampaign.mutateAsync({ 
+      name: campaignName, 
+      target: selectedSegForCampaign,
+      type: campaignType,
+      content: campaignContent
+    }), {
+      loading: 'კამპანია იგზავნება...',
+      success: () => {
+        setCampaignDialog(false);
+        setCampaignName('');
+        setCampaignContent('');
+        return t('success');
+      },
       error: t('error'),
     });
   };
@@ -139,25 +155,44 @@ export default function CRMPage() {
           </Button>
           <Dialog open={campaignDialog} onOpenChange={setCampaignDialog}>
             <DialogTrigger asChild><Button onClick={() => setCampaignDialog(true)}><Mail className="h-4 w-4 mr-1" />{t('crm_run_campaign')}</Button></DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[500px]">
               <DialogHeader><DialogTitle>{t('crm_campaign_title')}</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label>{t('crm_campaign_target')}</Label>
-                  <Select value={selectedSegForCampaign} onValueChange={setSelectedSegForCampaign}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t('crm_campaign_all')}</SelectItem>
-                      <SelectItem value="vip">{t('crm_campaign_vip')}</SelectItem>
-                      <SelectItem value="at_risk">{t('crm_campaign_at_risk')}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>{t('crm_campaign_name')}</Label>
+                  <Input value={campaignName} onChange={e => setCampaignName(e.target.value)} placeholder="მაგ: საგაზაფხულო ფასდაკლება" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t('crm_campaign_target')}</Label>
+                    <Select value={selectedSegForCampaign} onValueChange={setSelectedSegForCampaign}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('crm_campaign_all')}</SelectItem>
+                        <SelectItem value="vip">{t('crm_campaign_vip')}</SelectItem>
+                        <SelectItem value="at_risk">{t('crm_campaign_at_risk')}</SelectItem>
+                        <SelectItem value="new">ახალი კლიენტები</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('crm_channel')}</Label>
+                    <Select value={campaignType} onValueChange={setCampaignType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sms">SMS</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="portal">Portal Notification</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>{t('crm_campaign_message')}</Label>
-                  <Textarea rows={4} />
+                  <Textarea rows={4} value={campaignContent} onChange={e => setCampaignContent(e.target.value)} placeholder="შეიყვანეთ შეტყობინების ტექსტი..." />
                 </div>
-                <Button className="w-full" onClick={() => { handleSendCampaign({ name: 'CRM Promo', target: selectedSegForCampaign }); setCampaignDialog(false); }}>
+                <Button className="w-full" onClick={handleSendCampaign} disabled={sendCampaign.isPending}>
+                  {sendCampaign.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                   {t('crm_campaign_send')}
                 </Button>
               </div>
@@ -256,31 +291,9 @@ export default function CRMPage() {
                     {selectedCustomer.notes && <p className="text-muted-foreground italic">{selectedCustomer.notes}</p>}
                   </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold mb-2 flex items-center gap-1"><History className="h-4 w-4" />{t('crm_purchase_history')}</h4>
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>{t('date')}</TableHead>
-                      <TableHead>{t('products_title')}</TableHead>
-                      <TableHead className="text-right">{t('total')}</TableHead>
-                      <TableHead>{t('crm_earned_points')}</TableHead>
-                      <TableHead>{t('crm_discount_applied')}</TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {history.filter((h: any) => h.customerId === selectedCustomer.id).map((h: any) => (
-                        <TableRow key={h.id}>
-                          <TableCell>{h.date}</TableCell>
-                          <TableCell className="text-sm">{Array.isArray(h.items) ? h.items.join(', ') : h.items}</TableCell>
-                          <TableCell className="text-right font-medium">{h.total?.toFixed(2)} ₾</TableCell>
-                          <TableCell><Badge variant="outline" className="text-xs">+{h.pointsEarned}</Badge></TableCell>
-                          <TableCell>{h.discountApplied ? <span className="text-primary">-{h.discountApplied}%</span> : '—'}</TableCell>
-                        </TableRow>
-                      ))}
-                      {history.filter((h: any) => h.customerId === selectedCustomer.id).length === 0 && (
-                        <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">{t('crm_history_empty')}</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                <div className="pt-4 border-t">
+                  <h4 className="font-semibold mb-4 flex items-center gap-2"><History className="h-5 w-5 text-primary" />{t('crm_points_history')}</h4>
+                  <PointsHistoryTable clientId={selectedCustomer.id} />
                 </div>
               </CardContent>
             </Card>
@@ -446,7 +459,7 @@ export default function CRMPage() {
                   </div>
                   <div className="text-xs text-muted-foreground flex justify-between">
                     <span>{promo.start_date?.split('T')[0] || '-'} → {promo.end_date?.split('T')[0] || '-'}</span>
-                    <span>{t('crm_used')}: {promo.usage_count}{t('crm_times')}</span>
+                    <span>{t('crm_used')}: {promo.usage_count} {t('crm_times')}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -480,16 +493,84 @@ export default function CRMPage() {
                       <div><span className="text-muted-foreground">{t('crm_share')}</span><p className="font-medium">{pct}%</p></div>
                       <div><span className="text-muted-foreground">{t('crm_total_revenue')}</span><p className="font-medium">{segRevenue.toLocaleString()} ₾</p></div>
                     </div>
-                    <div className="text-xs space-y-0.5">
-                      {segCustomers.slice(0, 3).map(c => <p key={c.id} className="text-muted-foreground">{c.name} — {(c.total_spent || 0).toLocaleString()} ₾</p>)}
-                    </div>
                   </CardContent>
                 </Card>
               );
             })}
           </div>
+          
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t('crm_campaign_history')}</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('crm_campaign_name')}</TableHead>
+                    <TableHead>{t('type')}</TableHead>
+                    <TableHead>{t('crm_segment')}</TableHead>
+                    <TableHead>{t('status')}</TableHead>
+                    <TableHead>{t('date')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {campaigns.map((camp: any) => (
+                    <TableRow key={camp.id}>
+                      <TableCell className="font-medium">{camp.name}</TableCell>
+                      <TableCell><Badge variant="outline">{camp.type.toUpperCase()}</Badge></TableCell>
+                      <TableCell>{camp.target_segment}</TableCell>
+                      <TableCell><Badge className="bg-green-500 text-white">{camp.status}</Badge></TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(camp.created_at).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {campaigns.length === 0 && (
+                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">ისტორია ცარიელია</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function PointsHistoryTable({ clientId }: { clientId: string }) {
+  const { pointsHistory } = useClients();
+  const { data: history = [], isLoading } = pointsHistory(clientId);
+  const { t } = useI18n();
+
+  if (isLoading) return <div className="h-20 w-full animate-pulse bg-muted rounded-lg" />;
+
+  return (
+    <Table>
+      <TableHeader><TableRow>
+        <TableHead>{t('date')}</TableHead>
+        <TableHead>{t('description')}</TableHead>
+        <TableHead>{t('type')}</TableHead>
+        <TableHead className="text-right">{t('crm_points')}</TableHead>
+      </TableRow></TableHeader>
+      <TableBody>
+        {history.map((h: any) => (
+          <TableRow key={h.id}>
+            <TableCell className="text-xs">{new Date(h.created_at).toLocaleString()}</TableCell>
+            <TableCell className="text-sm font-medium">{h.description}</TableCell>
+            <TableCell>
+              <Badge variant={h.type === 'earn' ? 'default' : 'destructive'} className="text-[10px]">
+                {h.type === 'earn' ? t('crm_earn') : t('crm_spend')}
+              </Badge>
+            </TableCell>
+            <TableCell className={`text-right font-black ${h.type === 'earn' ? 'text-green-500' : 'text-destructive'}`}>
+              {h.type === 'earn' ? '+' : '-'}{h.points}
+            </TableCell>
+          </TableRow>
+        ))}
+        {history.length === 0 && (
+          <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-4">{t('crm_history_empty')}</TableCell></TableRow>
+        )}
+      </TableBody>
+    </Table>
   );
 }
