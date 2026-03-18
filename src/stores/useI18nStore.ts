@@ -11,8 +11,9 @@ const STORAGE_KEY = 'marte_lang';
 
 const savedLang = (): Lang => {
   try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    return v === 'en' ? 'en' : 'ka';
+    const v = localStorage.getItem(STORAGE_KEY) as Lang;
+    if (['ka', 'en', 'ru', 'az'].includes(v)) return v;
+    return 'ka';
   } catch {
     return 'ka';
   }

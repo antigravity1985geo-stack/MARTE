@@ -7,7 +7,7 @@ export type AppRole = 'admin' | 'cashier' | 'senior_cashier' | 'manager' | 'ware
 // ყველა როლისთვის საერთო გვერდები
 const COMMON_PATHS = [
   '/', '/pos', '/products', '/categories', '/sales', '/queue', '/profile', '/guide', 
-  '/salon/calendar', '/clinic/calendar', '/clinic/patients',
+  '/salon/calendar', '/clinic/calendar', '/clinic/patients', '/clinic/services',
   '/real-estate', '/real-estate/properties', '/real-estate/mortgages'
 ];
 
@@ -84,13 +84,14 @@ export function useUserRole() {
   const activeTenantId = useAuthStore((s) => s.activeTenantId);
 
   const query = useQuery({
-    queryKey: ['user_role', user?.id],
-    enabled: !!user?.id,
+    queryKey: ['user_role', user?.id, activeTenantId],
+    enabled: !!user?.id && !!activeTenantId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user!.id);
+        .eq('user_id', user!.id)
+        .eq('tenant_id', activeTenantId!);
       if (error) throw error;
       return (data || []).map((r: any) => r.role as AppRole);
     },

@@ -18,6 +18,12 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const getSections = (
   industry: IndustryType,
@@ -217,16 +223,36 @@ export function AppSidebar() {
         ))}
       </ScrollArea>
 
-      {/* Footer: Language Toggle + Logout */}
       <div className="border-t border-sidebar-border p-4 space-y-1">
-        <button
-          onClick={() => setLang(lang === 'ka' ? 'en' : 'ka')}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"
-        >
-          <Globe className="h-4 w-4" />
-          <span className="flex-1 text-left">{lang === 'ka' ? '🇬🇧 English' : '🇬🇪 ქართული'}</span>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-sidebar-border uppercase">{lang}</Badge>
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200">
+              <Globe className="h-4 w-4" />
+              <span className="flex-1 text-left">
+                {lang === 'ka' && '🇬🇪 ქართული'}
+                {lang === 'en' && '🇬🇧 English'}
+                {lang === 'ru' && '🇷🇺 Русский'}
+                {lang === 'az' && '🇦🇿 Azərbaycan'}
+              </span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-sidebar-border uppercase">{lang}</Badge>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[200px] bg-popover border-border">
+            <DropdownMenuItem onClick={() => setLang('ka')} className="cursor-pointer gap-2">
+              <span>🇬🇪</span> ქართული
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLang('en')} className="cursor-pointer gap-2">
+              <span>🇬🇧</span> English
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLang('ru')} className="cursor-pointer gap-2">
+              <span>🇷🇺</span> Русский
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLang('az')} className="cursor-pointer gap-2">
+              <span>🇦🇿</span> Azərbaycan
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-all duration-200"

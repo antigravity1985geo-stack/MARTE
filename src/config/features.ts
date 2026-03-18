@@ -1,4 +1,4 @@
-export type IndustryType = 'retail' | 'fnb' | 'salon' | 'clinic' | 'pharmacy' | 'auto' | 'other' | 'real_estate' | 'construction' | 'logistics';
+export type IndustryType = 'retail' | 'fnb' | 'salon' | 'clinic' | 'pharmacy' | 'auto' | 'other' | 'real_estate' | 'construction' | 'logistics' | 'production';
 export type PlanType = 'free' | 'basic' | 'pro' | 'enterprise';
 
 export interface FeatureConfig {
@@ -22,7 +22,7 @@ export const AVAILABLE_FEATURES: FeatureConfig[] = [
   { id: 'real_estate', label: 'უძრავი ქონება', industries: ['real_estate'], minPlan: 'pro' },
   { id: 'analytics', label: 'ანალიტიკა (BI)', industries: ['retail', 'fnb', 'salon', 'clinic', 'pharmacy', 'auto', 'other', 'real_estate', 'construction', 'logistics'], minPlan: 'pro' },
   { id: 'rsge', label: 'RS.GE ინტეგრაცია', industries: ['retail', 'fnb', 'pharmacy', 'other', 'logistics'], minPlan: 'basic' },
-  { id: 'distribution', label: 'დისტრიბუცია', industries: ['retail', 'fnb', 'logistics', 'production' as any], minPlan: 'pro' },
+  { id: 'distribution', label: 'დისტრიბუცია', industries: ['retail', 'fnb', 'logistics', 'production'], minPlan: 'pro' },
   { id: 'ecommerce', label: 'E-Commerce', industries: ['retail', 'other'], minPlan: 'pro' },
 ];
 

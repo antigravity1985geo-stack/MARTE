@@ -126,8 +126,11 @@ function RoleRoute({ children, path }: { children: React.ReactNode; path: string
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex min-h-[50vh] w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-sm text-muted-foreground">იტვირთება...</p>
+        </div>
       </div>
     );
   }
@@ -238,12 +241,12 @@ const App = () => (
                   <Route path="clinic/calendar" element={<RoleRoute path="/clinic/calendar"><ErrorBoundary><ClinicCalendarPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/patients" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/patients/:id" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientDetailsPage /></ErrorBoundary></RoleRoute>} />
-                  <Route path="clinic/services" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicServicesPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/services" element={<RoleRoute path="/clinic/services"><ErrorBoundary><ClinicServicesPage /></ErrorBoundary></RoleRoute>} />
                   
                   {/* MARTEHOME (Real Estate) */}
-                  <Route path="real-estate" element={<ErrorBoundary><RealEstateDashboard /></ErrorBoundary>} />
-                  <Route path="real-estate/properties" element={<RoleRoute path="/app/real-estate/properties"><ErrorBoundary><PropertyList /></ErrorBoundary></RoleRoute>} />
-                  <Route path="real-estate/mortgages" element={<RoleRoute path="/app/real-estate/mortgages"><ErrorBoundary><MortgageManagement /></ErrorBoundary></RoleRoute>} />
+                  <Route path="real-estate" element={<RoleRoute path="/real-estate"><ErrorBoundary><RealEstateDashboard /></ErrorBoundary></RoleRoute>} />
+                  <Route path="real-estate/properties" element={<RoleRoute path="/real-estate/properties"><ErrorBoundary><PropertyList /></ErrorBoundary></RoleRoute>} />
+                  <Route path="real-estate/mortgages" element={<RoleRoute path="/real-estate/mortgages"><ErrorBoundary><MortgageManagement /></ErrorBoundary></RoleRoute>} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
