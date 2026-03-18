@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { SwipeToDelete } from '@/components/SwipeToDelete';
 import { Textarea } from '@/components/ui/textarea';
 import { Link } from 'react-router-dom';
+import { useI18n } from '@/hooks/useI18n';
 
 const emptyForm: Omit<ClinicPatient, 'id' | 'created_at'> = {
   first_name: '',
@@ -37,6 +38,7 @@ export default function ClinicPatientsPage() {
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState('');
   const isMobile = useIsMobile();
+  const { t } = useI18n();
 
   const openNew = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
   
@@ -106,8 +108,8 @@ export default function ClinicPatientsPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary">პაციენტები</h1>
-            <p className="text-sm text-muted-foreground mt-1">სულ: {patients.length} რეგისტრირებული პაციენტი</p>
+            <h1 className="text-3xl font-bold tracking-tight text-primary">{t('nav_patients')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('total')}: {patients.length} {t('nav_patients').toLowerCase()}</p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
             <Input 

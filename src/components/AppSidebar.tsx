@@ -58,7 +58,7 @@ const getSections = (
 
   // 2. Business Operations
   const operationItems: any[] = [];
-  if (isEnabled('clinic') || isSuperadmin) operationItems.push({ title: t('nav_clients'), icon: Users, path: '/app/clinic/patients' });
+  if (isEnabled('clinic') || isSuperadmin) operationItems.push({ title: t('nav_patients'), icon: Users, path: '/app/clinic/patients' });
   if (isEnabled('sales') || isSuperadmin) {
     operationItems.push({ title: t('nav_sales'), icon: TrendingUp, path: '/app/sales' });
     operationItems.push({ title: t('nav_orders'), icon: ListOrdered, path: '/app/orders' });

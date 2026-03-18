@@ -90,6 +90,7 @@ const t = {
   nav_sales: { ka: 'გაყიდვები / სერვისები', en: 'Sales / Services', ru: 'Продажи / Услуги', az: 'Satış / Xidmətlər' },
   nav_orders: { ka: 'შეკვეთები', en: 'Orders', ru: 'Заказы', az: 'Sifarişlər' },
   nav_clients: { ka: 'კლიენტები', en: 'Clients', ru: 'Клиенты', az: 'Müştərilər' },
+  nav_patients: { ka: 'პაციენტები', en: 'Patients', ru: 'Пациенты', az: 'Pasientlər' },
   nav_products: { ka: 'პროდუქტები & სერვისები', en: 'Products & Services', ru: 'Продукты и Услуги', az: 'Məhsullar və Xidmətlər' },
   nav_warehouses: { ka: 'საწყობები', en: 'Warehouses', ru: 'Склады', az: 'Anbarlar' },
   nav_inventory: { ka: 'მარაგის აღწერა', en: 'Inventory Count', ru: 'Инвентаризация', az: 'İnventarizasiya' },
