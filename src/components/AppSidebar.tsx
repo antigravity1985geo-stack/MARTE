@@ -7,7 +7,7 @@ import {
   UserCog, Clock, ListOrdered, LogOut,
   Menu, X, Activity,
   Globe, Building2, Building,
-  ShieldCheck, CalendarDays, Lock, Home, Key, Stethoscope, Wallet2, Settings, Gift
+  ShieldCheck, CalendarDays, Lock, Home, Key, Stethoscope, Wallet2, Settings, Gift, Scissors
 } from 'lucide-react';
 import { Heart } from 'lucide-react';
 import { AVAILABLE_FEATURES, isFeatureLocked, IndustryType, PlanType } from '@/config/features';
@@ -78,6 +78,7 @@ const getSections = (
   if (isEnabled('inventory') || isSuperadmin) {
     managementItems.push({ title: t('nav_products'), icon: Package, path: '/app/products' });
     if (isEnabled('clinic') || isSuperadmin) managementItems.push({ title: 'სამედიცინო სერვისები', icon: Stethoscope, path: '/app/clinic/services' });
+    if (isEnabled('salon') || isSuperadmin) managementItems.push({ title: 'სალონის სერვისები', icon: Scissors, path: '/app/salon/services' });
     managementItems.push({ title: t('nav_warehouses'), icon: Warehouse, path: '/app/warehouse-management' });
     managementItems.push({ title: t('nav_inventory'), icon: ClipboardList, path: '/app/inventory-count' });
   }

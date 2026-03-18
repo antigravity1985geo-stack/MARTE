@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Share2, Users, Gift, MessageCircle } from "lucide-react";
+import { Copy, Share2, Users, Gift, MessageCircle, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -45,18 +45,27 @@ export const ReferralBonus = ({ referralCode, tenantSlug, primaryColor = "var(--
 
         <div className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur opacity-25 group-hover:opacity-40 transition-opacity"></div>
-          <div className="relative flex items-center gap-2 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-100 dark:border-white/5 shadow-inner">
-            <div className="flex-1 px-4 py-2 font-mono text-sm font-bold text-slate-500 truncate">
-              {referralCode}
+          <div className="relative flex flex-col items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-white/5 shadow-inner">
+            <div className="bg-white p-2 rounded-xl shadow-sm">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(referralLink)}`} 
+                alt="Referral QR Code" 
+                className="w-32 h-32"
+              />
             </div>
-            <Button 
-              size="sm" 
-              onClick={copyToClipboard}
-              className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:scale-105 transition-transform"
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              კოპირება
-            </Button>
+            <div className="flex w-full items-center gap-2">
+              <div className="flex-1 px-4 py-2 font-mono text-sm font-bold text-slate-500 truncate bg-slate-50 dark:bg-slate-800 rounded-xl">
+                {referralCode}
+              </div>
+              <Button 
+                size="sm" 
+                onClick={copyToClipboard}
+                className="rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:scale-105 transition-transform"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                კოპირება
+              </Button>
+            </div>
           </div>
         </div>
 

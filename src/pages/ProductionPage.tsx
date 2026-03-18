@@ -10,17 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Loader2, Calculator, Info } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calculator, Info, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function ProductionPage() {
   const { products } = useProducts();
-  const { ingredients, recipes, productionOrders, isLoading, addIngredient, deleteIngredient, addRecipe, addProductionOrder, executeProduction, calculateCost } = useProduction();
+  const { ingredients, recipes, productionOrders, isLoading, addIngredient, deleteIngredient, addRecipe, updateRecipe, deleteRecipe, addProductionOrder, executeProduction, calculateCost } = useProduction();
   const [ingDialogOpen, setIngDialogOpen] = useState(false);
   const [recDialogOpen, setRecDialogOpen] = useState(false);
   const [ordDialogOpen, setOrdDialogOpen] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState<any>(null);
   const [ingForm, setIngForm] = useState({ name: '', unit: 'კგ', price: '', stock: '' });
   const [recForm, setRecForm] = useState({ 
     name: '', 
@@ -45,10 +46,10 @@ export default function ProductionPage() {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const handleAddRecipe = async () => {
+  const handleSaveRecipe = async () => {
     if (!recForm.name || recForm.ingredients.length === 0) return;
     try {
-      await addRecipe.mutateAsync({
+      const payload = {
         name: recForm.name,
         product_id: recForm.product_id || undefined,
         wastage_percent: parseFloat(recForm.wastage_percent) || 0,
@@ -56,9 +57,17 @@ export default function ProductionPage() {
         overhead_cost: parseFloat(recForm.overhead_cost) || 0,
         production_instructions: recForm.production_instructions,
         ingredients: recForm.ingredients
-      });
-      toast.success('რეცეპტი დაემატა');
+      };
+
+      if (editingRecipe) {
+        await updateRecipe.mutateAsync({ id: editingRecipe.id, updates: payload });
+        toast.success('რეცეპტი განახლდა');
+      } else {
+        await addRecipe.mutateAsync(payload);
+        toast.success('რეცეპტი დაემატა');
+      }
       setRecDialogOpen(false); 
+      setEditingRecipe(null);
       setRecForm({ name: '', product_id: '', wastage_percent: '0', labor_cost: '0', overhead_cost: '0', production_instructions: '', ingredients: [] });
     } catch (err: any) { toast.error(err.message); }
   };
@@ -105,8 +114,10 @@ export default function ProductionPage() {
           </TabsContent>
 
           <TabsContent value="recipes" className="space-y-4 mt-4">
-            <Button onClick={() => setRecDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />ახალი რეცეპტი</Button>
-            <div className="stat-card"><Table><TableHeader><TableRow><TableHead>სახელი</TableHead><TableHead>ინგრედიენტები</TableHead><TableHead>ხარჯების დაშლა</TableHead><TableHead className="text-right">თვითღირებულება</TableHead></TableRow></TableHeader>
+            <Button onClick={() => { setEditingRecipe(null); setRecForm({ name: '', product_id: '', wastage_percent: '0', labor_cost: '0', overhead_cost: '0', production_instructions: '', ingredients: [] }); setRecDialogOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" />ახალი რეცეპტი
+            </Button>
+            <div className="stat-card"><Table><TableHeader><TableRow><TableHead>სახელი</TableHead><TableHead>ინგრედიენტები</TableHead><TableHead>ხარჯების დაშლა</TableHead><TableHead className="text-right">თვითღირებულება</TableHead><TableHead></TableHead></TableRow></TableHeader>
               <TableBody>{recipes.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.name}</TableCell>
@@ -123,7 +134,49 @@ export default function ProductionPage() {
                        {r.overhead_cost > 0 && <Badge variant="outline" className="text-[10px] py-0">ზედნ.: ₾{r.overhead_cost}</Badge>}
                     </div>
                   </TableCell>
-                  <TableCell className="font-semibold text-right">₾{calculateCost(r.id).toFixed(2)}</TableCell>
+                  <TableCell className="font-semibold text-right">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help border-b border-dotted border-primary/50">₾{calculateCost(r.id).toFixed(2)}</span>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-3 w-64 space-y-2">
+                          <p className="font-bold text-xs uppercase tracking-wider mb-1">ხარჯების დაშლა</p>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between"><span>მასალები:</span> <span>₾{(r.ingredients.reduce((sum, ri) => {
+                              const ing = ingredients.find(i => i.id === ri.ingredient_id);
+                              return sum + (ing ? ing.cost_per_unit * ri.quantity : 0);
+                            }, 0)).toFixed(2)}</span></div>
+                            <div className="flex justify-between text-destructive"><span>დანაკარგი ({r.wastage_percent}%):</span> <span>+₾{((r.ingredients.reduce((sum, ri) => {
+                              const ing = ingredients.find(i => i.id === ri.ingredient_id);
+                              return sum + (ing ? ing.cost_per_unit * ri.quantity : 0);
+                            }, 0)) * (r.wastage_percent / 100)).toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>ხელფასი:</span> <span>+₾{r.labor_cost.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>ზედნადები ხარჯი:</span> <span>+₾{r.overhead_cost.toFixed(2)}</span></div>
+                            <div className="flex justify-between border-t pt-1 font-bold"><span>ჯამი:</span> <span className="text-primary">₾{calculateCost(r.id).toFixed(2)}</span></div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                        setEditingRecipe(r);
+                        setRecForm({
+                          name: r.name,
+                          product_id: r.product_id || '',
+                          wastage_percent: r.wastage_percent.toString(),
+                          labor_cost: r.labor_cost.toString(),
+                          overhead_cost: r.overhead_cost.toString(),
+                          production_instructions: r.production_instructions || '',
+                          ingredients: r.ingredients.map(ri => ({ ingredient_id: ri.ingredient_id, quantity: ri.quantity }))
+                        });
+                        setRecDialogOpen(true);
+                      }}><Edit2 className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={async () => { if(confirm('ნამდვილად გსურთ წაშლა?')) await deleteRecipe.mutateAsync(r.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}</TableBody>
             </Table></div>
@@ -213,7 +266,7 @@ export default function ProductionPage() {
               </span>
             </div>
           </div>
-          <DialogFooter><Button onClick={handleAddRecipe} className="w-full" disabled={addRecipe.isPending}>{addRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}რეცეპტის შენახვა</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveRecipe} className="w-full" disabled={addRecipe.isPending || updateRecipe.isPending}>{(addRecipe.isPending || updateRecipe.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingRecipe ? 'ცვლილებების შენახვა' : 'რეცეპტის შენახვა'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -152,9 +152,65 @@ export function useProduction() {
           .insert(recipeIngs.map(ri => ({ recipe_id: data.id, ...ri })));
         if (riError) throw riError;
       }
+
+      // Sync calculated BOM cost to product buy_price if linked
+      if (recipe.product_id) {
+        await supabase.from('products').update({ 
+          buy_price: estimatedCost,
+          production_cost: estimatedCost
+        }).eq('id', recipe.product_id);
+      }
+
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recipes'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+
+  const updateRecipe = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      const { ingredients: recipeIngs, ...recipeData } = updates;
+      
+      const allIngs = queryClient.getQueryData(['ingredients']) as Ingredient[] || [];
+      const materialCost = (recipeIngs || []).reduce((sum: number, ri: any) => {
+        const ing = allIngs.find(i => i.id === ri.ingredient_id);
+        return sum + (ing ? ing.cost_per_unit * ri.quantity : 0);
+      }, 0);
+
+      const wastage = updates.wastage_percent || 0;
+      const labor = updates.labor_cost || 0;
+      const overhead = updates.overhead_cost || 0;
+      const estimatedCost = (materialCost * (1 + wastage / 100)) + labor + overhead;
+
+      const { error } = await supabase.from('recipes')
+        .update({ ...recipeData, estimated_cost: estimatedCost })
+        .eq('id', id);
+      if (error) throw error;
+
+      if (recipeIngs) {
+        // Simple replace for ingredients
+        await supabase.from('recipe_ingredients').delete().eq('recipe_id', id);
+        if (recipeIngs.length > 0) {
+          const { error: riError } = await supabase.from('recipe_ingredients')
+            .insert(recipeIngs.map((ri: any) => ({ recipe_id: id, ...ri })));
+          if (riError) throw riError;
+        }
+      }
+
+      // Sync to product
+      if (updates.product_id) {
+        await supabase.from('products').update({ 
+          buy_price: estimatedCost,
+          production_cost: estimatedCost
+        }).eq('id', updates.product_id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
   });
 
   const deleteRecipe = useMutation({
@@ -255,6 +311,7 @@ export function useProduction() {
     updateIngredient,
     deleteIngredient,
     addRecipe,
+    updateRecipe,
     deleteRecipe,
     addProductionOrder,
     executeProduction,

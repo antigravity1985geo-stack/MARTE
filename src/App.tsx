@@ -77,6 +77,7 @@ const ClinicCalendarPage = lazy(() => import('@/pages/clinic/ClinicCalendarPage'
 const ClinicPatientsPage = lazy(() => import('@/pages/clinic/ClinicPatientsPage'));
 const ClinicPatientDetailsPage = lazy(() => import('@/pages/clinic/ClinicPatientDetailsPage'));
 const ClinicServicesPage = lazy(() => import('@/pages/clinic/ClinicServicesPage'));
+const SalonServicesPage = lazy(() => import('@/pages/salon/SalonServicesPage'));
 const RealEstateDashboard = lazy(() => import('@/pages/real-estate/RealEstateDashboard'));
 const PropertyList = lazy(() => import('@/pages/real-estate/PropertyList'));
 const MortgageManagement = lazy(() => import('@/pages/real-estate/MortgageManagement'));
@@ -265,6 +266,7 @@ const App = () => (
                   <Route path="clinic/patients" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/patients/:id" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ClinicPatientDetailsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/services" element={<RoleRoute path="/clinic/services"><ErrorBoundary><ClinicServicesPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="salon/services" element={<RoleRoute path="/salon/services"><ErrorBoundary><SalonServicesPage /></ErrorBoundary></RoleRoute>} />
                   
                   {/* MARTEHOME (Real Estate) */}
                   <Route path="real-estate" element={<RoleRoute path="/real-estate"><ErrorBoundary><RealEstateDashboard /></ErrorBoundary></RoleRoute>} />
