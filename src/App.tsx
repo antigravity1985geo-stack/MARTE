@@ -61,7 +61,7 @@ const BranchesPage = lazy(() => import('@/pages/BranchesPage'));
 const FixedAssetsPage = lazy(() => import('@/pages/FixedAssetsPage'));
 const CashFlowPage = lazy(() => import('@/pages/CashFlowPage'));
 const InventoryMethodsPage = lazy(() => import('@/pages/InventoryMethodsPage'));
-const BankIntegrationPage = lazy(() => import('@/pages/BankIntegrationPage'));
+const FintechPage = lazy(() => import('@/pages/FintechPage'));
 const DistributionPage = lazy(() => import('@/pages/DistributionPage'));
 const EcommercePage = lazy(() => import('@/pages/EcommercePage'));
 const AttendancePage = lazy(() => import('@/pages/AttendancePage'));
@@ -80,6 +80,13 @@ const ClinicServicesPage = lazy(() => import('@/pages/clinic/ClinicServicesPage'
 const RealEstateDashboard = lazy(() => import('@/pages/real-estate/RealEstateDashboard'));
 const PropertyList = lazy(() => import('@/pages/real-estate/PropertyList'));
 const MortgageManagement = lazy(() => import('@/pages/real-estate/MortgageManagement'));
+
+// Portal Pages
+const PortalLayout = lazy(() => import('@/components/portal/PortalLayout').then(m => ({ default: m.PortalLayout })));
+const PortalDashboard = lazy(() => import('@/pages/portal/PortalDashboard').then(m => ({ default: m.PortalDashboard })));
+const PortalBooking = lazy(() => import('@/pages/portal/PortalBooking').then(m => ({ default: m.PortalBooking })));
+const PortalHistory = lazy(() => import('@/pages/portal/PortalHistory').then(m => ({ default: m.PortalHistory })));
+const PortalAuth = lazy(() => import('@/pages/portal/PortalAuth').then(m => ({ default: m.PortalAuth })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -176,6 +183,14 @@ const App = () => (
                 <Route path="/martehome/property/:id" element={<PropertyDetail />} />
                 <Route path="/access-denied" element={<AccessDeniedPage />} />
 
+                {/* Client Portals */}
+                <Route path="/portal/:tenant_slug/auth" element={<PortalAuth />} />
+                <Route path="/portal/:tenant_slug" element={<PortalLayout />}>
+                  <Route index element={<PortalDashboard />} />
+                  <Route path="booking" element={<PortalBooking />} />
+                  <Route path="history" element={<PortalHistory />} />
+                </Route>
+
                 {/* Legacy Redirects */}
                 <Route path="/pos" element={<Navigate to="/app/pos" replace />} />
                 <Route path="/products" element={<Navigate to="/app/products" replace />} />
@@ -222,13 +237,13 @@ const App = () => (
                   <Route path="data-export" element={<RoleRoute path="/data-export"><ErrorBoundary><DataExportPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="reports" element={<RoleRoute path="/reports"><ErrorBoundary><ReportsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="salary" element={<RoleRoute path="/salary"><ErrorBoundary><SalaryPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="fintech" element={<RoleRoute path="/app/fintech"><ErrorBoundary><FintechPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="returns" element={<RoleRoute path="/returns"><ErrorBoundary><ReturnsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="currency" element={<RoleRoute path="/currency"><ErrorBoundary><CurrencyPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="branches" element={<RoleRoute path="/branches"><ErrorBoundary><BranchesPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="fixed-assets" element={<RoleRoute path="/fixed-assets"><ErrorBoundary><FixedAssetsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="cash-flow" element={<RoleRoute path="/cash-flow"><ErrorBoundary><CashFlowPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="inventory-methods" element={<RoleRoute path="/inventory-methods"><ErrorBoundary><InventoryMethodsPage /></ErrorBoundary></RoleRoute>} />
-                  <Route path="bank-integration" element={<RoleRoute path="/bank-integration"><ErrorBoundary><BankIntegrationPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="distribution" element={<RoleRoute path="/distribution"><ErrorBoundary><DistributionPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="ecommerce" element={<RoleRoute path="/ecommerce"><ErrorBoundary><EcommercePage /></ErrorBoundary></RoleRoute>} />
                   <Route path="attendance" element={<RoleRoute path="/attendance"><ErrorBoundary><AttendancePage /></ErrorBoundary></RoleRoute>} />

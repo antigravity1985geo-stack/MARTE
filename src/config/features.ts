@@ -28,7 +28,14 @@ export const AVAILABLE_FEATURES: FeatureConfig[] = [
   { id: 'warehouses', label: 'მრავალი საწყობი', industries: ['retail', 'fnb', 'pharmacy', 'other', 'logistics'], minPlan: 'pro', category: 'inventory' },
   
   // HR
-  { id: 'hr', label: 'HR / ხელფასები', industries: ['retail', 'fnb', 'salon', 'clinic', 'pharmacy', 'auto', 'other', 'real_estate', 'construction', 'logistics'], minPlan: 'basic', category: 'hr' },
+  { 
+    id: 'fintech', 
+    label: 'Fintech (Banking & Payroll)', 
+    industries: ['retail', 'fnb', 'salon', 'clinic', 'pharmacy', 'auto', 'logistics', 'construction', 'real_estate'], 
+    minPlan: 'pro',
+    category: 'finance'
+  },
+  { id: 'hr', label: 'HR & Payroll', industries: ['retail', 'fnb', 'salon', 'clinic', 'pharmacy', 'auto', 'logistics', 'construction', 'real_estate'], minPlan: 'free', category: 'hr' },
   
   // INDUSTRY SPECIFIC
   { id: 'clinic', label: 'კლინიკის მოდული', industries: ['clinic', 'pharmacy'], minPlan: 'free', category: 'industry' },

@@ -104,6 +104,9 @@ const getSections = (
     if (isEnabled('analytics') || isSuperadmin) {
       financeItems.push({ title: t('nav_analytics'), icon: Activity, path: '/app/reports' });
     }
+    if (isEnabled('fintech') || isSuperadmin) {
+      financeItems.push({ title: t('nav_fintech'), icon: Wallet2, path: '/app/fintech' });
+    }
   }
   if (isEnabled('hr') || isSuperadmin) financeItems.push({ title: t('nav_salary'), icon: Wallet2, path: '/app/salary' });
   if (financeItems.length > 0) sections.push({ title: t('nav_section_finance'), items: financeItems });

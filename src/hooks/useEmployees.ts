@@ -20,6 +20,7 @@ export interface Employee {
   address?: string;
   emergency_contact?: string;
   iban?: string;
+  bank_name?: string;
   created_at: string;
 }
 

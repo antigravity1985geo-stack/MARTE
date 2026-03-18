@@ -560,26 +560,82 @@ function AuditTab() {
 }
 
 // ============================================================
+// Sync Status Helper Component
+// ============================================================
+function SyncStatusBanner() {
+  const { data: logs = [], isLoading } = useRsgeAuditLogs(10);
+  const { config } = useRsgeConfig();
+  
+  const lastSuccess = logs.find(l => l.status === 'success');
+  const lastError = logs.find(l => l.status === 'error');
+
+  if (isLoading) return <div className="h-10 w-48 bg-slate-100 animate-pulse rounded-full" />;
+
+  return (
+    <div className="flex items-center gap-4 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border px-4 py-2 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
+      <div className="flex items-center gap-2">
+        <div className={`h-2.5 w-2.5 rounded-full ${config?.is_active ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`} />
+        <span className="text-[10px] font-black uppercase tracking-widest opacity-70">RS Connection</span>
+      </div>
+      
+      <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+      
+      <div className="flex items-center gap-4">
+        {lastSuccess && (
+          <div className="flex items-center gap-1.5" title="ბოლო წარმატებული სინქრონიზაცია">
+            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+            <div className="flex flex-col">
+              <span className="text-[9px] font-bold text-muted-foreground leading-none uppercase tracking-tighter">Last Success</span>
+              <span className="text-[10px] font-black leading-none mt-0.5">{new Date(lastSuccess.created_at).toLocaleTimeString('ka-GE')}</span>
+            </div>
+          </div>
+        )}
+        
+        {lastError && (
+          <div className="flex items-center gap-1.5" title="ბოლო შეცდომა">
+            <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+            <div className="flex flex-col">
+              <span className="text-[9px] font-bold text-destructive leading-none uppercase tracking-tighter">Last Error</span>
+              <span className="text-[10px] font-black leading-none mt-0.5">{new Date(lastError.created_at).toLocaleTimeString('ka-GE')}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // Main Page
 // ============================================================
 export default function RSGEPage() {
-  const { config, isLoading } = useRsgeConfig();
+  const { config } = useRsgeConfig();
 
   return (
     <PageTransition>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">RS.GE ინტეგრაცია</h1>
-            <p className="text-sm text-muted-foreground">ზედნადებები, ინვოისები, ფისკალიზაცია</p>
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3">
+              RS.GE <span className="text-portal-primary font-black">Sync</span>
+            </h1>
+            <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider opacity-60">Revenue Service Integration & Automation</p>
           </div>
-          <div className="flex items-center gap-2">
-            {config && (
-              <Badge variant={config.demo ? 'outline' : 'default'} className={config.demo ? 'text-orange-500 border-orange-500' : 'bg-green-600'}>
-                {config.demo ? 'Demo Mode' : 'Production'}
-              </Badge>
-            )}
-            {config?.company_name && <Badge variant="secondary"><Building2 className="h-3 w-3 mr-1" />{config.company_name}</Badge>}
+          
+          <div className="flex items-center gap-3">
+             <SyncStatusBanner />
+             <div className="flex flex-col items-end gap-1">
+                {config && (
+                  <Badge variant={config.demo ? 'outline' : 'default'} className={config.demo ? 'text-orange-500 border-orange-500 font-black italic' : 'bg-green-600 font-black italic'}>
+                    {config.demo ? 'DEMO' : 'PROD'}
+                  </Badge>
+                )}
+                {config?.company_name && (
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                    <Building2 className="h-3 w-3" /> {config.company_name}
+                  </span>
+                )}
+             </div>
           </div>
         </div>
 
