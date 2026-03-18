@@ -90,7 +90,7 @@ const GEORGIAN_CHART_OF_ACCOUNTS: Omit<Account, 'id'>[] = [
 // ==========================================
 
 export function useAccounting() {
-    const user = useAuthStore((s) => s.user);
+    const { user, activeTenantId } = useAuthStore();
     const queryClient = useQueryClient();
 
     // ---- Accounts ----
@@ -251,6 +251,7 @@ export function useAccounting() {
             const { data: entry, error: entryErr } = await supabase
                 .from('journal_entries')
                 .insert({
+                    tenant_id: activeTenantId,
                     entry_number: entryNumber,
                     date: params.date,
                     description: params.description,
@@ -283,13 +284,6 @@ export function useAccounting() {
                 },
             ]);
             if (linesErr) throw linesErr;
-
-            // Update account balances
-            const debitDelta = ['asset', 'expense'].includes(debitAcc.type) ? params.amount : -params.amount;
-            const creditDelta = ['liability', 'equity', 'revenue'].includes(creditAcc.type) ? params.amount : -params.amount;
-
-            await supabase.from('accounts').update({ balance: debitAcc.balance + debitDelta }).eq('id', debitAcc.id);
-            await supabase.from('accounts').update({ balance: creditAcc.balance + creditDelta }).eq('id', creditAcc.id);
 
             return entry;
         },
@@ -325,6 +319,7 @@ export function useAccounting() {
             const { data: entry, error: entryErr } = await supabase
                 .from('journal_entries')
                 .insert({
+                    tenant_id: activeTenantId,
                     entry_number: entryNumber,
                     date: params.date,
                     description: params.description,
@@ -353,17 +348,6 @@ export function useAccounting() {
 
             const { error: linesErr } = await supabase.from('journal_lines').insert(linesToInsert);
             if (linesErr) throw linesErr;
-
-            // Update account balances
-            for (const line of params.lines) {
-                const acc = accounts.find(a => a.code === line.accountCode)!;
-                const delta = (['asset', 'expense'].includes(acc.type))
-                    ? (line.debit - line.credit)
-                    : (line.credit - line.debit);
-
-                await supabase.from('accounts').update({ balance: acc.balance + delta }).eq('id', acc.id);
-            }
-
             return entry;
         },
         onSuccess: () => {

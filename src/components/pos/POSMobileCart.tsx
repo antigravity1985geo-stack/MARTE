@@ -10,6 +10,7 @@ interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  image?: string;
 }
 
 interface POSMobileCartProps {
@@ -55,7 +56,14 @@ export function POSMobileCart({
             <div className="space-y-1">
               {cart.map((item) => (
                 <SwipeToDelete key={item.id} onDelete={() => onRemove(item.productId)}>
-                  <div className="flex items-center gap-2 py-2 px-1">
+                  <div className="flex items-center gap-3 py-2 px-1">
+                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0 border">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-[10px] text-muted-foreground opacity-30">IMG</div>
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.name}</p>
                       <p className="text-xs text-muted-foreground">₾{item.price.toFixed(2)} × {item.quantity}</p>

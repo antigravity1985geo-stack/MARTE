@@ -8,6 +8,7 @@ interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  image?: string;
 }
 
 interface POSCartProps {
@@ -38,9 +39,16 @@ export function POSCart({
         ) : (
           <div className="space-y-3">
             {cart.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 p-3 rounded-xl bg-muted/30 border border-transparent hover:border-primary/20 transition-all">
+              <div key={item.id} className="flex items-center gap-3 p-2 rounded-xl bg-muted/30 border border-transparent hover:border-primary/20 transition-all">
+                <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0 border">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-[10px] text-muted-foreground opacity-30">IMG</div>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-foreground leading-tight line-clamp-2">{item.name}</p>
+                  <p className="text-sm font-bold text-foreground leading-tight line-clamp-1">{item.name}</p>
                   <p className="text-xs text-muted-foreground">₾{item.price.toFixed(2)}</p>
                 </div>
                 <div className="flex items-center gap-1">

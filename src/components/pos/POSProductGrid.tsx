@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type { SupabaseProduct } from '@/hooks/useProducts';
 
@@ -40,7 +41,17 @@ export function POSProductGrid({ products, cart, isMobile, onAddToCart }: POSPro
                   {inCart.quantity}
                 </span>
               )}
-              <p className={`font-medium truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>{p.name}</p>
+
+              {/* Product Image */}
+              <div className="aspect-square w-full bg-muted rounded-lg mb-2 overflow-hidden flex items-center justify-center border border-border/50 group-hover:border-primary/20">
+                {p.images && p.images[0] ? (
+                  <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                ) : (
+                  <ImageIcon className="h-8 w-8 text-muted-foreground/20" />
+                )}
+              </div>
+
+              <p className={`font-medium truncate ${isMobile ? 'text-[11px]' : 'text-sm'}`}>{p.name}</p>
               <div className="flex items-center justify-between mt-1.5">
                 <span className={`text-primary font-bold ${isMobile ? 'text-sm' : ''}`}>₾{p.sell_price.toFixed(2)}</span>
                 <Badge variant={p.stock <= p.min_stock ? 'destructive' : 'secondary'} className="text-[9px] px-1 py-0">

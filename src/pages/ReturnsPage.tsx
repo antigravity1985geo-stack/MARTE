@@ -13,37 +13,25 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, RotateCcw, Truck, Users } from 'lucide-react';
+import { Plus, RotateCcw, Truck, Users, Loader2, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface ReturnRecord {
-  id: string;
-  type: 'supplier' | 'customer';
-  date: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  totalAmount: number;
-  counterpartyId: string;
-  counterpartyName: string;
-  reason: string;
-  status: 'pending' | 'approved' | 'completed' | 'rejected';
-  createdAt: string;
-}
+import { useReturns, ReturnRecord } from '@/hooks/useReturns';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 export default function ReturnsPage() {
   const { products } = useProducts();
   const { suppliers } = useSuppliers();
   const { clients } = useClients();
-  const [returns, setReturns] = useState<ReturnRecord[]>([]);
+  const { returns, isLoading, addReturn, processReturn, updateStatus } = useReturns();
+  const { activeTenantId } = useAuthStore();
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [returnType, setReturnType] = useState<'supplier' | 'customer'>('customer');
   const [form, setForm] = useState({
     productId: '', quantity: '', counterpartyId: '', reason: '',
   });
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.productId || !form.quantity || !form.counterpartyId) {
       toast.error('შეავსეთ ყველა ველი');
       return;
@@ -52,39 +40,55 @@ export default function ReturnsPage() {
     const counterparty = returnType === 'supplier'
       ? suppliers.find(s => s.id === form.counterpartyId)
       : clients.find(c => c.id === form.counterpartyId);
+    
+    if (!product || !counterparty) return;
+
     const qty = parseInt(form.quantity);
     const unitPrice = returnType === 'supplier' ? (product?.buy_price || 0) : (product?.sell_price || 0);
 
-    setReturns(prev => [...prev, {
-      id: crypto.randomUUID(),
-      type: returnType,
-      date: new Date().toISOString().split('T')[0],
-      productId: form.productId,
-      productName: product?.name || '',
-      quantity: qty,
-      unitPrice,
-      totalAmount: qty * unitPrice,
-      counterpartyId: form.counterpartyId,
-      counterpartyName: counterparty?.name || (counterparty as any)?.full_name || '',
-      reason: form.reason,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    }]);
-    setDialogOpen(false);
-    setForm({ productId: '', quantity: '', counterpartyId: '', reason: '' });
-    toast.success('დაბრუნება დაემატა');
+    try {
+      await addReturn.mutateAsync({
+        type: returnType,
+        productId: form.productId,
+        productName: product?.name || '',
+        quantity: qty,
+        price: unitPrice,
+        counterpartyId: form.counterpartyId,
+        counterpartyName: counterparty?.name || (counterparty as any)?.full_name || '',
+        reason: form.reason,
+      });
+      
+      setDialogOpen(false);
+      setForm({ productId: '', quantity: '', counterpartyId: '', reason: '' });
+    } catch (err: any) {
+      toast.error('Error: ' + err.message);
+    }
   };
 
-  const handleStatusChange = (id: string, status: ReturnRecord['status']) => {
-    setReturns(prev => prev.map(r => r.id === id ? { ...r, status } : r));
-    toast.success('სტატუსი განახლდა');
+  const handleProcessReturn = async (r: ReturnRecord) => {
+    if (!activeTenantId) return;
+    try {
+      const product = products.find(p => p.id === r.product_id);
+      await processReturn.mutateAsync({
+        returnId: r.id,
+        type: r.type,
+        productId: r.product_id,
+        quantity: r.quantity,
+        price: r.type === 'supplier' ? (product?.buy_price || 0) : (product?.sell_price || 0),
+        counterpartyId: r.counterparty_id,
+        counterpartyName: r.counterparty_name,
+        reason: r.reason
+      });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const supplierReturns = returns.filter(r => r.type === 'supplier');
   const customerReturns = returns.filter(r => r.type === 'customer');
 
-  const totalSupplierAmount = supplierReturns.reduce((s, r) => s + r.totalAmount, 0);
-  const totalCustomerAmount = customerReturns.reduce((s, r) => s + r.totalAmount, 0);
+  const totalSupplierAmount = supplierReturns.reduce((s, r) => s + (r.total || 0), 0);
+  const totalCustomerAmount = customerReturns.reduce((s, r) => s + (r.total || 0), 0);
 
   const renderTable = (records: ReturnRecord[]) => (
     <div className="stat-card overflow-auto">
@@ -92,6 +96,7 @@ export default function ReturnsPage() {
         <TableHeader>
           <TableRow>
             <TableHead>თარიღი</TableHead>
+            <TableHead className="w-12">ფოტო</TableHead>
             <TableHead>პროდუქტი</TableHead>
             <TableHead>კონტრაგენტი</TableHead>
             <TableHead className="text-right">რაოდენობა</TableHead>
@@ -106,11 +111,20 @@ export default function ReturnsPage() {
             <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">ჩანაწერები არ არის</TableCell></TableRow>
           ) : records.map(r => (
             <TableRow key={r.id}>
-              <TableCell className="text-sm">{r.date}</TableCell>
-              <TableCell className="font-medium">{r.productName}</TableCell>
-              <TableCell>{r.counterpartyName}</TableCell>
+              <TableCell className="text-sm">{new Date(r.created_at).toLocaleDateString()}</TableCell>
+              <TableCell>
+                <div className="h-8 w-8 rounded overflow-hidden bg-muted flex items-center justify-center border">
+                  {(r as any).image_url ? (
+                    <img src={(r as any).image_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon className="h-3 w-3 text-muted-foreground/20" />
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="font-medium">{r.product_name}</TableCell>
+              <TableCell>{r.counterparty_name}</TableCell>
               <TableCell className="text-right">{r.quantity}</TableCell>
-              <TableCell className="text-right font-semibold">₾{r.totalAmount.toFixed(2)}</TableCell>
+              <TableCell className="text-right font-semibold">₾{(r as any).total?.toFixed(2) || '0.00'}</TableCell>
               <TableCell className="text-sm text-muted-foreground max-w-32 truncate">{r.reason}</TableCell>
               <TableCell>
                 <Badge variant={r.status === 'completed' ? 'default' : r.status === 'approved' ? 'secondary' : r.status === 'rejected' ? 'destructive' : 'outline'}>
@@ -120,12 +134,14 @@ export default function ReturnsPage() {
               <TableCell>
                 {r.status === 'pending' && (
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => handleStatusChange(r.id, 'approved')}>✓</Button>
-                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleStatusChange(r.id, 'rejected')}>✗</Button>
+                    <Button size="sm" variant="ghost" onClick={() => updateStatus.mutate({ id: r.id, status: 'approved' })}>✓</Button>
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => updateStatus.mutate({ id: r.id, status: 'rejected' })}>✗</Button>
                   </div>
                 )}
                 {r.status === 'approved' && (
-                  <Button size="sm" variant="ghost" onClick={() => handleStatusChange(r.id, 'completed')}>დასრულება</Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleProcessReturn(r)} disabled={processReturn.isPending}>
+                    {processReturn.isPending ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : "დასრულება"}
+                  </Button>
                 )}
               </TableCell>
             </TableRow>
@@ -134,6 +150,10 @@ export default function ReturnsPage() {
       </Table>
     </div>
   );
+
+  if (isLoading) {
+    return <PageTransition><div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div></PageTransition>;
+  }
 
   return (
     <PageTransition>
@@ -175,6 +195,18 @@ export default function ReturnsPage() {
                 <SelectTrigger><SelectValue placeholder="აირჩიეთ" /></SelectTrigger>
                 <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
               </Select>
+              {form.productId && (
+                <div className="mt-2 flex items-center gap-2 p-2 bg-muted rounded-md border border-dashed">
+                  <div className="h-10 w-10 rounded overflow-hidden bg-white/50 border flex items-center justify-center shrink-0">
+                    {products.find(p => p.id === form.productId)?.images?.[0] ? (
+                      <img src={products.find(p => p.id === form.productId)?.images[0]} alt="Selected" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
+                    )}
+                  </div>
+                  <span className="text-xs font-medium">{products.find(p => p.id === form.productId)?.name}</span>
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <Label>{returnType === 'supplier' ? 'მომწოდებელი' : 'მყიდველი'}</Label>

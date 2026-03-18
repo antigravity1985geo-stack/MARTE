@@ -10,25 +10,40 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, ScanLine, Search } from 'lucide-react';
+import { Loader2, ScanLine, Search, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { BarcodeDisplay } from '@/components/BarcodeDisplay';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 export default function ReceivingPage() {
   const { products, isLoading: productsLoading } = useProducts();
   const { suppliers, isLoading: suppliersLoading } = useSuppliers();
   const { addEntry } = useAccounting();
   const queryClient = useQueryClient();
+  const { activeTenantId } = useAuthStore();
+  
   const [supplierId, setSupplierId] = useState('');
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [receivings, setReceivings] = useState<{ id: string; supplier: string; product: string; quantity: number; price: number; date: string; barcode: string }[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const { data: receivings = [], isLoading: historyLoading } = useQuery({
+    queryKey: ['product_receivings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_receivings')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeTenantId,
+  });
 
   const handleBarcodeFound = useCallback((code: string) => {
     const product = products.find((p) => p.barcode === code);
@@ -87,7 +102,8 @@ export default function ReceivingPage() {
         p_price: prc,
         p_supplier_id: supplierId,
         p_supplier_name: supplier.name,
-        p_user_id: user.id
+        p_user_id: user.id,
+        p_tenant_id: activeTenantId
       });
 
       if (rpcError) throw rpcError;
@@ -99,7 +115,7 @@ export default function ReceivingPage() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
-      setReceivings([{ id: crypto.randomUUID(), supplier: supplier.name, product: product.name, quantity: qty, price: prc, date: new Date().toISOString(), barcode: product.barcode || '' }, ...receivings]);
+      queryClient.invalidateQueries({ queryKey: ['product_receivings'] });
       toast.success(`${product.name} - ${qty} ${product.unit} მიღებულია`);
       setProductId(''); setQuantity(''); setPrice(''); setBarcodeInput('');
     } catch (err: any) {
@@ -109,7 +125,7 @@ export default function ReceivingPage() {
     }
   };
 
-  if (productsLoading || suppliersLoading) {
+  if (productsLoading || suppliersLoading || historyLoading) {
     return <PageTransition><div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></PageTransition>;
   }
 
@@ -141,6 +157,13 @@ export default function ReceivingPage() {
           </div>
           {barcodeInput && productId && (
             <div className="mt-2 p-2 bg-muted rounded-md flex items-center gap-3">
+              <div className="h-10 w-10 rounded-md overflow-hidden bg-white/50 border flex items-center justify-center shrink-0">
+                {products.find(p => p.id === productId)?.images?.[0] ? (
+                  <img src={products.find(p => p.id === productId)?.images[0]} alt="პროდუქტი" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
+                )}
+              </div>
               <BarcodeDisplay value={barcodeInput} width={1} height={28} fontSize={10} />
               <span className="text-sm font-medium">{products.find(p => p.id === productId)?.name}</span>
             </div>
@@ -168,13 +191,22 @@ export default function ReceivingPage() {
         </div>
         <div className="stat-card">
           <Table>
-            <TableHeader><TableRow><TableHead>თარიღი</TableHead><TableHead>მომწოდებელი</TableHead><TableHead>პროდუქტი</TableHead><TableHead>ბარკოდი</TableHead><TableHead>რაოდენობა</TableHead><TableHead>ფასი</TableHead><TableHead>ჯამი</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>თარიღი</TableHead><TableHead className="w-12">ფოტო</TableHead><TableHead>მომწოდებელი</TableHead><TableHead>პროდუქტი</TableHead><TableHead>ბარკოდი</TableHead><TableHead>რაოდენობა</TableHead><TableHead>ფასი</TableHead><TableHead>ჯამი</TableHead></TableRow></TableHeader>
             <TableBody>
               {receivings.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="text-xs">{new Date(r.date).toLocaleString('ka-GE')}</TableCell>
-                  <TableCell>{r.supplier}</TableCell>
-                  <TableCell>{r.product}</TableCell>
+                  <TableCell className="text-xs">{new Date(r.created_at).toLocaleString('ka-GE')}</TableCell>
+                  <TableCell>
+                    <div className="h-8 w-8 rounded overflow-hidden bg-muted flex items-center justify-center border">
+                      {r.image_url ? (
+                        <img src={r.image_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="h-3 w-3 text-muted-foreground/20" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{(r as any).supplier_name || r.supplier}</TableCell>
+                  <TableCell>{(r as any).product_name || r.product}</TableCell>
                   <TableCell className="font-mono text-xs">{r.barcode || '-'}</TableCell>
                   <TableCell>{r.quantity}</TableCell>
                   <TableCell>₾{r.price.toFixed(2)}</TableCell>

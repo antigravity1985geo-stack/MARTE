@@ -35,7 +35,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useHardwareScanner } from '@/hooks/useHardwareScanner';
 import { useI18n } from '@/hooks/useI18n';
 
-interface CartItem { id: string; productId: string; name: string; price: number; quantity: number; categoryId?: string; }
+interface CartItem { id: string; productId: string; name: string; price: number; quantity: number; categoryId?: string; image?: string; }
 
 export default function POSPage() {
   useRealtimeSync(['products', 'transactions', 'shift_sales', 'queue_tickets']);
@@ -203,7 +203,7 @@ export default function POSPage() {
       if (existing) {
         return prev.map((i) => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, { id: crypto.randomUUID(), productId: product.id, name: product.name, price: product.sell_price, quantity: 1, categoryId: product.category_id }];
+      return [...prev, { id: crypto.randomUUID(), productId: product.id, name: product.name, price: product.sell_price, quantity: 1, categoryId: product.category_id, image: product.images?.[0] }];
     });
   };
 
