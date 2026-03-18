@@ -255,10 +255,12 @@ public/                 # Static assets
 - ⚠️ Needs real-time feed
 
 #### 30. **RS.GE Integration**
-- ✅ Full bidirectional integration (DB-backed)
-- ✅ Edge function with auth guard, retry, and audit logging
-- ✅ POS auto-fiscalization
+- ✅ Full bidirectional integration (DB-backed credentials)
+- ✅ Edge function with secure DB retrieval, retry, and audit logging
+- ✅ Fixed critical SQL error (duplicate column) in audit logs
+- ✅ POS auto-fiscalization & Shift management
 - ✅ Buyer waybills & Invoices handling
+- ✅ Deno IDE support & Import maps for Edge Functions
 
 ---
 

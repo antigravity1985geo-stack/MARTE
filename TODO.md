@@ -75,11 +75,13 @@
   - [ ] Add barcode batch printing
   
 - [x] **RS.GE Integration** (Completed)
-  - [x] Deploy edge function with JWT auth guard
+  - [x] Deploy edge function with DB-backed credentials (secure)
   - [x] Test fiscal document sending from POS
   - [x] Add retry logic with exponential backoff
-  - [x] Add RS.GE response logging to `rsge_audit_logs`
+  - [x] Add RS.GE response logging to `rsge_audit_logs` (fixed duplicate column)
   - [x] UI for Waybills, Invoices, and Fiscal Shifts
+  - [x] Configured Deno IDE support for Edge Functions
+  - [x] Fixed multi-tenant proxy (client.ts) for RS.GE tables
   
 - [ ] **Reporting**
   - [ ] Daily sales report

@@ -13,7 +13,10 @@ export const setTenantIdProvider = (provider: () => string | null) => {
 };
 
 const originalFrom = supabase.from.bind(supabase);
-const EXCLUDED_TABLES = ['tenants', 'tenant_members', 'user_roles', 'profiles', 'audit_logs', 'global_announcements'];
+const EXCLUDED_TABLES = [
+  'tenants', 'tenant_members', 'user_roles', 'profiles', 'audit_logs', 
+  'global_announcements', 'rsge_configs', 'rsge_audit_logs', 'rsge_fiscal_shifts'
+];
 
 (supabase as any).from = (table: string) => {
   const query = originalFrom(table);

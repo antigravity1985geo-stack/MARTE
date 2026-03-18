@@ -60,9 +60,8 @@ function SettingsTab() {
     try {
       // First save so edge function reads fresh creds
       await saveConfigAsync(form);
-      const info = await getCompanyInfo();
-      setCompanyInfo(info);
-      toast.success(`კავშირი წარმატებულია! ${info.name}`);
+      const info = await whatIsMyIp();
+      toast.success(`კავშირი წარმატებულია! IP: ${info.ip}`);
     } catch (err: any) {
       toast.error(`კავშირის შეცდომა: ${err.message}`);
     } finally {

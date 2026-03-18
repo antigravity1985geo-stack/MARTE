@@ -1,8 +1,7 @@
 /// <reference lib="deno.ns" />
-// @ts-nocheck
-declare const Deno: any;
-// RS.GE Proxy Edge Function
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
+// RS.GE Proxy Edge Function
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -11,8 +10,6 @@ const corsHeaders = {
 
 // RS.GE ფისკალური ჩეკის API
 const RS_GE_FISCAL_URL = 'https://www.revenue.mof.ge/tax/api/cashregister';
-const RS_GE_FISCAL_DEMO_URL = 'https://www.revenue.mof.ge/tax/api/cashregister';
-
 const RS_GE_URL = 'https://services.rs.ge/WayBillService/WayBillService.asmx';
 const RS_GE_DEMO_URL = 'https://services-test.rs.ge/WayBillService/WayBillService.asmx';
 const NAMESPACE = 'http://tempuri.org/';
@@ -121,7 +118,6 @@ interface ActionMap {
 }
 
 const ACTIONS: ActionMap = {
-  // ზედნადებების მიღება
   get_waybills: {
     method: 'get_waybills',
     buildParams: (data, su, sp) => ({
@@ -139,26 +135,16 @@ const ACTIONS: ActionMap = {
       return { waybills: items.map(parseWaybillFromXml) };
     },
   },
-
-  // კონკრეტული ზედნადები
   get_waybill: {
     method: 'get_waybill',
     buildParams: (data, su, sp) => ({ su, sp, waybill_id: data.waybillId }),
-    parseResponse: (xml) => {
-      return { waybill: parseWaybillFromXml(xml) };
-    },
+    parseResponse: (xml) => ({ waybill: parseWaybillFromXml(xml) }),
   },
-
-  // ზედნადების საქონლის სია
   get_waybill_goods_list: {
     method: 'get_waybill_goods_list',
     buildParams: (data, su, sp) => ({ su, sp, waybill_id: data.waybillId }),
-    parseResponse: (xml) => {
-      return { goods: parseGoodsFromXml(xml) };
-    },
+    parseResponse: (xml) => ({ goods: parseGoodsFromXml(xml) }),
   },
-
-  // ზედნადების ტიპები
   get_waybill_types: {
     method: 'get_waybill_types',
     buildParams: (_, su, sp) => ({ su, sp }),
@@ -172,8 +158,6 @@ const ACTIONS: ActionMap = {
       };
     },
   },
-
-  // ზომის ერთეულები
   get_waybill_units: {
     method: 'get_waybill_units',
     buildParams: (_, su, sp) => ({ su, sp }),
@@ -187,8 +171,6 @@ const ACTIONS: ActionMap = {
       };
     },
   },
-
-  // ტრანსპორტის ტიპები
   get_trans_types: {
     method: 'get_trans_types',
     buildParams: (_, su, sp) => ({ su, sp }),
@@ -202,8 +184,6 @@ const ACTIONS: ActionMap = {
       };
     },
   },
-
-  // ზედნადების სტატუსები
   get_waybill_statuses: {
     method: 'get_waybill_statuses',
     buildParams: (_, su, sp) => ({ su, sp }),
@@ -217,8 +197,6 @@ const ACTIONS: ActionMap = {
       };
     },
   },
-
-  // ზედნადების შენახვა
   save_waybill: {
     method: 'save_waybill',
     buildParams: (data, su, sp) => ({
@@ -238,53 +216,31 @@ const ACTIONS: ActionMap = {
       return { waybillId: id, success: true };
     },
   },
-
-  // ზედნადების გაგზავნა
   send_waybill: {
     method: 'send_waybill',
     buildParams: (data, su, sp) => ({ su, sp, waybill_id: data.waybillId }),
-    parseResponse: (xml) => {
-      return { success: !xml.includes('ERROR'), message: parseXmlValue(xml, 'TEXT') || 'OK' };
-    },
+    parseResponse: (xml) => ({ success: !xml.includes('ERROR'), message: parseXmlValue(xml, 'TEXT') || 'OK' }),
   },
-
-  // ზედნადების დახურვა
   close_waybill: {
     method: 'close_waybill',
     buildParams: (data, su, sp) => ({ su, sp, waybill_id: data.waybillId }),
-    parseResponse: (xml) => {
-      return { success: !xml.includes('ERROR'), message: parseXmlValue(xml, 'TEXT') || 'OK' };
-    },
+    parseResponse: (xml) => ({ success: !xml.includes('ERROR'), message: parseXmlValue(xml, 'TEXT') || 'OK' }),
   },
-
-  // ზედნადების წაშლა
   delete_waybill: {
     method: 'delete_waybill',
     buildParams: (data, su, sp) => ({ su, sp, waybill_id: data.waybillId }),
-    parseResponse: (xml) => {
-      return { success: !xml.includes('ERROR') };
-    },
+    parseResponse: (xml) => ({ success: !xml.includes('ERROR') }),
   },
-
-  // ზედნადების უარყოფა
   ref_waybill: {
     method: 'ref_waybill',
     buildParams: (data, su, sp) => ({ su, sp, waybill_id: data.waybillId }),
-    parseResponse: (xml) => {
-      return { success: !xml.includes('ERROR') };
-    },
+    parseResponse: (xml) => ({ success: !xml.includes('ERROR') }),
   },
-
-  // ზედნადების დადასტურება
   confirm_waybill: {
     method: 'confirm_waybill',
     buildParams: (data, su, sp) => ({ su, sp, waybill_id: data.waybillId }),
-    parseResponse: (xml) => {
-      return { success: !xml.includes('ERROR') };
-    },
+    parseResponse: (xml) => ({ success: !xml.includes('ERROR') }),
   },
-
-  // მყიდველის ზედნადებები
   get_buyer_waybills: {
     method: 'get_buyer_waybills',
     buildParams: (data, su, sp) => ({
@@ -299,8 +255,6 @@ const ACTIONS: ActionMap = {
       return { waybills: items.map(parseWaybillFromXml) };
     },
   },
-
-  // დღგ-ს გადამხდელის შემოწმება
   is_vat_payer: {
     method: 'is_vat_payer',
     buildParams: (data, su, sp) => ({ su, sp, tin: data.tin }),
@@ -309,8 +263,6 @@ const ACTIONS: ActionMap = {
       return { isVatPayer: isVat === 'true' || isVat === '1', name: parseXmlValue(xml, 'NAME') || '' };
     },
   },
-
-  // ბარკოდის ძებნა
   get_bar_codes: {
     method: 'get_bar_codes',
     buildParams: (data, su, sp) => ({ su, sp, bar_code: data.barCode }),
@@ -326,17 +278,11 @@ const ACTIONS: ActionMap = {
       };
     },
   },
-
-  // IP მისამართი
   what_is_my_ip: {
     method: 'what_is_my_ip',
     buildParams: (_, su, sp) => ({ su, sp }),
-    parseResponse: (xml) => {
-      return { ip: parseXmlValue(xml, 'IP') || '' };
-    },
+    parseResponse: (xml) => ({ ip: parseXmlValue(xml, 'IP') || '' }),
   },
-
-  // სერვის მომხმარებლები
   get_service_users: {
     method: 'get_service_users',
     buildParams: (_, su, sp) => ({ su, sp }),
@@ -351,8 +297,6 @@ const ACTIONS: ActionMap = {
       };
     },
   },
-
-  // კომპანიის ინფორმაცია
   get_company_info: {
     method: 'get_company_info',
     buildParams: (_, su, sp) => ({ su, sp }),
@@ -365,9 +309,7 @@ const ACTIONS: ActionMap = {
       registrationDate: parseXmlValue(xml, 'REG_DATE') || '',
     }),
   },
-
-  // მყიდველის საიდენტიფიკაციო
-  get_buyer_tin_from_rs: {
+  get_name_from_tin: {
     method: 'get_name_from_tin',
     buildParams: (data, su, sp) => ({ su, sp, tin: data.tin }),
     parseResponse: (xml) => ({
@@ -375,50 +317,6 @@ const ACTIONS: ActionMap = {
       tin: parseXmlValue(xml, 'TIN') || '',
     }),
   },
-
-  // ფისკალური ჩეკის შექმნა (დემო რეჟიმში ლოკალურად გენერირდება)
-  create_fiscal_receipt: {
-    method: 'create_fiscal_receipt',
-    buildParams: (data, su, sp) => ({ su, sp, ...data }),
-    parseResponse: (_xml) => ({}), // overridden in handler
-  },
-
-  // ფისკალური ჩეკის გაუქმება
-  void_fiscal_receipt: {
-    method: 'void_fiscal_receipt',
-    buildParams: (data, su, sp) => ({ su, sp, receiptId: data.receiptId }),
-    parseResponse: (_xml) => ({}),
-  },
-
-  // ფისკალური ცვლის გახსნა
-  open_shift: {
-    method: 'open_shift',
-    buildParams: (data, su, sp) => ({ su, sp, cashierName: data.cashierName }),
-    parseResponse: (_xml) => ({}),
-  },
-
-  // ფისკალური ცვლის დახურვა
-  close_shift: {
-    method: 'close_shift',
-    buildParams: (_, su, sp) => ({ su, sp }),
-    parseResponse: (_xml) => ({}),
-  },
-
-  // მიმდინარე ფისკალური ცვლა
-  get_shift: {
-    method: 'get_shift',
-    buildParams: (_, su, sp) => ({ su, sp }),
-    parseResponse: (_xml) => ({}),
-  },
-
-  // ფისკალური ჩეკების სია
-  get_fiscal_receipts: {
-    method: 'get_fiscal_receipts',
-    buildParams: (_, su, sp) => ({ su, sp }),
-    parseResponse: (_xml) => ({}),
-  },
-
-  // ინვოისები
   get_invoices: {
     method: 'get_invoices',
     buildParams: (data, su, sp) => ({ su, sp, ...data }),
@@ -437,28 +335,11 @@ const ACTIONS: ActionMap = {
       };
     },
   },
-
-  get_invoice: {
-    method: 'get_invoice',
-    buildParams: (data, su, sp) => ({ su, sp, invoice_id: data.invoiceId }),
-    parseResponse: (xml) => ({
-      id: parseXmlValue(xml, 'ID') || '',
-      number: parseXmlValue(xml, 'NUMBER') || '',
-      buyerTin: parseXmlValue(xml, 'BUYER_TIN') || '',
-      buyerName: parseXmlValue(xml, 'BUYER_NAME') || '',
-      total: parseFloat(parseXmlValue(xml, 'AMOUNT') || '0'),
-    }),
-  },
-
   save_invoice: {
     method: 'save_invoice',
     buildParams: (data, su, sp) => ({ su, sp, ...data }),
-    parseResponse: (xml) => ({
-      invoiceId: parseXmlValue(xml, 'ID') || '',
-      success: true,
-    }),
+    parseResponse: (xml) => ({ invoiceId: parseXmlValue(xml, 'ID') || '', success: true }),
   },
-
   delete_invoice: {
     method: 'delete_invoice',
     buildParams: (data, su, sp) => ({ su, sp, invoice_id: data.invoiceId }),
@@ -466,7 +347,6 @@ const ACTIONS: ActionMap = {
   },
 };
 
-// ფისკალური actions რომლებიც დემო რეჟიმში ლოკალურად მუშაობს
 const FISCAL_ACTIONS = new Set([
   'create_fiscal_receipt', 'void_fiscal_receipt',
   'open_shift', 'close_shift', 'get_shift', 'get_fiscal_receipts',
@@ -505,10 +385,7 @@ function generateDemoFiscalResponse(action: string, data: any): any {
         },
       };
     case 'close_shift':
-      return {
-        success: true,
-        shift: { closedAt: now, isOpen: false },
-      };
+      return { success: true, shift: { closedAt: now, isOpen: false } };
     case 'get_shift':
       return {
         shift: {
@@ -528,63 +405,92 @@ function generateDemoFiscalResponse(action: string, data: any): any {
   }
 }
 
-Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+async function auditLog(supabase: any, tenantId: string, action: string, docType: string, docId: string | null, status: string, error: string | null, demo: boolean, reqData: any, resData: any) {
+  try {
+    await supabase.from('rsge_audit_logs').insert({
+      tenant_id: tenantId,
+      action,
+      document_type: docType,
+      document_id: docId,
+      status,
+      error_message: error,
+      demo_mode: demo,
+      request_data: reqData,
+      response_data: resData
+    });
+  } catch (e) {
+    console.error('Failed to write audit log:', e);
   }
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
 
   try {
-    // Check if the request is POST and has a body
     if (req.method !== 'POST') {
-      return new Response(
-        JSON.stringify({ error: 'მხოლოდ POST მოთხოვნებია დაშვებული' }),
-        { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders });
     }
 
-    let payload;
-    try {
-      payload = await req.json();
-    } catch (e) {
-      return new Response(
-        JSON.stringify({ error: 'არასწორი JSON ფორმატი' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const payload = await req.json();
+    const { action, tenant_id, data } = payload;
+    let { demo, su, sp } = payload;
+
+    if (!action) return new Response(JSON.stringify({ error: 'No action' }), { status: 400, headers: corsHeaders });
+
+    // Handle config saving
+    if (action === 'save_config') {
+      const { data: result, error: saveErr } = await supabase
+        .from('rsge_configs')
+        .upsert({
+          tenant_id,
+          su: data.su,
+          sp: data.sp || undefined, // Don't overwrite if not provided
+          company_tin: data.company_tin,
+          company_name: data.company_name,
+          demo: data.demo,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'tenant_id' });
+
+      if (saveErr) throw saveErr;
+      return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
     }
 
-    const { action, demo, su, sp, data } = payload;
-
-    if (!action) {
-      return new Response(
-        JSON.stringify({ error: 'მოთხოვნაში არ არის action' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // ფისკალური actions დემო რეჟიმში ლოკალურად მუშაობს
-    if (FISCAL_ACTIONS.has(action) && demo) {
-      const result = generateDemoFiscalResponse(action, data);
-      return new Response(
-        JSON.stringify(result),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Fetch config from DB if not provided
+    if (!su || !sp || demo === undefined) {
+      if (!tenant_id) return new Response(JSON.stringify({ error: 'Missing tenant_id or credentials' }), { status: 400, headers: corsHeaders });
+      
+      const { data: config, error: cfgErr } = await supabase
+        .from('rsge_configs')
+        .select('su, sp, demo')
+        .eq('tenant_id', tenant_id)
+        .single();
+      
+      if (cfgErr || !config) {
+        return new Response(JSON.stringify({ error: 'RS.GE configuration not found for this tenant.' }), { status: 404, headers: corsHeaders });
+      }
+      
+      su = su || config.su;
+      sp = sp || config.sp;
+      demo = demo !== undefined ? demo : config.demo;
     }
 
     if (!su || !sp) {
-      return new Response(
-        JSON.stringify({ error: 'მოთხოვნაში არ არის su ან sp' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Credentials (su/sp) missing' }), { status: 400, headers: corsHeaders });
+    }
+
+    // Fiscal Demo Mode
+    if (FISCAL_ACTIONS.has(action) && demo) {
+      const result = generateDemoFiscalResponse(action, data);
+      return new Response(JSON.stringify(result), { headers: corsHeaders });
     }
 
     const actionDef = ACTIONS[action];
-    if (!actionDef) {
-      return new Response(
-        JSON.stringify({ error: `უცნობი მოქმედება: ${action}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    if (!actionDef) return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), { status: 400, headers: corsHeaders });
 
     const baseUrl = demo ? RS_GE_DEMO_URL : RS_GE_URL;
     const params = actionDef.buildParams(data || {}, su, sp);
@@ -599,38 +505,26 @@ Deno.serve(async (req: Request) => {
       body: soapBody,
     });
 
+    const responseXml = await soapResponse.text();
+    
     if (!soapResponse.ok) {
-      const errorText = await soapResponse.text();
-      console.error('RS.GE SOAP error:', errorText);
-      return new Response(
-        JSON.stringify({ error: `RS.GE შეცდომა: ${soapResponse.status}`, details: errorText }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      await auditLog(supabase, tenant_id, action, 'rsge', null, 'error', `HTTP ${soapResponse.status}`, demo, data, responseXml);
+      return new Response(JSON.stringify({ error: `RS.GE Error: ${soapResponse.status}`, details: responseXml }), { status: 502, headers: corsHeaders });
     }
 
-    const responseXml = await soapResponse.text();
-
-    // შევამოწმოთ SOAP Fault
     const faultString = parseXmlValue(responseXml, 'faultstring');
     if (faultString) {
-      return new Response(
-        JSON.stringify({ error: faultString }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      await auditLog(supabase, tenant_id, action, 'rsge', null, 'error', faultString, demo, data, responseXml);
+      return new Response(JSON.stringify({ error: faultString }), { status: 400, headers: corsHeaders });
     }
 
     const result = actionDef.parseResponse(responseXml);
+    await auditLog(supabase, tenant_id, action, 'rsge', result.id || result.number || result.waybillId || null, 'success', null, demo, data, result);
 
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (err) {
-    console.error('rsge-proxy error:', err);
-    const message = err instanceof Error ? err.message : String(err);
-    return new Response(
-      JSON.stringify({ error: message || 'სერვერის შეცდომა' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify(result), { headers: corsHeaders });
+
+  } catch (err: any) {
+    console.error('RS.GE Proxy error:', err);
+    return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), { status: 500, headers: corsHeaders });
   }
 });
