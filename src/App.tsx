@@ -87,6 +87,7 @@ const PortalLayout = lazy(() => import('@/components/portal/PortalLayout').then(
 const PortalDashboard = lazy(() => import('@/pages/portal/PortalDashboard').then(m => ({ default: m.PortalDashboard })));
 const PortalBooking = lazy(() => import('@/pages/portal/PortalBooking').then(m => ({ default: m.PortalBooking })));
 const PortalHistory = lazy(() => import('@/pages/portal/PortalHistory').then(m => ({ default: m.PortalHistory })));
+const PortalCatalog = lazy(() => import('@/pages/portal/PortalCatalog').then(m => ({ default: m.PortalCatalog })));
 const PortalAuth = lazy(() => import('@/pages/portal/PortalAuth').then(m => ({ default: m.PortalAuth })));
 
 const queryClient = new QueryClient({
@@ -188,6 +189,7 @@ const App = () => (
                 <Route path="/portal/:tenant_slug/auth" element={<PortalAuth />} />
                 <Route path="/portal/:tenant_slug" element={<PortalLayout />}>
                   <Route index element={<PortalDashboard />} />
+                  <Route path="catalog" element={<PortalCatalog />} />
                   <Route path="booking" element={<PortalBooking />} />
                   <Route path="history" element={<PortalHistory />} />
                 </Route>

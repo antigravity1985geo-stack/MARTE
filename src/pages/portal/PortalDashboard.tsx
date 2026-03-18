@@ -1,16 +1,50 @@
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, Link, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, History, CreditCard, Star, Sparkles, Info, ArrowRight } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Calendar, History as HistoryIcon, CreditCard, Star, Sparkles, Info, ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { LoyaltyCard } from "@/components/portal/LoyaltyCard";
 
 export const PortalDashboard = () => {
   const { tenant } = useOutletContext<{ tenant: any }>();
   const { tenant_slug } = useParams();
+  const { user } = useAuthStore();
+
+  const { data: clientData, isLoading: clientLoading } = useQuery({
+    queryKey: ['portal-client-data', tenant.id, user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .eq('user_id', user?.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant.id && !!user?.id
+  });
+
+  const loyaltyPoints = clientData?.loyalty_points || 0;
+  const loyaltyTier = (clientData?.loyalty_tier || 'bronze').toUpperCase();
+  
+  // Logic for next tier
+  const tiers = {
+    'BRONZE': { next: 'SILVER', goal: 500 },
+    'SILVER': { next: 'GOLD', goal: 1500 },
+    'GOLD': { next: 'PLATINUM', goal: 5000 },
+    'PLATINUM': { next: 'MAX', goal: 10000 }
+  };
+  
+  const currentTierInfo = tiers[loyaltyTier as keyof typeof tiers] || tiers['BRONZE'];
+  const progress = Math.min(Math.round((loyaltyPoints / currentTierInfo.goal) * 100), 100);
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-6 p-4 pb-20">
       {/* Hero Section */}
       <section className="relative -mx-4 -mt-4 overflow-hidden rounded-b-[3rem] bg-slate-900 px-6 pb-24 pt-16 text-white shadow-2xl">
         {/* Animated Mesh Background */}
@@ -59,44 +93,22 @@ export const PortalDashboard = () => {
         <Card className="group glass-card overflow-hidden border-none shadow-xl hover:shadow-purple-500/20">
           <CardContent className="flex flex-col items-center justify-center p-8 bg-white/90 dark:bg-slate-900/90">
             <div className="bg-purple-500/10 text-purple-500 mb-4 rounded-3xl p-4 group-hover:scale-110 transition-transform duration-500">
-               <History className="h-8 w-8" />
+               <HistoryIcon className="h-8 w-8" />
             </div>
             <span className="font-black text-xs uppercase tracking-tighter">ჩემი ისტორია</span>
           </CardContent>
         </Card>
       </div>
 
-      {/* Loyalty / Info Section */}
-      <Card className="relative overflow-hidden border-none bg-slate-900 text-white shadow-2xl rounded-[2.5rem] p-8 -mx-1">
-        <div className="absolute top-0 right-0 p-8 opacity-10">
-           <Star className="h-24 w-24 fill-white" />
-        </div>
-        <div className="relative z-10 flex flex-col h-full justify-between">
-          <div className="flex items-center justify-between mb-8">
-            <Badge className="bg-portal-primary/20 text-portal-primary border-none px-4 py-1.5 rounded-xl font-bold italic tracking-widest uppercase">
-               VIP Member
-            </Badge>
-            <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/10 backdrop-blur-md">
-               <CreditCard className="h-5 w-5 text-white/70" />
-            </div>
-          </div>
-          
-          <div>
-            <p className="text-4xl font-black tracking-tighter mb-1">1,250</p>
-            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">LOYALTY POINTS</p>
-          </div>
-
-          <div className="mt-8">
-            <div className="flex justify-between items-end mb-2">
-               <p className="text-[10px] font-bold text-white/60">NEXT LEVEL: GOLD</p>
-               <p className="text-[10px] font-bold text-white/80">65%</p>
-            </div>
-            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden backdrop-blur-sm">
-               <div className="portal-bg-primary h-full w-[65%] shadow-[0_0_15px_rgba(var(--portal-primary),0.5)] transition-all duration-1000" />
-            </div>
-          </div>
-        </div>
-      </Card>
+      {/* Loyalty Card */}
+      <LoyaltyCard 
+        points={loyaltyPoints}
+        tier={loyaltyTier}
+        nextTier={currentTierInfo.next}
+        progress={progress}
+        clientId={user?.id || ''}
+        primaryColor={tenant?.primary_color}
+      />
 
       {/* Recent Visits */}
       <div className="space-y-4 pt-4">

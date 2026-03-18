@@ -1,6 +1,6 @@
 import { Outlet, useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { usePortal } from "@/hooks/usePortal";
-import { Loader2, Calendar, Clock, User, Home } from "lucide-react";
+import { Loader2, Calendar, Clock, User, Home, ShoppingBag } from "lucide-react";
 import { useEffect } from "react";
 
 export const PortalLayout = () => {
@@ -87,6 +87,18 @@ export const PortalLayout = () => {
           </div>
           <span className="text-[10px] font-bold uppercase tracking-wider">მთავარი</span>
           {location.pathname === `/portal/${tenant_slug}` && (
+            <div className="absolute -bottom-1 h-1 w-1 rounded-full portal-bg-primary" />
+          )}
+        </Link>
+        <Link
+          to={`/portal/${tenant_slug}/catalog`}
+          className={`relative group flex flex-col items-center gap-1.5 transition-all duration-300 ${location.pathname.includes('/catalog') ? 'portal-text-primary' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+        >
+          <div className={`p-1.5 rounded-xl transition-all duration-300 ${location.pathname.includes('/catalog') ? 'bg-portal-primary/10' : 'group-hover:bg-slate-100/50'}`}>
+            <ShoppingBag className={`h-6 w-6 transition-transform duration-300 ${location.pathname.includes('/catalog') ? 'scale-110' : 'group-hover:scale-105'}`} />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider">კატალოგი</span>
+          {location.pathname.includes('/catalog') && (
             <div className="absolute -bottom-1 h-1 w-1 rounded-full portal-bg-primary" />
           )}
         </Link>

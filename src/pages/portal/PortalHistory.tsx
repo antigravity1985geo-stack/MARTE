@@ -1,15 +1,29 @@
 import { useOutletContext } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { FileText, ChevronRight, Sparkles } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { FileText, ChevronRight, Sparkles, CreditCard, Clock } from "lucide-react";
 
 export const PortalHistory = () => {
   const { tenant } = useOutletContext<{ tenant: any }>();
+  const { user } = useAuthStore();
 
-  const history = [
-    { id: 1, date: "12 მარტი, 2024", service: "კონსულტაცია", amount: "45.00 ₾", status: "completed", type: "Health" },
-    { id: 2, date: "01 თებერვალი, 2024", service: "დიაგნოსტიკა", amount: "60.00 ₾", status: "completed", type: "Checkup" },
-    { id: 3, date: "15 იანვარი, 2024", service: "თერაპია", amount: "80.00 ₾", status: "completed", type: "Medical" },
-  ];
+  const { data: history, isLoading } = useQuery({
+    queryKey: ['portal-history', tenant.id, user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .eq('client_id', user?.id)
+        .order('start_time', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant.id && !!user?.id
+  });
 
   return (
     <div className="p-4 space-y-8 animate-slide-up">
@@ -22,35 +36,45 @@ export const PortalHistory = () => {
       </div>
 
       <div className="space-y-4">
-        {history.map((item) => (
-          <div key={item.id} className="group glass-card bg-white/90 dark:bg-slate-900/90 rounded-[2rem] p-6 shadow-xl border border-white/5 hover:scale-[1.02] transition-all duration-500 flex items-center justify-between">
-            <div className="flex gap-5 items-center">
-              <div className="h-14 w-14 bg-slate-50 dark:bg-slate-800 flex items-center justify-center rounded-2xl group-hover:bg-purple-500/10 group-hover:text-purple-500 transition-colors duration-500">
-                 <FileText className="h-7 w-7 opacity-50 group-hover:opacity-100" />
+        {isLoading ? (
+          [1, 2, 3].map(i => <div key={i} className="h-28 rounded-[2rem] bg-slate-100 animate-pulse" />)
+        ) : history?.length === 0 ? (
+          <div className="text-center py-20 opacity-40">
+            <Clock className="h-12 w-12 mx-auto mb-4" />
+            <p className="font-bold">ისტორია ცარიელია</p>
+          </div>
+        ) : (
+          history?.map((item) => (
+            <div key={item.id} className="group glass-card bg-white/90 dark:bg-slate-900/90 rounded-[2rem] p-6 shadow-xl border border-white/5 hover:scale-[1.02] transition-all duration-500 flex items-center justify-between">
+              <div className="flex gap-5 items-center">
+                <div className="h-14 w-14 bg-slate-50 dark:bg-slate-800 flex items-center justify-center rounded-2xl group-hover:bg-purple-500/10 group-hover:text-purple-500 transition-colors duration-500">
+                   <FileText className="h-7 w-7 opacity-50 group-hover:opacity-100" />
+                </div>
+                <div>
+                  <p className="text-lg font-black dark:text-white leading-tight">{item.title}</p>
+                  <div className="flex items-center gap-3 mt-1.5">
+                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                       {new Date(item.start_time).toLocaleDateString('ka-GE')}
+                     </p>
+                     <span className="h-1 w-1 rounded-full bg-slate-300" />
+                     <p className="text-[10px] font-black portal-text-primary uppercase tracking-widest">{item.status}</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-lg font-black dark:text-white leading-tight">{item.service}</p>
-                <div className="flex items-center gap-3 mt-1.5">
-                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{item.date}</p>
-                   <span className="h-1 w-1 rounded-full bg-slate-300" />
-                   <p className="text-[10px] font-black portal-text-primary uppercase tracking-widest">{item.type}</p>
+              
+              <div className="flex items-center gap-6">
+                <div className="text-right">
+                  <p className="text-xl font-black dark:text-white leading-none">
+                     {item.price || "---"} ₾
+                  </p>
+                  <Badge className={`mt-2 text-[9px] font-black border-none uppercase tracking-tighter px-2 py-0 ${item.payment_status === 'paid' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+                     {item.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
+                  </Badge>
                 </div>
               </div>
             </div>
-            
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-xl font-black dark:text-white leading-none">{item.amount}</p>
-                <Badge className="mt-2 text-[9px] font-black border-none bg-green-500/10 text-green-600 dark:text-green-400 uppercase tracking-tighter px-2 py-0">
-                   DONE
-                </Badge>
-              </div>
-              <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 group-hover:bg-slate-100 transition-colors">
-                <ChevronRight className="h-6 w-6 text-slate-300" />
-              </div>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       <div className="p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden">
