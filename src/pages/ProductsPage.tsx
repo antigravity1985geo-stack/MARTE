@@ -21,6 +21,9 @@ import { SwipeToDelete } from '@/components/SwipeToDelete';
 import * as XLSX from 'xlsx';
 import { BarcodeLabelPrinter } from '@/components/BarcodeLabelPrinter';
 import { useI18n } from '@/hooks/useI18n';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getTranslatedField } from '@/lib/i18n/content';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function ProductsPage() {
   const { categories } = useCategories();
@@ -31,20 +34,48 @@ export default function ProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const { activeTenantId } = useAuthStore();
-  const [form, setForm] = useState({ name: '', barcode: '', buyPrice: '', sellPrice: '', category: '', unit: 'ცალი', minStock: '10', stock: '0', images: [] as string[] });
+  const { lang } = useI18n();
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    name_en: '',
+    description_en: '',
+    name_ru: '',
+    description_ru: '',
+    name_az: '',
+    description_az: '',
+    barcode: '',
+    buyPrice: '',
+    sellPrice: '',
+    category: '',
+    unit: 'ცალი',
+    minStock: '10',
+    stock: '0',
+    images: [] as string[]
+  });
   const [importOpen, setImportOpen] = useState(false);
   const [importData, setImportData] = useState<{ name: string; barcode: string; buyPrice: number; sellPrice: number; unit: string; stock: number; minStock: number; category: string }[]>([]);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [labelsOpen, setLabelsOpen] = useState(false);
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode.includes(search)
-  );
+  const filtered = products.filter((p) => {
+    const displayName = getTranslatedField(p, 'name', lang);
+    return displayName.toLowerCase().includes(search.toLowerCase()) || p.barcode.includes(search);
+  });
 
   const openNew = () => {
     setEditingId(null);
-    setForm({ name: '', barcode: crypto.randomUUID().slice(0, 13), buyPrice: '', sellPrice: '', category: categories[0]?.id || '', unit: 'ცალი', minStock: '10', stock: '0', images: [] });
+    setForm({
+      name: '', description: '',
+      name_en: '', description_en: '',
+      name_ru: '', description_ru: '',
+      name_az: '', description_az: '',
+      barcode: crypto.randomUUID().slice(0, 13),
+      buyPrice: '', sellPrice: '',
+      category: categories[0]?.id || '',
+      unit: 'ცალი', minStock: '10', stock: '0', images: []
+    });
     setDialogOpen(true);
   };
 
@@ -52,6 +83,13 @@ export default function ProductsPage() {
     setEditingId(p.id);
     setForm({
       name: p.name,
+      description: p.description || '',
+      name_en: p.name_en || '',
+      description_en: p.description_en || '',
+      name_ru: p.name_ru || '',
+      description_ru: p.description_ru || '',
+      name_az: p.name_az || '',
+      description_az: p.description_az || '',
       barcode: p.barcode,
       buyPrice: String(p.buy_price),
       sellPrice: String(p.sell_price),
@@ -70,8 +108,15 @@ export default function ProductsPage() {
       return;
     }
 
-    const data: ProductInsert = {
+    const data: any = {
       name: form.name.trim(),
+      description: form.description.trim(),
+      name_en: form.name_en.trim(),
+      description_en: form.description_en.trim(),
+      name_ru: form.name_ru.trim(),
+      description_ru: form.description_ru.trim(),
+      name_az: form.name_az.trim(),
+      description_az: form.description_az.trim(),
       barcode: form.barcode.trim(),
       buy_price: parseFloat(form.buyPrice),
       sell_price: parseFloat(form.sellPrice),
@@ -273,7 +318,7 @@ export default function ProductsPage() {
                       <div className="stat-card p-3" onClick={() => openEdit(p)}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{p.name}</p>
+                            <p className="font-medium truncate">{getTranslatedField(p, 'name', lang)}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
                               {categories.find((c) => c.id === p.category_id)?.name || (t('no_category') || 'No category')}
                             </p>
@@ -323,7 +368,10 @@ export default function ProductsPage() {
                     ) : (
                       filtered.map((p) => (
                         <TableRow key={p.id}>
-                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell className="font-medium">
+                            <div>{getTranslatedField(p, 'name', lang)}</div>
+                            {p.description && <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{getTranslatedField(p, 'description', lang)}</div>}
+                          </TableCell>
                           <TableCell><BarcodeDisplay value={p.barcode} width={1} height={28} fontSize={10} /></TableCell>
                           <TableCell>{categories.find((c) => c.id === p.category_id)?.name || '-'}</TableCell>
                           <TableCell>₾{p.buy_price.toFixed(2)}</TableCell>
@@ -351,18 +399,47 @@ export default function ProductsPage() {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingId ? (t('edit') || 'Edit') : (t('new_product') || 'New product')}</DialogTitle></DialogHeader>
           <div className="grid gap-3">
-            <div className="space-y-1"><Label>{t('name') || 'Name'}</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={200} /></div>
-            <div className="space-y-1">
-              <Label>{t('barcode') || 'Barcode'}</Label>
-              <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} maxLength={50} />
-              {form.barcode && <BarcodeDisplay value={form.barcode} width={1.2} height={35} fontSize={11} />}
-            </div>
-            <div className="space-y-1">
-              <Label>{t('category') || 'Category'}</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-              </Select>
+            <Tabs defaultValue="ka" className="w-full">
+              <TabsList className="grid w-full grid-cols-4 h-9">
+                <TabsTrigger value="ka" className="text-xs">KA</TabsTrigger>
+                <TabsTrigger value="en" className="text-xs">EN</TabsTrigger>
+                <TabsTrigger value="ru" className="text-xs">RU</TabsTrigger>
+                <TabsTrigger value="az" className="text-xs">AZ</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="ka" className="space-y-3 pt-3">
+                <div className="space-y-1"><Label>დასახელება (ქართული)</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                <div className="space-y-1"><Label>აღწერა</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+              </TabsContent>
+              
+              <TabsContent value="en" className="space-y-3 pt-3">
+                <div className="space-y-1"><Label>Name (English)</Label><Input value={form.name_en} onChange={(e) => setForm({ ...form, name_en: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Description</Label><Textarea value={form.description_en} onChange={(e) => setForm({ ...form, description_en: e.target.value })} /></div>
+              </TabsContent>
+              
+              <TabsContent value="ru" className="space-y-3 pt-3">
+                <div className="space-y-1"><Label>Название (Русский)</Label><Input value={form.name_ru} onChange={(e) => setForm({ ...form, name_ru: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Описание</Label><Textarea value={form.description_ru} onChange={(e) => setForm({ ...form, description_ru: e.target.value })} /></div>
+              </TabsContent>
+              
+              <TabsContent value="az" className="space-y-3 pt-3">
+                <div className="space-y-1"><Label>Ad (Azərbaycan)</Label><Input value={form.name_az} onChange={(e) => setForm({ ...form, name_az: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Təsvir</Label><Textarea value={form.description_az} onChange={(e) => setForm({ ...form, description_az: e.target.value })} /></div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <div className="space-y-1">
+                <Label>{t('barcode') || 'Barcode'}</Label>
+                <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} maxLength={50} />
+              </div>
+              <div className="space-y-1">
+                <Label>{t('category') || 'Category'}</Label>
+                <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1"><Label>{t('buy_price') || 'Buy price'}</Label><Input type="number" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: e.target.value })} /></div>

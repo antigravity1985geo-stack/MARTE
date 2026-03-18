@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/hooks/useI18n";
+import { getTranslatedField } from "@/lib/i18n/content";
 
 export const PortalBooking = () => {
   const { tenant } = useOutletContext<{ tenant: any }>();
@@ -15,6 +17,7 @@ export const PortalBooking = () => {
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'onsite' | null>(null);
   const [isPaying, setIsPaying] = useState(false);
   const navigate = useNavigate();
+  const { lang, t } = useI18n();
 
   const { data: services, isLoading } = useQuery({
     queryKey: ['portal-services', tenant.id, tenant.industry],
@@ -69,10 +72,10 @@ export const PortalBooking = () => {
     <div className="p-4 space-y-8 animate-slide-up pb-24">
       <div className="flex flex-col gap-2 pt-4">
         <Badge className="w-fit bg-portal-primary/10 text-portal-primary border-none text-[10px] font-black uppercase tracking-widest px-3 py-1">
-           Step {step}: {step === 1 ? 'Select Service' : 'Confirm & Pay'}
+           {t('booking_step') || 'Step'} {step}: {step === 1 ? t('select_service') : t('confirm_pay')}
         </Badge>
         <h1 className="text-3xl font-black tracking-tighter">
-          {step === 1 ? 'ვიზიტის დაჯავშნა' : 'გადახდა და დადასტურება'}
+          {step === 1 ? (t('booking') || 'ვიზიტის დაჯავშნა') : t('confirm_pay')}
         </h1>
       </div>
 
@@ -93,7 +96,7 @@ export const PortalBooking = () => {
                        <CalendarIcon className="h-6 w-6" />
                     </div>
                     <div>
-                      <p className="text-lg font-black dark:text-white leading-tight">{service.name}</p>
+                      <p className="text-lg font-black dark:text-white leading-tight">{getTranslatedField(service, 'name', lang)}</p>
                       <p className="portal-text-primary brightness-110 font-black mt-1">{service.price || service.sell_price || service.base_price} ₾</p>
                     </div>
                   </div>
@@ -108,15 +111,15 @@ export const PortalBooking = () => {
           <Card className="rounded-[2rem] border-none shadow-xl bg-white dark:bg-slate-900 p-6">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase">არჩეული სერვისი</p>
-                <p className="text-xl font-black">{selectedService?.name}</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase">{t('select_service')}</p>
+                <p className="text-xl font-black">{getTranslatedField(selectedService, 'name', lang)}</p>
               </div>
               <p className="text-2xl font-black portal-text-primary">{selectedService?.price || selectedService?.sell_price} ₾</p>
             </div>
           </Card>
 
           <div className="space-y-3">
-             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">გადახდის მეთოდი</p>
+             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">{t('payment_methods') || 'გადახდის მეთოდი'}</p>
              <div 
                onClick={() => setPaymentMethod('online')}
                className={`flex items-center justify-between p-6 rounded-[2rem] cursor-pointer transition-all duration-300 border-2 ${paymentMethod === 'online' ? 'portal-border-primary bg-portal-primary/5' : 'border-transparent bg-white dark:bg-slate-900 shadow-sm'}`}
@@ -125,10 +128,10 @@ export const PortalBooking = () => {
                    <div className={`h-12 w-12 flex items-center justify-center rounded-2xl ${paymentMethod === 'online' ? 'portal-bg-primary text-white' : 'bg-slate-100 text-slate-400'}`}>
                       <CreditCard className="h-6 w-6" />
                    </div>
-                   <div>
-                      <p className="font-bold">ონლაინ გადახდა</p>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">TBC / BOG Checkout</p>
-                   </div>
+                    <div>
+                       <p className="font-bold">{t('online_payment')}</p>
+                       <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">TBC / BOG Checkout</p>
+                    </div>
                 </div>
                 {paymentMethod === 'online' && <Check className="h-6 w-6 portal-text-primary" />}
              </div>
@@ -140,10 +143,10 @@ export const PortalBooking = () => {
                    <div className={`h-12 w-12 flex items-center justify-center rounded-2xl ${paymentMethod === 'onsite' ? 'portal-bg-primary text-white' : 'bg-slate-100 text-slate-400'}`}>
                       <Wallet className="h-6 w-6" />
                    </div>
-                   <div>
-                      <p className="font-bold">ადგილზე გადახდა</p>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">ნაღდი ან ბარათი</p>
-                   </div>
+                    <div>
+                       <p className="font-bold">{t('onsite_payment')}</p>
+                       <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{t('cash_or_card')}</p>
+                    </div>
                 </div>
                 {paymentMethod === 'onsite' && <Check className="h-6 w-6 portal-text-primary" />}
              </div>
@@ -164,13 +167,13 @@ export const PortalBooking = () => {
              {isPaying ? (
                <Loader2 className="h-6 w-6 animate-spin" />
              ) : paymentMethod === 'online' ? (
-               'გადახდა და დადასტურება'
+               t('confirm_pay')
              ) : (
-               'დაჯავშნა'
+               t('booking')
              )}
           </Button>
           <Button variant="ghost" onClick={() => setStep(1)} className="w-full font-bold text-muted-foreground uppercase text-xs h-10">
-             უკან დაბრუნება
+             {t('back')}
           </Button>
         </div>
       )}

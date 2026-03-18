@@ -34,6 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHardwareScanner } from '@/hooks/useHardwareScanner';
 import { useI18n } from '@/hooks/useI18n';
+import { getTranslatedField } from '@/lib/i18n/content';
 
 interface CartItem { id: string; productId: string; name: string; price: number; quantity: number; categoryId?: string; image?: string; }
 
@@ -54,7 +55,7 @@ export default function POSPage() {
   const { setActiveCashier } = useActiveCashier();
   const { useCoupon } = usePricing();
   const { addEntry } = useAccounting();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const isMobile = useIsMobile();
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -66,6 +67,7 @@ export default function POSPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pin, setPin] = useState('');
   const [startingCash, setStartingCash] = useState('');
+  const [offlineSales, setOfflineSales] = useState<any[]>([]);
 
   const syncOfflineQueue = async () => {
     if (!navigator.onLine) return;
@@ -192,7 +194,8 @@ export default function POSPage() {
   );
 
   const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.barcode || '').includes(searchQuery);
+    const displayName = getTranslatedField(p, 'name', lang);
+    const matchesSearch = displayName.toLowerCase().includes(searchQuery.toLowerCase()) || (p.barcode || '').includes(searchQuery);
     const matchesCategory = selectedCategory === 'all' || p.category_id === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -203,7 +206,15 @@ export default function POSPage() {
       if (existing) {
         return prev.map((i) => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, { id: crypto.randomUUID(), productId: product.id, name: product.name, price: product.sell_price, quantity: 1, categoryId: product.category_id, image: product.images?.[0] }];
+      return [...prev, { 
+        id: crypto.randomUUID(), 
+        productId: product.id, 
+        name: getTranslatedField(product, 'name', lang), 
+        price: product.sell_price, 
+        quantity: 1, 
+        categoryId: product.category_id, 
+        image: product.images?.[0] 
+      }];
     });
   };
 
@@ -634,7 +645,18 @@ export default function POSPage() {
       </Dialog>
 
       {/* Sales History */}
-      <POSSalesHistory open={historyOpen} onOpenChange={setHistoryOpen} transactions={transactions} />
+      <POSSalesHistory 
+        open={historyOpen} 
+        onOpenChange={async (open) => {
+            setHistoryOpen(open);
+            if (open) {
+                const queued = await offlineQueue.getQueuedSales();
+                setOfflineSales(queued);
+            }
+        }} 
+        transactions={transactions} 
+        offlineSales={offlineSales}
+      />
 
       <BarcodeScanner open={scannerOpen} onOpenChange={setScannerOpen} onScan={handleBarcodeScan} />
 

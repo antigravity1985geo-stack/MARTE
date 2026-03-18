@@ -17,6 +17,13 @@ export interface SupabaseProduct {
   warehouse_id: string | null;
   user_id: string;
   created_at: string;
+  description?: string;
+  name_en?: string;
+  name_ru?: string;
+  name_az?: string;
+  description_en?: string;
+  description_ru?: string;
+  description_az?: string;
 }
 
 export type ProductInsert = Omit<SupabaseProduct, 'id' | 'created_at' | 'user_id'>;

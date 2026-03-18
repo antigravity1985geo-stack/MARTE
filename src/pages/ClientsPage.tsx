@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, Phone, Mail, Loader2 } from 'lucide-react';
 import { PrintButton } from '@/components/PrintButton';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SwipeToDelete } from '@/components/SwipeToDelete';
@@ -16,20 +17,36 @@ export default function ClientsPage() {
   const { clients, isLoading, addClient, updateClient, deleteClient } = useClients();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<SupabaseClient | null>(null);
-  const [form, setForm] = useState({ name: '', tin: '', phone: '', email: '', address: '' });
+  const [form, setForm] = useState({ name: '', tin: '', phone: '', email: '', address: '', referral_code: '', referred_by_code: '' });
   const isMobile = useIsMobile();
 
-  const openNew = () => { setEditing(null); setForm({ name: '', tin: '', phone: '', email: '', address: '' }); setDialogOpen(true); };
-  const openEdit = (c: SupabaseClient) => { setEditing(c); setForm({ name: c.name, tin: c.tin, phone: c.phone, email: c.email, address: c.address }); setDialogOpen(true); };
+  const openNew = () => { setEditing(null); setForm({ name: '', tin: '', phone: '', email: '', address: '', referral_code: '', referred_by_code: '' }); setDialogOpen(true); };
+  const openEdit = (c: any) => { setEditing(c); setForm({ name: c.name, tin: c.tin, phone: c.phone, email: c.email, address: c.address, referral_code: c.referral_code || '', referred_by_code: '' }); setDialogOpen(true); };
 
   const handleSave = async () => {
     if (!form.name) { toast.error('სახელი აუცილებელია'); return; }
     try {
       if (editing) {
-        await updateClient.mutateAsync({ id: editing.id, updates: form });
+        await updateClient.mutateAsync({ id: editing.id, updates: { 
+          name: form.name, tin: form.tin, phone: form.phone, email: form.email, address: form.address 
+        }});
         toast.success('განახლდა');
       } else {
-        await addClient.mutateAsync(form);
+        // Handle referral lookup
+        let referredById = null;
+        if (form.referred_by_code) {
+          const { data } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('referral_code', form.referred_by_code)
+            .maybeSingle();
+          referredById = data?.id;
+        }
+
+        await addClient.mutateAsync({
+          ...form,
+          referred_by: referredById
+        });
         toast.success('დაემატა');
       }
       setDialogOpen(false);
@@ -121,6 +138,22 @@ export default function ClientsPage() {
               <div className="space-y-1"><Label>ელ-ფოსტა</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             </div>
             <div className="space-y-1"><Label>მისამართი</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-primary flex items-center gap-1">თქვენი რეფერალური კოდი</Label>
+                <Input value={form.referral_code} disabled placeholder="ავტომატური" />
+              </div>
+              <div className="space-y-1">
+                <Label>ვინ მოიყვანა? (რეფერალური კოდი)</Label>
+                <Input 
+                  value={form.referred_by_code} 
+                  onChange={(e) => setForm({ ...form, referred_by_code: e.target.value })}
+                  placeholder="მაგ: ABC123"
+                  className="border-dashed"
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter><Button onClick={handleSave} disabled={addClient.isPending || updateClient.isPending}>{editing ? 'განახლება' : 'დამატება'}</Button></DialogFooter>
         </DialogContent>

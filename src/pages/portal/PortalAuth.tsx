@@ -1,14 +1,16 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePortal } from "@/hooks/usePortal";
 import { Loader2, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const PortalAuth = () => {
   const { tenant_slug } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { data: tenant, isLoading } = usePortal(tenant_slug);
   const [phone, setPhone] = useState("");
@@ -22,13 +24,64 @@ export const PortalAuth = () => {
     }
 
     setIsSubmitting(true);
-    // Simulate lookup / OTP
-    setTimeout(() => {
-      setIsSubmitting(false);
-      localStorage.setItem(`portal_auth_${tenant_slug}`, JSON.stringify({ phone }));
-      toast.success("მოგესალმებით!");
+    try {
+      // 1. Check if client exists
+      const { data: existingClient, error: fetchError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('phone', phone)
+        .eq('tenant_id', tenant.id)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      let client = existingClient;
+
+      // 2. If not, create one
+      if (!client) {
+        const referralCode = searchParams.get('ref');
+        let referredById = null;
+
+        if (referralCode) {
+          const { data: referrer } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('referral_code', referralCode)
+            .maybeSingle();
+          referredById = referrer?.id;
+        }
+
+        const { data: newClient, error: insertError } = await supabase
+          .from('clients')
+          .insert({
+            phone,
+            name: `Client-${phone.slice(-4)}`,
+            tenant_id: tenant.id,
+            referred_by: referredById
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        client = newClient;
+        toast.success("წარმატებით დარეგისტრირდით!");
+      } else {
+        toast.success("მოგესალმებით!");
+      }
+
+      // 3. Store auth state
+      localStorage.setItem(`portal_auth_${tenant_slug}`, JSON.stringify({ 
+        phone: client.phone,
+        client_id: client.id 
+      }));
+      
       navigate(`/portal/${tenant_slug}`);
-    }, 1000);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("ავტორიზაციის შეცდომა");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin portal-text-primary" /></div>;

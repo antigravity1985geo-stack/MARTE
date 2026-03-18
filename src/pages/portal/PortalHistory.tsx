@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { FileText, ChevronRight, Sparkles, CreditCard, Clock } from "lucide-react";
+import { offlineQueue } from "@/lib/offlineQueue";
+import { toast } from "sonner";
 
 export const PortalHistory = () => {
   const { tenant } = useOutletContext<{ tenant: any }>();
@@ -12,6 +14,14 @@ export const PortalHistory = () => {
   const { data: history, isLoading } = useQuery({
     queryKey: ['portal-history', tenant.id, user?.id],
     queryFn: async () => {
+      if (!navigator.onLine && user?.id) {
+        const cached = await offlineQueue.getCachedPortalHistory(user.id);
+        if (cached) {
+          toast.info("ისტორია იტვირთება ოფლაინ რეჟიმში");
+          return cached.items;
+        }
+      }
+
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
@@ -19,7 +29,18 @@ export const PortalHistory = () => {
         .eq('client_id', user?.id)
         .order('start_time', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        if (user?.id) {
+          const cached = await offlineQueue.getCachedPortalHistory(user.id);
+          if (cached) return cached.items;
+        }
+        throw error;
+      }
+
+      if (data && user?.id) {
+        await offlineQueue.cachePortalHistory(user.id, data);
+      }
+
       return data;
     },
     enabled: !!tenant.id && !!user?.id

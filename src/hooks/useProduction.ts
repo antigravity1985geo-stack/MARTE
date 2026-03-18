@@ -22,6 +22,10 @@ export interface Recipe {
   modifiers: any[];
   extras: any[];
   instructions: string;
+  production_instructions?: string;
+  wastage_percent: number;
+  labor_cost: number;
+  overhead_cost: number;
   ingredients: { ingredient_id: string; ingredient_name?: string; quantity: number; unit?: string }[];
 }
 
@@ -62,6 +66,10 @@ export function useProduction() {
           quantity: ri.quantity,
           unit: ri.unit,
         })),
+        wastage_percent: r.wastage_percent || 0,
+        labor_cost: r.labor_cost || 0,
+        overhead_cost: r.overhead_cost || 0,
+        production_instructions: r.production_instructions || r.instructions || '',
       })) as Recipe[];
     },
   });
@@ -113,16 +121,25 @@ export function useProduction() {
       modifiers?: any[];
       extras?: any[];
       instructions?: string;
+      production_instructions?: string;
+      wastage_percent?: number;
+      labor_cost?: number;
+      overhead_cost?: number;
       ingredients: { ingredient_id: string; quantity: number; unit?: string }[];
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('არ ხართ ავტორიზებული');
 
       const allIngs = queryClient.getQueryData(['ingredients']) as Ingredient[] || [];
-      const estimatedCost = recipe.ingredients.reduce((sum, ri) => {
+      const materialCost = recipe.ingredients.reduce((sum, ri) => {
         const ing = allIngs.find(i => i.id === ri.ingredient_id);
         return sum + (ing ? ing.cost_per_unit * ri.quantity : 0);
       }, 0);
+
+      const wastage = recipe.wastage_percent || 0;
+      const labor = recipe.labor_cost || 0;
+      const overhead = recipe.overhead_cost || 0;
+      const estimatedCost = (materialCost * (1 + wastage / 100)) + labor + overhead;
 
       const { ingredients: recipeIngs, ...recipeData } = recipe;
       const { data, error } = await supabase.from('recipes')
@@ -191,7 +208,12 @@ export function useProduction() {
         const { data: prodData } = await supabase.from('products').select('stock').eq('id', recipe.product_id).single();
         if (prodData) {
           const newProdStock = (prodData.stock || 0) + (recipe.output_quantity * order.quantity);
-          await supabase.from('products').update({ stock: newProdStock }).eq('id', recipe.product_id);
+          const currentCost = calculateCost(recipe.id);
+          await supabase.from('products').update({ 
+            stock: newProdStock,
+            buy_price: currentCost, // Sync calculated BOM cost to product buy_price
+            production_cost: currentCost
+          }).eq('id', recipe.product_id);
         }
       }
 
@@ -211,10 +233,17 @@ export function useProduction() {
   const calculateCost = (recipeId: string): number => {
     const recipe = (recipesQuery.data || []).find(r => r.id === recipeId);
     if (!recipe) return 0;
-    return recipe.ingredients.reduce((sum, ri) => {
+    
+    const materialCost = recipe.ingredients.reduce((sum, ri) => {
       const ing = (ingredientsQuery.data || []).find(i => i.id === ri.ingredient_id);
       return sum + (ing ? ing.cost_per_unit * ri.quantity : 0);
     }, 0);
+
+    const wastage = recipe.wastage_percent || 0;
+    const labor = recipe.labor_cost || 0;
+    const overhead = recipe.overhead_cost || 0;
+
+    return (materialCost * (1 + wastage / 100)) + labor + overhead;
   };
 
   return {

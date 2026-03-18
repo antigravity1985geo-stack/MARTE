@@ -10,12 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { useI18n } from '@/hooks/useI18n';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getTranslatedField } from '@/lib/i18n/content';
 
 export default function ClinicServicesPage() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
+  const { lang, t } = useI18n();
 
   const { data: services = [], isLoading } = useQuery({
     queryKey: ['clinic_services'],
@@ -62,10 +66,12 @@ export default function ClinicServicesPage() {
     onError: (err: any) => toast.error(err.message)
   });
 
-  const filteredServices = services.filter((s: any) => 
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredServices = services.filter((s: any) => {
+    const displayName = getTranslatedField(s, 'name', lang);
+    const displayDesc = getTranslatedField(s, 'description', lang);
+    return displayName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+           displayDesc.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   return (
     <PageTransition>
@@ -99,7 +105,7 @@ export default function ClinicServicesPage() {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Stethoscope className="h-5 w-5 text-primary" /> {service.name}
+                      <Stethoscope className="h-5 w-5 text-primary" /> {getTranslatedField(service, 'name', lang)}
                     </CardTitle>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingService(service); setIsModalOpen(true); }}>
@@ -113,7 +119,7 @@ export default function ClinicServicesPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-4 h-10">
-                    {service.description || 'აღწერა არ არის მითითებული'}
+                    {getTranslatedField(service, 'description', lang) || 'აღწერა არ არის მითითებული'}
                   </p>
                   <div className="flex justify-between items-center pt-2 border-t text-sm">
                     <div className="text-muted-foreground">ხანგრძლივობა: <span className="font-semibold text-foreground">{service.duration_minutes} წთ</span></div>
@@ -136,19 +142,70 @@ export default function ClinicServicesPage() {
               const payload = {
                 name: formData.get('name'),
                 description: formData.get('description'),
+                name_en: formData.get('name_en'),
+                description_en: formData.get('description_en'),
+                name_ru: formData.get('name_ru'),
+                description_ru: formData.get('description_ru'),
+                name_az: formData.get('name_az'),
+                description_az: formData.get('description_az'),
                 base_price: parseFloat(formData.get('base_price') as string),
                 duration_minutes: parseInt(formData.get('duration_minutes') as string),
               };
               upsertMutation.mutate(payload);
             }} className="space-y-4 py-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="name">დასახელება</Label>
-                <Input id="name" name="name" defaultValue={editingService?.name} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="description">აღწერა</Label>
-                <Textarea id="description" name="description" defaultValue={editingService?.description} rows={3} />
-              </div>
+              <Tabs defaultValue="ka" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 h-9">
+                  <TabsTrigger value="ka" className="text-xs">KA</TabsTrigger>
+                  <TabsTrigger value="en" className="text-xs">EN</TabsTrigger>
+                  <TabsTrigger value="ru" className="text-xs">RU</TabsTrigger>
+                  <TabsTrigger value="az" className="text-xs">AZ</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="ka" className="space-y-3 pt-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name">დასახელება</Label>
+                    <Input id="name" name="name" defaultValue={editingService?.name} required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="description">აღწერა</Label>
+                    <Textarea id="description" name="description" defaultValue={editingService?.description} rows={3} />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="en" className="space-y-3 pt-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name_en">Name (EN)</Label>
+                    <Input id="name_en" name="name_en" defaultValue={editingService?.name_en} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="description_en">Description (EN)</Label>
+                    <Textarea id="description_en" name="description_en" defaultValue={editingService?.description_en} rows={3} />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="ru" className="space-y-3 pt-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name_ru">Название (RU)</Label>
+                    <Input id="name_ru" name="name_ru" defaultValue={editingService?.name_ru} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="description_ru">Описание (RU)</Label>
+                    <Textarea id="description_ru" name="description_ru" defaultValue={editingService?.description_ru} rows={3} />
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="az" className="space-y-3 pt-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name_az">Ad (AZ)</Label>
+                    <Input id="name_az" name="name_az" defaultValue={editingService?.name_az} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="description_az">Təsvir (AZ)</Label>
+                    <Textarea id="description_az" name="description_az" defaultValue={editingService?.description_az} rows={3} />
+                  </div>
+                </TabsContent>
+              </Tabs>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="base_price">ფასი (GEL)</Label>

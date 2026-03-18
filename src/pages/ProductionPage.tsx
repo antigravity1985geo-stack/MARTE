@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calculator, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function ProductionPage() {
   const { products } = useProducts();
@@ -20,7 +22,15 @@ export default function ProductionPage() {
   const [recDialogOpen, setRecDialogOpen] = useState(false);
   const [ordDialogOpen, setOrdDialogOpen] = useState(false);
   const [ingForm, setIngForm] = useState({ name: '', unit: 'კგ', price: '', stock: '' });
-  const [recForm, setRecForm] = useState({ name: '', product_id: '', ingredients: [] as { ingredient_id: string; quantity: number }[] });
+  const [recForm, setRecForm] = useState({ 
+    name: '', 
+    product_id: '', 
+    wastage_percent: '0', 
+    labor_cost: '0', 
+    overhead_cost: '0', 
+    production_instructions: '',
+    ingredients: [] as { ingredient_id: string; quantity: number }[] 
+  });
   const [selectedIngredient, setSelectedIngredient] = useState('');
   const [ingQty, setIngQty] = useState('');
   const [ordRecipeId, setOrdRecipeId] = useState('');
@@ -41,10 +51,15 @@ export default function ProductionPage() {
       await addRecipe.mutateAsync({
         name: recForm.name,
         product_id: recForm.product_id || undefined,
+        wastage_percent: parseFloat(recForm.wastage_percent) || 0,
+        labor_cost: parseFloat(recForm.labor_cost) || 0,
+        overhead_cost: parseFloat(recForm.overhead_cost) || 0,
+        production_instructions: recForm.production_instructions,
         ingredients: recForm.ingredients
       });
       toast.success('რეცეპტი დაემატა');
-      setRecDialogOpen(false); setRecForm({ name: '', product_id: '', ingredients: [] });
+      setRecDialogOpen(false); 
+      setRecForm({ name: '', product_id: '', wastage_percent: '0', labor_cost: '0', overhead_cost: '0', production_instructions: '', ingredients: [] });
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -91,8 +106,26 @@ export default function ProductionPage() {
 
           <TabsContent value="recipes" className="space-y-4 mt-4">
             <Button onClick={() => setRecDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />ახალი რეცეპტი</Button>
-            <div className="stat-card"><Table><TableHeader><TableRow><TableHead>სახელი</TableHead><TableHead>ინგრედიენტები</TableHead><TableHead>თვითღირებულება</TableHead></TableRow></TableHeader>
-              <TableBody>{recipes.map((r) => (<TableRow key={r.id}><TableCell className="font-medium">{r.name}</TableCell><TableCell className="text-xs">{r.ingredients.map((ri) => { const ing = ingredients.find((i) => i.id === ri.ingredient_id); return ing ? `${ing.name} x${ri.quantity}` : ''; }).join(', ')}</TableCell><TableCell className="font-semibold">₾{calculateCost(r.id).toFixed(2)}</TableCell></TableRow>))}</TableBody>
+            <div className="stat-card"><Table><TableHeader><TableRow><TableHead>სახელი</TableHead><TableHead>ინგრედიენტები</TableHead><TableHead>ხარჯების დაშლა</TableHead><TableHead className="text-right">თვითღირებულება</TableHead></TableRow></TableHeader>
+              <TableBody>{recipes.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell className="text-xs max-w-[200px] truncate">
+                    {r.ingredients.map((ri) => { 
+                      const ing = ingredients.find((i) => i.id === ri.ingredient_id); 
+                      return ing ? `${ing.name} x${ri.quantity}` : ''; 
+                    }).join(', ')}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                       {r.wastage_percent > 0 && <Badge variant="outline" className="text-[10px] py-0">დანაკარგი: {r.wastage_percent}%</Badge>}
+                       {r.labor_cost > 0 && <Badge variant="outline" className="text-[10px] py-0">ხელფასი: ₾{r.labor_cost}</Badge>}
+                       {r.overhead_cost > 0 && <Badge variant="outline" className="text-[10px] py-0">ზედნ.: ₾{r.overhead_cost}</Badge>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-semibold text-right">₾{calculateCost(r.id).toFixed(2)}</TableCell>
+                </TableRow>
+              ))}</TableBody>
             </Table></div>
           </TabsContent>
 
@@ -123,22 +156,64 @@ export default function ProductionPage() {
         <DialogContent><DialogHeader><DialogTitle>ახალი რეცეპტი</DialogTitle></DialogHeader>
           <div className="grid gap-3">
             <div className="space-y-1"><Label>არაავტომატური სახელი</Label><Input value={recForm.name} onChange={(e) => setRecForm({ ...recForm, name: e.target.value })} /></div>
-            <div className="space-y-1"><Label>დაკავშირებული პროდუქტი (POS-ისთვის)</Label>
-              <Select value={recForm.product_id} onValueChange={(val) => setRecForm({ ...recForm, product_id: val })}>
-                <SelectTrigger><SelectValue placeholder="აირჩიეთ პროდუქტი" /></SelectTrigger>
-                <SelectContent>
-                  {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label>დაკავშირებული პროდუქტი</Label>
+                <Select value={recForm.product_id} onValueChange={(val) => setRecForm({ ...recForm, product_id: val })}>
+                  <SelectTrigger><SelectValue placeholder="აირჩიეთ" /></SelectTrigger>
+                  <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1"><Label>დანაკარგი (Wastage %)</Label><Input type="number" value={recForm.wastage_percent} onChange={(e) => setRecForm({ ...recForm, wastage_percent: e.target.value })} /></div>
             </div>
-            <div className="flex gap-2">
-              <Select value={selectedIngredient} onValueChange={setSelectedIngredient}><SelectTrigger><SelectValue placeholder="ინგრედიენტი" /></SelectTrigger><SelectContent>{ingredients.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent></Select>
-              <Input type="number" placeholder="რაოდ." value={ingQty} onChange={(e) => setIngQty(e.target.value)} className="w-24" />
-              <Button onClick={addIngToRecipe}>+</Button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label>ხელფასი (Labor Cost)</Label><Input type="number" value={recForm.labor_cost} onChange={(e) => setRecForm({ ...recForm, labor_cost: e.target.value })} /></div>
+              <div className="space-y-1"><Label>ზედნადები (Overhead)</Label><Input type="number" value={recForm.overhead_cost} onChange={(e) => setRecForm({ ...recForm, overhead_cost: e.target.value })} /></div>
             </div>
-            {recForm.ingredients.length > 0 && <div className="space-y-1">{recForm.ingredients.map((ri, idx) => { const ing = ingredients.find((i) => i.id === ri.ingredient_id); return <div key={idx} className="text-sm bg-muted/30 px-2 py-1 rounded">{ing?.name} x{ri.quantity}</div>; })}</div>}
+
+            <div className="space-y-1"><Label>ინსტრუქციები (წარმოებისთვის)</Label><Textarea value={recForm.production_instructions} onChange={(e) => setRecForm({ ...recForm, production_instructions: e.target.value })} placeholder="ნაბიჯ-ნაბიჯ ინსტრუქცია..." /></div>
+
+            <div className="border-t pt-3 mt-1">
+              <Label className="mb-2 block">შემადგენლობა (BOM)</Label>
+              <div className="flex gap-2 mb-2">
+                <Select value={selectedIngredient} onValueChange={setSelectedIngredient}><SelectTrigger className="flex-1"><SelectValue placeholder="ინგრედიენტი" /></SelectTrigger><SelectContent>{ingredients.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent></Select>
+                <Input type="number" placeholder="რაოდ." value={ingQty} onChange={(e) => setIngQty(e.target.value)} className="w-20" />
+                <Button variant="secondary" onClick={addIngToRecipe}>+</Button>
+              </div>
+              <div className="max-h-32 overflow-auto space-y-1 bg-muted/20 p-2 rounded-md border min-h-[40px]">
+                {recForm.ingredients.length > 0 ? recForm.ingredients.map((ri, idx) => { 
+                  const ing = ingredients.find((i) => i.id === ri.ingredient_id); 
+                  return (
+                    <div key={idx} className="flex items-center justify-between text-xs bg-background p-1.5 rounded border shadow-sm">
+                      <span>{ing?.name} x{ri.quantity} {ing?.unit}</span>
+                      <span className="text-muted-foreground">₾{(ing ? ing.cost_per_unit * ri.quantity : 0).toFixed(2)}</span>
+                    </div>
+                  ); 
+                }) : <p className="text-[10px] text-muted-foreground text-center py-2">ინგრედიენტები არ არის</p>}
+              </div>
+            </div>
+
+            <div className="bg-primary/5 p-3 rounded-lg border border-primary/20 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary font-semibold">
+                <Calculator className="h-4 w-4" />
+                <span>ჯამური თვითღირებულება:</span>
+              </div>
+              <span className="text-lg font-bold text-primary">
+                ₾{(() => {
+                  const materialCost = recForm.ingredients.reduce((sum, ri) => {
+                    const ing = ingredients.find(i => i.id === ri.ingredient_id);
+                    return sum + (ing ? ing.cost_per_unit * ri.quantity : 0);
+                  }, 0);
+                  const wastage = parseFloat(recForm.wastage_percent) || 0;
+                  const labor = parseFloat(recForm.labor_cost) || 0;
+                  const overhead = parseFloat(recForm.overhead_cost) || 0;
+                  return (materialCost * (1 + wastage / 100) + labor + overhead).toFixed(2);
+                })()}
+              </span>
+            </div>
           </div>
-          <DialogFooter><Button onClick={handleAddRecipe} disabled={addRecipe.isPending}>{addRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}შენახვა</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleAddRecipe} className="w-full" disabled={addRecipe.isPending}>{addRecipe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}რეცეპტის შენახვა</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 

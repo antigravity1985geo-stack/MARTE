@@ -1,13 +1,17 @@
 import { Outlet, useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { usePortal } from "@/hooks/usePortal";
-import { Loader2, Calendar, Clock, User, Home, ShoppingBag } from "lucide-react";
-import { useEffect } from "react";
+import { Loader2, Calendar, Clock, User, Home, ShoppingBag, Globe, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useI18n } from "@/hooks/useI18n";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 
 export const PortalLayout = () => {
   const { tenant_slug } = useParams();
   const { data: tenant, isLoading, error } = usePortal(tenant_slug);
   const location = useLocation();
   const navigate = useNavigate();
+  const { lang, setLang, t } = useI18n();
 
   useEffect(() => {
     const auth = localStorage.getItem(`portal_auth_${tenant_slug}`);
@@ -66,9 +70,38 @@ export const PortalLayout = () => {
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1 opacity-70">Client Portal</span>
           </div>
         </div>
-        <button className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-          <User className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-        </button>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <Globe className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-40 p-1 rounded-2xl mt-2" align="end">
+              <div className="flex flex-col gap-1">
+                {[
+                  { id: 'ka', label: 'ქართული' },
+                  { id: 'en', label: 'English' },
+                  { id: 'ru', label: 'Русский' },
+                  { id: 'az', label: 'Azərbaycan' },
+                ].map((l) => (
+                  <button
+                    key={l.id}
+                    onClick={() => setLang(l.id as any)}
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-colors ${lang === l.id ? 'portal-bg-primary text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  >
+                    {l.label}
+                    {lang === l.id && <Check className="h-4 w-4" />}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <button className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+            <User className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}
@@ -97,7 +130,7 @@ export const PortalLayout = () => {
           <div className={`p-1.5 rounded-xl transition-all duration-300 ${location.pathname.includes('/catalog') ? 'bg-portal-primary/10' : 'group-hover:bg-slate-100/50'}`}>
             <ShoppingBag className={`h-6 w-6 transition-transform duration-300 ${location.pathname.includes('/catalog') ? 'scale-110' : 'group-hover:scale-105'}`} />
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider">კატალოგი</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">{t('catalog')}</span>
           {location.pathname.includes('/catalog') && (
             <div className="absolute -bottom-1 h-1 w-1 rounded-full portal-bg-primary" />
           )}
@@ -109,7 +142,7 @@ export const PortalLayout = () => {
           <div className={`p-1.5 rounded-xl transition-all duration-300 ${location.pathname.includes('/booking') ? 'bg-portal-primary/10' : 'group-hover:bg-slate-100/50'}`}>
             <Calendar className={`h-6 w-6 transition-transform duration-300 ${location.pathname.includes('/booking') ? 'scale-110' : 'group-hover:scale-105'}`} />
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider">დაჯავშნა</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">{t('booking') || 'დაჯავშნა'}</span>
           {location.pathname.includes('/booking') && (
             <div className="absolute -bottom-1 h-1 w-1 rounded-full portal-bg-primary" />
           )}
@@ -121,7 +154,7 @@ export const PortalLayout = () => {
           <div className={`p-1.5 rounded-xl transition-all duration-300 ${location.pathname.includes('/history') ? 'bg-portal-primary/10' : 'group-hover:bg-slate-100/50'}`}>
             <Clock className={`h-6 w-6 transition-transform duration-300 ${location.pathname.includes('/history') ? 'scale-110' : 'group-hover:scale-105'}`} />
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider">ისტორია</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">{t('history')}</span>
           {location.pathname.includes('/history') && (
             <div className="absolute -bottom-1 h-1 w-1 rounded-full portal-bg-primary" />
           )}

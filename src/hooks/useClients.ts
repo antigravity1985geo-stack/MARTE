@@ -20,6 +20,8 @@ export interface SupabaseClient {
   notes: string | null;
   birth_date: string | null;
   created_at: string;
+  referral_code?: string;
+  referred_by?: string;
 }
 
 export interface Promotion {

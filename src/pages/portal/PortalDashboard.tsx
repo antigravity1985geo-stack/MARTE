@@ -7,9 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { LoyaltyCard } from "@/components/portal/LoyaltyCard";
+import { ReferralBonus } from "@/components/portal/ReferralBonus";
 
 export const PortalDashboard = () => {
   const { tenant } = useOutletContext<{ tenant: any }>();
+  // ... (existing code omitted for brevity in thought, but I'll provide the actual replacement)
   const { tenant_slug } = useParams();
   const { user } = useAuthStore();
 
@@ -107,6 +109,13 @@ export const PortalDashboard = () => {
         nextTier={currentTierInfo.next}
         progress={progress}
         clientId={user?.id || ''}
+        primaryColor={tenant?.primary_color}
+      />
+
+      {/* Referral Program */}
+      <ReferralBonus 
+        referralCode={clientData?.referral_code || "------"} 
+        tenantSlug={tenant_slug || ""}
         primaryColor={tenant?.primary_color}
       />
 

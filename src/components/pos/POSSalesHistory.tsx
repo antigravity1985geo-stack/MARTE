@@ -16,9 +16,22 @@ interface POSSalesHistoryProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transactions: Transaction[];
+  offlineSales?: any[];
 }
 
-export function POSSalesHistory({ open, onOpenChange, transactions }: POSSalesHistoryProps) {
+export function POSSalesHistory({ open, onOpenChange, transactions, offlineSales = [] }: POSSalesHistoryProps) {
+    const allSales = [
+        ...offlineSales.map(os => ({
+            id: os.id,
+            type: 'sale',
+            date: new Date(os.timestamp).toISOString(),
+            total: os.payload.p_total,
+            status: 'offline_pending',
+            items: os.payload.p_cart
+        })),
+        ...transactions.filter(t => t.type === 'sale')
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[500px] sm:max-w-xl">
@@ -34,17 +47,20 @@ export function POSSalesHistory({ open, onOpenChange, transactions }: POSSalesHi
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.length === 0 ? (
+              {allSales.length === 0 ? (
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">ისტორია ცარიელია</TableCell></TableRow>
               ) : (
-                transactions.filter((t) => t.type === 'sale').map((t) => (
+                allSales.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="text-xs">{new Date(t.date).toLocaleString('ka-GE')}</TableCell>
                     <TableCell className="text-xs">{(t.items || []).length} ერთ.</TableCell>
                     <TableCell className="font-semibold">₾{t.total.toFixed(2)}</TableCell>
                     <TableCell>
-                      <Badge variant={t.status === 'refunded' ? 'destructive' : 'default'} className="text-[10px]">
-                        {t.status === 'refunded' ? 'სტორნო' : 'დასრულ.'}
+                      <Badge 
+                        variant={t.status === 'offline_pending' ? 'outline' : t.status === 'refunded' ? 'destructive' : 'default'} 
+                        className={`text-[10px] ${t.status === 'offline_pending' ? 'border-amber-500 text-amber-600 animate-pulse' : ''}`}
+                      >
+                        {t.status === 'offline_pending' ? 'მოლოდინში (Offline)' : t.status === 'refunded' ? 'სტორნო' : 'დასრულ.'}
                       </Badge>
                     </TableCell>
                   </TableRow>

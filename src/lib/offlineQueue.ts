@@ -19,6 +19,22 @@ interface POSDB extends DBSchema {
         key: string;
         value: any;
     };
+    portal_catalog: {
+        key: string; // tenant_id
+        value: {
+            id: string;
+            items: any[];
+            timestamp: number;
+        };
+    };
+    portal_history: {
+        key: string; // user_id
+        value: {
+            id: string;
+            items: any[];
+            timestamp: number;
+        };
+    };
 }
 
 const DB_NAME = 'marte_pos_db';
@@ -40,6 +56,12 @@ class OfflineQueue {
                     }
                     if (!db.objectStoreNames.contains('categories_cache')) {
                         db.createObjectStore('categories_cache', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('portal_catalog')) {
+                        db.createObjectStore('portal_catalog', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('portal_history')) {
+                        db.createObjectStore('portal_history', { keyPath: 'id' });
                     }
                 },
             });
@@ -125,6 +147,31 @@ class OfflineQueue {
         const db = await this.getDB();
         if (!db) return [];
         return await db.getAll('categories_cache');
+    }
+
+    // Portal Cache
+    async cachePortalCatalog(tenantId: string, items: any[]) {
+        const db = await this.getDB();
+        if (!db) return;
+        await db.put('portal_catalog', { id: tenantId, items, timestamp: Date.now() });
+    }
+
+    async getCachedPortalCatalog(tenantId: string) {
+        const db = await this.getDB();
+        if (!db) return null;
+        return await db.get('portal_catalog', tenantId);
+    }
+
+    async cachePortalHistory(userId: string, items: any[]) {
+        const db = await this.getDB();
+        if (!db) return;
+        await db.put('portal_history', { id: userId, items, timestamp: Date.now() });
+    }
+
+    async getCachedPortalHistory(userId: string) {
+        const db = await this.getDB();
+        if (!db) return null;
+        return await db.get('portal_history', userId);
     }
 }
 
