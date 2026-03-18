@@ -405,6 +405,36 @@ export default function SuperAdminPage() {
     }));
   }, [allTenants]);
 
+  const groupedFeatures = useMemo(() => {
+    const groups: Record<string, any[]> = {
+      core: [],
+      finance: [],
+      inventory: [],
+      hr: [],
+      industry: [],
+      advanced: []
+    };
+    AVAILABLE_FEATURES.forEach(f => {
+      if (groups[f.category]) {
+        groups[f.category].push(f);
+      } else {
+        // Fallback for unexpected categories
+        if (!groups['advanced']) groups['advanced'] = [];
+        groups['advanced'].push(f);
+      }
+    });
+    return groups;
+  }, []);
+
+  const categoryLabels: Record<string, string> = {
+    core: 'Core & CRM (მთავარი)',
+    finance: 'Finance & Sales (ფინანსები)',
+    inventory: 'Inventory & Warehouse (საწყობი)',
+    hr: 'HR & Management (პერსონალი)',
+    industry: 'Industry Specific (სპეციფიკური)',
+    advanced: 'Advanced (დამატებითი)'
+  };
+
   const isImpersonating = useMemo(() => {
     if (!user?.isSuperadmin || !activeTenantId) return false;
     // If the user is a natural member of this tenant, it's in their tenants list
@@ -1278,41 +1308,53 @@ export default function SuperAdminPage() {
                   <ShieldCheck className="h-4 w-4 text-primary" />
                   მოდულების მართვა (Feature Flags)
                 </Label>
-                <div className="grid grid-cols-2 gap-y-3 gap-x-4 bg-muted/20 p-4 rounded-xl border border-border/50">
-                  {AVAILABLE_FEATURES.map(feat => {
-                    const isActive = editFeatures[feat.id] !== false;
-                    return (
-                      <div 
-                        key={feat.id} 
-                        className={`flex items-center justify-between p-2 rounded-lg transition-all border ${
-                          isActive 
-                            ? 'bg-emerald-500/5 border-emerald-500/10' 
-                            : 'bg-muted/50 border-transparent opacity-60'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {isActive ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                          ) : (
-                            <Lock className="h-4 w-4 text-muted-foreground/50" />
-                          )}
-                          <Label 
-                            htmlFor={`feature-${feat.id}`} 
-                            className={`text-xs font-medium cursor-pointer ${
-                              isActive ? 'text-foreground' : 'text-muted-foreground'
-                            }`}
-                          >
-                            {feat.label}
-                          </Label>
+                <div className="space-y-6 bg-muted/20 p-4 rounded-xl border border-border/50">
+                  {Object.entries(groupedFeatures).map(([categoryId, features]) => (
+                    features.length > 0 && (
+                      <div key={categoryId} className="space-y-3">
+                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-2 border-b border-border/50 pb-1">
+                          {categoryLabels[categoryId]}
+                        </Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {features.map(feat => {
+                            const isActive = editFeatures[feat.id] !== false;
+                            return (
+                              <div 
+                                key={feat.id} 
+                                className={`flex items-center justify-between p-2 rounded-lg transition-all border ${
+                                  isActive 
+                                    ? 'bg-emerald-500/5 border-emerald-500/10' 
+                                    : 'bg-muted/50 border-transparent opacity-60'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {isActive ? (
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                  ) : (
+                                    <Lock className="h-4 w-4 text-muted-foreground/50" />
+                                  )}
+                                  <Label 
+                                    htmlFor={`feature-${feat.id}`} 
+                                    className={`text-xs font-medium cursor-pointer ${
+                                      isActive ? 'text-foreground' : 'text-muted-foreground'
+                                    }`}
+                                  >
+                                    {feat.label}
+                                  </Label>
+                                </div>
+                                <Switch 
+                                  id={`feature-${feat.id}`} 
+                                  checked={isActive}
+                                  onCheckedChange={(checked) => setEditFeatures(prev => ({ ...prev, [feat.id]: checked }))}
+                                  className="scale-90"
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
-                        <Switch 
-                          id={`feature-${feat.id}`} 
-                          checked={isActive}
-                          onCheckedChange={(checked) => setEditFeatures(prev => ({ ...prev, [feat.id]: checked }))}
-                        />
                       </div>
-                    );
-                  })}
+                    )
+                  ))}
                 </div>
               </div>
 
@@ -1446,42 +1488,53 @@ export default function SuperAdminPage() {
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 მოდულების გააქტიურება
               </Label>
-              <div className="grid grid-cols-2 gap-y-3 gap-x-4 bg-muted/30 p-3 rounded-lg border border-border/50">
-                {AVAILABLE_FEATURES.map(feat => {
-                  const isActive = addFeatures[feat.id] !== false;
-                  return (
-                    <div 
-                      key={feat.id} 
-                      className={`flex items-center justify-between p-1.5 rounded-md transition-all border ${
-                        isActive 
-                          ? 'bg-emerald-500/5 border-emerald-500/10' 
-                          : 'bg-muted/50 border-transparent opacity-60'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        {isActive ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                        ) : (
-                          <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                        )}
-                        <Label 
-                          htmlFor={`new-feature-${feat.id}`} 
-                          className={`text-[10px] cursor-pointer ${
-                            isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
-                          }`}
-                        >
-                          {feat.label}
-                        </Label>
+              <div className="space-y-4 bg-muted/30 p-3 rounded-lg border border-border/50 max-h-[40vh] overflow-y-auto">
+                {Object.entries(groupedFeatures).map(([categoryId, features]) => (
+                  features.length > 0 && (
+                    <div key={categoryId} className="space-y-2">
+                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-2 border-b border-border/50 pb-0.5">
+                        {categoryLabels[categoryId]}
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {features.map(feat => {
+                          const isActive = addFeatures[feat.id] !== false;
+                          return (
+                            <div 
+                              key={feat.id} 
+                              className={`flex items-center justify-between p-1.5 rounded-md transition-all border ${
+                                isActive 
+                                  ? 'bg-emerald-500/5 border-emerald-500/10' 
+                                  : 'bg-muted/50 border-transparent opacity-60'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                {isActive ? (
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                ) : (
+                                  <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                )}
+                                <Label 
+                                  htmlFor={`new-feature-${feat.id}`} 
+                                  className={`text-[10px] cursor-pointer ${
+                                    isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
+                                  }`}
+                                >
+                                  {feat.label}
+                                </Label>
+                              </div>
+                              <Switch 
+                                id={`new-feature-${feat.id}`} 
+                                checked={isActive}
+                                onCheckedChange={(checked) => setAddFeatures(prev => ({ ...prev, [feat.id]: checked }))}
+                                className="scale-75"
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
-                      <Switch 
-                        id={`new-feature-${feat.id}`} 
-                        checked={isActive}
-                        onCheckedChange={(checked) => setAddFeatures(prev => ({ ...prev, [feat.id]: checked }))}
-                        className="scale-90"
-                      />
                     </div>
-                  );
-                })}
+                  )
+                ))}
               </div>
             </div>
 
