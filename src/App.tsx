@@ -89,6 +89,8 @@ const PortalBooking = lazy(() => import('@/pages/portal/PortalBooking').then(m =
 const PortalHistory = lazy(() => import('@/pages/portal/PortalHistory').then(m => ({ default: m.PortalHistory })));
 const PortalCatalog = lazy(() => import('@/pages/portal/PortalCatalog').then(m => ({ default: m.PortalCatalog })));
 const PortalAuth = lazy(() => import('@/pages/portal/PortalAuth').then(m => ({ default: m.PortalAuth })));
+const PortalPaymentSuccess = lazy(() => import('@/pages/portal/PortalPaymentSuccess'));
+const PortalPaymentFailure = lazy(() => import('@/pages/portal/PortalPaymentFailure'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -192,6 +194,8 @@ const App = () => (
                   <Route path="catalog" element={<PortalCatalog />} />
                   <Route path="booking" element={<PortalBooking />} />
                   <Route path="history" element={<PortalHistory />} />
+                  <Route path="payment-success" element={<PortalPaymentSuccess />} />
+                  <Route path="payment-failure" element={<PortalPaymentFailure />} />
                 </Route>
 
                 {/* Legacy Redirects */}

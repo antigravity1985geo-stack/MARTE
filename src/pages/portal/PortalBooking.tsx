@@ -1,17 +1,20 @@
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Clock, ChevronRight, Sparkles, CreditCard, Wallet, Check, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, ChevronRight, Sparkles, CreditCard, Wallet, Check, AlertCircle, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const PortalBooking = () => {
   const { tenant } = useOutletContext<{ tenant: any }>();
   const [selectedService, setSelectedService] = useState<any>(null);
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'onsite' | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
+  const navigate = useNavigate();
 
   const { data: services, isLoading } = useQuery({
     queryKey: ['portal-services', tenant.id, tenant.industry],
@@ -31,12 +34,34 @@ export const PortalBooking = () => {
     }
   });
 
-  const handleBooking = () => {
+  const handleBooking = async () => {
     if (paymentMethod === 'online') {
-      // Simulate Redirect to TBC/BOG
-      console.log("Redirecting to Checkout...");
+      setIsPaying(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('create-checkout', {
+          body: {
+            amount: selectedService?.price || selectedService?.sell_price || selectedService?.base_price,
+            currency: 'GEL',
+            appointment_id: 'temp-' + Math.random().toString(36).substr(2, 9),
+            tenant_id: tenant.id,
+            success_url: `${window.location.origin}/portal/${tenant.slug}/payment-success`,
+            failure_url: `${window.location.origin}/portal/${tenant.slug}/payment-failure`,
+          }
+        });
+
+        if (error) throw error;
+        if (data?.checkout_url) {
+          window.location.href = data.checkout_url;
+        }
+      } catch (err: any) {
+        console.error('Payment error:', err);
+        toast.error('გადახდის ინიცირება ვერ მოხერხდა: ' + err.message);
+      } finally {
+        setIsPaying(false);
+      }
     } else {
-      console.log("Booking confirmed for onsite payment");
+      toast.success("ვიზიტი წარმატებით დაიჯავშნა!");
+      navigate('/portal/history');
     }
   };
 
@@ -132,11 +157,17 @@ export const PortalBooking = () => {
           </div>
 
           <Button 
-            disabled={!paymentMethod}
+            disabled={!paymentMethod || isPaying}
             onClick={handleBooking}
             className="w-full h-16 portal-bg-primary rounded-3xl text-lg font-black shadow-2xl shadow-portal-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
           >
-             {paymentMethod === 'online' ? 'გადახდა და დადასტურება' : 'დაჯავშნა'}
+             {isPaying ? (
+               <Loader2 className="h-6 w-6 animate-spin" />
+             ) : paymentMethod === 'online' ? (
+               'გადახდა და დადასტურება'
+             ) : (
+               'დაჯავშნა'
+             )}
           </Button>
           <Button variant="ghost" onClick={() => setStep(1)} className="w-full font-bold text-muted-foreground uppercase text-xs h-10">
              უკან დაბრუნება
