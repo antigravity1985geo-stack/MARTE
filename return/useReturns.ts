@@ -1,7 +1,7 @@
-// src/hooks/useReturns.ts
+// hooks/useReturns.ts
 import { useState, useCallback } from 'react'
-import { supabase } from '@/integrations/supabase/client'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/hooks/useAuth'
 import {
   OriginalTransaction,
   OriginalTransactionItem,
@@ -59,6 +59,7 @@ export function useTransactionSearch() {
         .from('return_items')
         .select('original_item_id, returned_qty')
         .in('original_item_id', itemIds)
+        .eq('returns.status', 'completed') // join filter
 
       // Build returned qty map
       const returnedQtyMap: Record<string, number> = {}
@@ -112,7 +113,7 @@ export function useTransactionSearch() {
 // ─── Create Return (RPC) ─────────────────────────────────────────
 
 export function useCreateReturn(tenantId: string) {
-  const user = useAuthStore(s => s.user)
+  const { user } = useAuth()
   const [busy, setBusy] = useState(false)
 
   const createReturn = useCallback(async (

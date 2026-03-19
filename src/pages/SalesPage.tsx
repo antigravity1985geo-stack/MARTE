@@ -18,6 +18,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { addGeorgianFont } from '@/lib/pdfHelper';
+import { RefundBadge } from '@/components/pos/POSRefundIntegration';
 
 export default function SalesPage() {
   const { transactions, isLoading } = useTransactions();
@@ -141,6 +142,7 @@ export default function SalesPage() {
                     <Badge variant={tr.status === 'refunded' ? 'destructive' : 'default'}>
                       {tr.status === 'refunded' ? t('sales_refunded') : t('sales_completed')}
                     </Badge>
+                    <RefundBadge txId={tr.id} />
                     <span className="text-xs text-muted-foreground">{t('sales_cashier')}: {getCashierName(tr.cashier_id)}</span>
                   </div>
                 </div>
@@ -181,6 +183,9 @@ export default function SalesPage() {
                         <Badge variant={tr.status === 'refunded' ? 'destructive' : 'default'}>
                           {tr.status === 'refunded' ? t('sales_refunded') : t('sales_completed')}
                         </Badge>
+                        <div className="mt-1">
+                          <RefundBadge txId={tr.id} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

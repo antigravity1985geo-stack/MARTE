@@ -45,6 +45,7 @@ interface POSPaymentDialogProps {
   onCreateWaybillChange: (val: boolean) => void;
   tipAmount?: string;
   onTipAmountChange?: (val: string) => void;
+  canAcceptCash?: boolean;
 }
 
 export function POSPaymentDialog({
@@ -58,7 +59,8 @@ export function POSPaymentDialog({
   loyaltyDiscount = 0, pointsToEarn = 0,
   selectedClientData,
   createWaybill, onCreateWaybillChange,
-  tipAmount = '', onTipAmountChange
+  tipAmount = '', onTipAmountChange,
+  canAcceptCash = true
 }: POSPaymentDialogProps) {
   const [openClientPopover, setOpenClientPopover] = useState(false);
 
@@ -92,9 +94,9 @@ export function POSPaymentDialog({
         )}
         <Tabs value={paymentMethod} onValueChange={(v) => onPaymentMethodChange(v as any)}>
           <TabsList className="grid grid-cols-4 w-full h-auto flex-wrap mb-4">
-            <TabsTrigger value="cash">ნაღდი</TabsTrigger>
+            <TabsTrigger value="cash" disabled={!canAcceptCash}>ნაღდი {!canAcceptCash && '🔒'}</TabsTrigger>
             <TabsTrigger value="card">ბარათი</TabsTrigger>
-            <TabsTrigger value="combined">შერეული</TabsTrigger>
+            <TabsTrigger value="combined" disabled={!canAcceptCash}>შერეული {!canAcceptCash && '🔒'}</TabsTrigger>
             <TabsTrigger value="bog_qr" className="bg-[#FF6A00]/10 text-[#FF6A00] data-[state=active]:bg-[#FF6A00] data-[state=active]:text-white">BOG QR</TabsTrigger>
             <TabsTrigger value="tbc_pay" className="bg-[#00A3E0]/10 text-[#00A3E0] data-[state=active]:bg-[#00A3E0] data-[state=active]:text-white">TBC Pay</TabsTrigger>
             <TabsTrigger value="keepz" className="col-span-1">Keepz</TabsTrigger>
@@ -262,7 +264,11 @@ export function POSPaymentDialog({
         )}
 
         <DialogFooter>
-          <Button className="w-full" onClick={onPayment} disabled={isPending}>
+          <Button 
+            className="w-full" 
+            onClick={onPayment} 
+            disabled={isPending || ((paymentMethod === 'cash' || paymentMethod === 'combined') && !canAcceptCash)}
+          >
             <DollarSign className="mr-2 h-4 w-4" /> გადახდა ₾{finalTotal.toFixed(2)}
           </Button>
         </DialogFooter>

@@ -138,6 +138,8 @@ const t = {
   nav_clinic_calendar: { ka: 'კლინიკის კალენდარი', en: 'Clinic Calendar' },
   nav_salon: { ka: 'სალონი / ჯავშნები', en: 'Salon / Bookings' },
   nav_company: { ka: 'კომპანია', en: 'Company' },
+  nav_cash_drawer: { ka: 'სალარო (ნაღდი ფული)', en: 'Cash Drawer', ru: 'Касса', az: 'Kassa' },
+  nav_returns: { ka: 'დაბრუნებები', en: 'Returns', ru: 'Возвраты', az: 'Qayıdışlar' },
   logout: { ka: 'გამოსვლა', en: 'Logout' },
 
   // ─── Auth Page ────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import {
   UserCog, Clock, ListOrdered, LogOut,
   Menu, X, Activity,
   Globe, Building2, Building,
-  ShieldCheck, CalendarDays, Lock, Home, Key, Stethoscope, Wallet2, Settings, Gift, Scissors
+  ShieldCheck, CalendarDays, Lock, Home, Key, Stethoscope, Wallet2, Settings, Gift, Scissors, RotateCcw
 } from 'lucide-react';
 import { Heart } from 'lucide-react';
 import { AVAILABLE_FEATURES, isFeatureLocked, IndustryType, PlanType } from '@/config/features';
@@ -49,7 +49,11 @@ const getSections = (
     title: t('nav_section_main'),
     items: [
       { title: t('nav_dashboard'), icon: LayoutDashboard, path: '/app' },
-      ...(isEnabled('pos') ? [{ title: t('nav_pos'), icon: Monitor, path: '/app/pos' }] : []),
+      ...(isEnabled('pos') ? [
+        { title: t('nav_pos'), icon: Monitor, path: '/app/pos' },
+        { title: t('nav_returns'), icon: RotateCcw, path: '/app/pos/refund' },
+        { title: t('nav_cash_drawer'), icon: Wallet2, path: '/app/pos/cash-drawer' }
+      ] : []),
       ...(isEnabled('real_estate') || isSuperadmin ? [{ title: 'Real Estate Home', icon: Home, path: '/app/real-estate' }] : []),
       ...(isEnabled('clinic') || isSuperadmin ? [{ title: t('nav_clinic_calendar'), icon: CalendarDays, path: '/app/clinic/calendar' }] : []),
       ...(isEnabled('salon') || isSuperadmin ? [{ title: t('nav_salon'), icon: CalendarDays, path: '/app/salon/calendar' }] : []),

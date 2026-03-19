@@ -37,9 +37,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useHardwareScanner } from '@/hooks/useHardwareScanner';
 import { useI18n } from '@/hooks/useI18n';
 import { getTranslatedField } from '@/lib/i18n/content';
-import type { CartItem } from '@/components/pos/POSCart';
-import { useHotkeys } from 'react-hotkeys-hook'; // New import
 import { calculateCartTotal, calculateLoyaltyDiscount } from '@/lib/posMath';
+import { useActiveSession, useDrawers, useCashDrawerActions } from '@/hooks/useCashDrawer';
+import { NoCashDrawerBanner, CashDrawerStatusWidget, useCashPaymentGuard } from '@/components/pos/POSCashDrawerIntegration';
+import { RefundButton } from '@/components/pos/POSRefundIntegration';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useHotkeys } from 'react-hotkeys-hook';
+import type { CartItem } from '@/components/pos/POSCart';
 
 export default function POSPage() {
   useRealtimeSync(['products', 'transactions', 'shift_sales', 'queue_tickets']);
@@ -60,6 +64,22 @@ export default function POSPage() {
   const { addEntry } = useAccounting();
   const { t, lang } = useI18n();
   const isMobile = useIsMobile();
+  const activeTenantId = useAuthStore(s => s.activeTenantId);
+
+  // Cash Drawer Integration
+  const { drawers } = useDrawers();
+  const [selectedDrawerId, setSelectedDrawerId] = useState<string | null>(() => localStorage.getItem('pos_drawer_id'));
+  const { session: activeSession } = useActiveSession(selectedDrawerId || '');
+  const { recordSale } = useCashDrawerActions(activeTenantId || '');
+  const { canAcceptCash } = useCashPaymentGuard(selectedDrawerId || '');
+
+  // Auto-select first drawer if none selected
+  useEffect(() => {
+    if (!selectedDrawerId && drawers.length > 0) {
+      setSelectedDrawerId(drawers[0].id);
+      localStorage.setItem('pos_drawer_id', drawers[0].id);
+    }
+  }, [drawers, selectedDrawerId]);
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     try { return JSON.parse(localStorage.getItem('pos_cart') || '[]'); } catch { return []; }
@@ -454,6 +474,16 @@ export default function POSPage() {
       clearCart();
       setPaymentOpen(false);
       setCreateWaybill(false);
+
+      // 6. Cash Drawer Transaction Recording
+      if (activeSession && selectedDrawerId && (paymentMethod === 'cash' || (paymentMethod === 'combined' && cashPaid > 0))) {
+        await recordSale(
+          activeSession.id,
+          selectedDrawerId,
+          paymentMethod === 'cash' ? finalTotal : cashPaid,
+          txId
+        );
+      }
     } catch (err: any) {
       toast.error(err.message || (t('sale_error') || 'ოკ'));
     }
@@ -543,7 +573,12 @@ export default function POSPage() {
               </div>
             )}
             <NetworkStatus onSync={syncOfflineQueue} />
+            {selectedDrawerId && <CashDrawerStatusWidget drawerId={selectedDrawerId} onClick={() => setHistoryOpen(true)} />}
           </div>
+
+          {!activeSession && selectedDrawerId && (
+            <NoCashDrawerBanner onOpen={() => window.open('/app/pos/cash-drawer', '_blank')} />
+          )}
 
           {/* Categories & Navigation */}
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -595,6 +630,7 @@ export default function POSPage() {
               <>
                 <Button size="sm" onClick={() => cart.length > 0 && setPaymentOpen(true)}>{t('pos_checkout_f1') || 'ოკ'}</Button>
                 <Button size="sm" variant="outline" onClick={() => setScannerOpen(true)}><ScanLine className="mr-1 h-4 w-4" />{t('pos_scanner_f2') || 'ოკ'}</Button>
+                <RefundButton compact={!isMobile} />
                 <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>{t('pos_history_f3') || 'ოკ'}</Button>
                 <Button size="sm" variant="outline" onClick={() => setHoldOrderOpen(true)} className="relative">
                   შეჩერებული
@@ -730,6 +766,7 @@ export default function POSPage() {
         onCreateWaybillChange={setCreateWaybill}
         tipAmount={tipAmount}
         onTipAmountChange={setTipAmount}
+        canAcceptCash={canAcceptCash}
       />
 
       {/* Shift Dialog */}

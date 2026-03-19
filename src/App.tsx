@@ -78,10 +78,12 @@ const ClinicPatientsPage = lazy(() => import('@/pages/clinic/ClinicPatientsPage'
 const ClinicPatientDetailsPage = lazy(() => import('@/pages/clinic/ClinicPatientDetailsPage'));
 const ClinicServicesPage = lazy(() => import('@/pages/clinic/ClinicServicesPage'));
 const SalonServicesPage = lazy(() => import('@/pages/salon/SalonServicesPage'));
+const CashDrawerPage = lazy(() => import('@/pages/pos/CashDrawerPage'));
 const RealEstateDashboard = lazy(() => import('@/pages/real-estate/RealEstateDashboard'));
 const PropertyList = lazy(() => import('@/pages/real-estate/PropertyList'));
 const MortgageManagement = lazy(() => import('@/pages/real-estate/MortgageManagement'));
 const MarteDistributorPage = lazy(() => import('@/pages/MarteDistributorPage'));
+const RefundPage = lazy(() => import('@/pages/pos/RefundPage'));
 
 // Portal Pages
 const PortalLayout = lazy(() => import('@/components/portal/PortalLayout').then(m => ({ default: m.PortalLayout })));
@@ -209,6 +211,8 @@ const App = () => (
                   {/* ყველასთვის ხელმისაწვდომი */}
                   <Route index element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
                   <Route path="pos" element={<ErrorBoundary><POSPage /></ErrorBoundary>} />
+                  <Route path="pos/refund" element={<ErrorBoundary><RefundPage /></ErrorBoundary>} />
+                  <Route path="pos/cash-drawer" element={<ErrorBoundary><CashDrawerPage /></ErrorBoundary>} />
                   <Route path="products" element={<ErrorBoundary><ProductsPage /></ErrorBoundary>} />
                   <Route path="bundles" element={<ErrorBoundary><BundlesPage /></ErrorBoundary>} />
                   <Route path="price-rules" element={<ErrorBoundary><PriceRulesPage /></ErrorBoundary>} />
