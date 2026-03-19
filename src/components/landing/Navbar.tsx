@@ -48,6 +48,7 @@ const modules = [
 const navLinks = [
   { label: "მთავარი", href: "#hero" },
   { label: "ჩვენი პროექტი", href: "#modules", hasMega: true },
+  { label: "ინდუსტრიები", href: "#industries" },
   { label: "ჩვენს შესახებ", href: "#about" },
   { label: "სამომავლო გეგმები", href: "#roadmap" },
   { label: "კონტაქტი", href: "#contact" },

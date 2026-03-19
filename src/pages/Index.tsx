@@ -4,6 +4,7 @@ import FeaturesGrid from "@/components/landing/FeaturesGrid";
 import POSAnimationSection from "@/components/landing/POSAnimationSection";
 import AboutSection from "@/components/landing/AboutSection";
 import RoadmapSection from "@/components/landing/RoadmapSection";
+import IndustryShowcase from "@/components/landing/IndustryShowcase";
 import Footer from "@/components/landing/Footer";
 
 const Index = () => {
@@ -12,6 +13,7 @@ const Index = () => {
       <Navbar />
       <HeroSection />
       <FeaturesGrid />
+      <IndustryShowcase />
       <POSAnimationSection />
       <AboutSection />
       <RoadmapSection />
