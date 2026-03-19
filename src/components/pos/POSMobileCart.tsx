@@ -2,7 +2,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { SwipeToDelete } from '@/components/SwipeToDelete';
-import { ShoppingCart, Plus, Minus, Trash2, CreditCard } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, CreditCard, UserCheck } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CartItem {
   id: string;
@@ -11,24 +12,27 @@ interface CartItem {
   price: number;
   quantity: number;
   image?: string;
+  employeeId?: string;
 }
 
 interface POSMobileCartProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cart: CartItem[];
+  employees: { id: string, full_name: string }[];
   finalTotal: number;
   cartItemCount: number;
   couponDiscount: number;
   onUpdateQuantity: (productId: string, delta: number) => void;
+  onUpdateEmployee: (cartItemId: string, employeeId: string) => void;
   onRemove: (productId: string) => void;
   onClear: () => void;
   onPayment: () => void;
 }
 
 export function POSMobileCart({
-  open, onOpenChange, cart, finalTotal, cartItemCount, couponDiscount,
-  onUpdateQuantity, onRemove, onClear, onPayment,
+  open, onOpenChange, cart, employees, finalTotal, cartItemCount, couponDiscount,
+  onUpdateQuantity, onUpdateEmployee, onRemove, onClear, onPayment,
 }: POSMobileCartProps) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -66,7 +70,23 @@ export function POSMobileCart({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">₾{item.price.toFixed(2)} × {item.quantity}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">₾{item.price.toFixed(2)} × {item.quantity}</p>
+                        <Select 
+                          value={item.employeeId || ""} 
+                          onValueChange={(val) => onUpdateEmployee(item.id, val)}
+                        >
+                          <SelectTrigger className="h-5 w-24 text-[9px] py-0 px-1 bg-muted/50 border-none">
+                            <UserCheck className="h-2.5 w-2.5 mr-1" />
+                            <SelectValue placeholder="პერსონალი" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {employees.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id} className="text-[10px]">{emp.full_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="flex items-center gap-0.5 bg-muted rounded-lg">
                       <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" onClick={() => onUpdateQuantity(item.productId, -1)}>

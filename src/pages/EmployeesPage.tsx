@@ -9,7 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEmployees, Employee, Attendance, SalarySlip, Leave, PerformanceReview } from '@/hooks/useEmployees';
+import { useEmployees, Employee, Attendance, SalarySlip, Leave, PerformanceReview, StaffWorkingHours } from '@/hooks/useEmployees';
+import { useServiceManagement } from '@/hooks/useServiceManagement';
+import { useProducts } from '@/hooks/useProducts';
 import { Users, Clock, CalendarDays, UserPlus, Search, Loader2, Save, Stethoscope, DollarSign, Star, FileText, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -106,7 +108,9 @@ export default function EmployeesPage() {
   
   const [activeTab, setActiveTab] = useState('employees');
   const [search, setSearch] = useState('');
-  const { employees, attendance, salarySlips, leaves, reviews, isLoading, addEmployee, updateEmployee, logAttendance, createSalarySlip, paySalary, requestLeave, updateLeaveStatus, addPerformanceReview } = useEmployees();
+  const { employees, attendance, salarySlips, leaves, reviews, isLoading, addEmployee, updateEmployee, logAttendance, createSalarySlip, paySalary, requestLeave, updateLeaveStatus, addPerformanceReview, workingHours, saveWorkingHours } = useEmployees();
+  const { commissionRules, saveCommissionRule } = useServiceManagement();
+  const { products } = useProducts();
 
   const currentRoles = ROLES_BY_INDUSTRY[currentIndustry] || COMMON_ROLES;
   const isClinic = currentIndustry === 'clinic';
@@ -198,6 +202,10 @@ export default function EmployeesPage() {
     pending: t('status_pending') || 'Pending', approved: t('status_approved') || 'Approved', rejected: t('status_rejected') || 'Rejected'
   };
   const MONTHS = [t('jan'), t('feb'), t('mar'), t('apr'), t('may'), t('jun'), t('jul'), t('aug'), t('sep'), t('oct'), t('nov'), t('dec')].map(s => s || '');
+
+  const WEEK_DAYS = ['ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი', 'პარასკევი', 'შაბათი', 'კვირა'];
+  const [selectedScheduleEmp, setSelectedScheduleEmp] = useState<string | null>(null);
+  const [selectedCommEmp, setSelectedCommEmp] = useState<string | null>(null);
 
 
   return (
@@ -372,6 +380,14 @@ export default function EmployeesPage() {
             <TabsTrigger value="reviews" className="gap-2">
               <Star className="h-4 w-4" />
               {t('reviews_tab') || 'Reviews'}
+            </TabsTrigger>
+            <TabsTrigger value="schedules" className="gap-2 text-primary font-bold">
+              <CalendarDays className="h-4 w-4" />
+              {t('schedules_tab') || 'გრაფიკები'}
+            </TabsTrigger>
+            <TabsTrigger value="commissions" className="gap-2 text-primary font-bold">
+              <Star className="h-4 w-4" />
+              {t('commissions_tab') || 'საკომისიოები'}
             </TabsTrigger>
           </TabsList>
 
@@ -613,45 +629,143 @@ export default function EmployeesPage() {
             </Card>
           </TabsContent>
 
-          {/* ============ REVIEWS TAB ============ */}
-          <TabsContent value="reviews" className="mt-6 space-y-4">
-            <div className="flex justify-between">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Star className="h-5 w-5 text-primary" />
-                {t('reviews_title') || 'Reviews'}
-              </h3>
-              <Button onClick={() => setReviewFormOpen(true)} size="sm">{t('add_review') || '+ Review'}</Button>
+          {/* ============ SCHEDULES TAB ============ */}
+          <TabsContent value="schedules" className="mt-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card className="md:col-span-1">
+                <CardHeader><CardTitle className="text-sm">თანამშრომელი</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {employees.map(emp => (
+                    <Button 
+                      key={emp.id} 
+                      variant={selectedScheduleEmp === emp.id ? "default" : "ghost"}
+                      className="w-full justify-start text-xs"
+                      onClick={() => setSelectedScheduleEmp(emp.id)}
+                    >
+                      {emp.full_name}
+                    </Button>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {selectedScheduleEmp ? (
+                <Card className="md:col-span-3">
+                  <CardHeader><CardTitle className="text-lg">კვირის გრაფიკი: {employees.find(e => e.id === selectedScheduleEmp)?.full_name}</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {WEEK_DAYS.map((day, idx) => {
+                        const existing = workingHours(selectedScheduleEmp).data?.find(h => h.day_of_week === idx);
+                        return (
+                          <div key={idx} className="flex items-center gap-4 p-3 border rounded-lg bg-muted/20">
+                            <span className="w-24 font-bold text-sm">{day}</span>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="time" 
+                                className="w-32 h-8 text-xs" 
+                                disabled={existing?.is_off}
+                                value={existing?.start_time || "09:00"}
+                                onChange={(e) => saveWorkingHours.mutate({ employee_id: selectedScheduleEmp, day_of_week: idx, start_time: e.target.value, is_off: false })}
+                              />
+                              <span>-</span>
+                              <Input 
+                                type="time" 
+                                className="w-32 h-8 text-xs" 
+                                disabled={existing?.is_off}
+                                value={existing?.end_time || "18:00"}
+                                onChange={(e) => saveWorkingHours.mutate({ employee_id: selectedScheduleEmp, day_of_week: idx, end_time: e.target.value, is_off: false })}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 ml-auto">
+                              <Checkbox 
+                                checked={existing?.is_off || false} 
+                                onCheckedChange={(checked) => saveWorkingHours.mutate({ employee_id: selectedScheduleEmp, day_of_week: idx, is_off: !!checked })}
+                              />
+                              <Label className="text-xs">დასვენება</Label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="md:col-span-3 flex items-center justify-center p-20 border-2 border-dashed rounded-xl grayscale opacity-50">
+                   <p className="text-muted-foreground">აირჩიეთ თანამშრომელი გრაფიკის სანახავად</p>
+                </div>
+              )}
             </div>
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader><TableRow>
-                    <TableHead>{t('emp_name_col') || 'Employee'}</TableHead>
-                    <TableHead>{t('date_col') || 'Date'}</TableHead>
-                    <TableHead>{t('review_score_col') || 'Score'}</TableHead>
-                    <TableHead>{t('review_comment_col') || 'Comment'}</TableHead>
-                    <TableHead>{t('reviewer_col') || 'Reviewer'}</TableHead>
-                  </TableRow></TableHeader>
-                  <TableBody>
-                    {reviews.map(review => {
-                      const emp = employees.find(e => e.id === review.employee_id);
-                      return (
-                        <TableRow key={review.id}>
-                          <TableCell>{emp?.full_name || '—'}</TableCell>
-                          <TableCell>{new Date(review.review_date).toLocaleDateString(lang === 'ka' ? 'ka-GE' : 'en-US')}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-0.5">{Array.from({length: 5}).map((_, i) => <Star key={i} className={`h-4 w-4 ${i < review.performance_score ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />)}</div>
-                          </TableCell>
-                          <TableCell>{review.comments || '—'}</TableCell>
-                          <TableCell>{review.reviewer_name || '—'}</TableCell>
+          </TabsContent>
+
+          {/* ============ COMMISSIONS TAB ============ */}
+          <TabsContent value="commissions" className="mt-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card className="md:col-span-1">
+                <CardHeader><CardTitle className="text-sm">თანამშრომელი</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {employees.map(emp => (
+                    <Button 
+                      key={emp.id} 
+                      variant={selectedCommEmp === emp.id ? "default" : "ghost"}
+                      className="w-full justify-start text-xs"
+                      onClick={() => setSelectedCommEmp(emp.id)}
+                    >
+                      {emp.full_name}
+                    </Button>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {selectedCommEmp ? (
+                <Card className="md:col-span-3">
+                  <CardHeader><CardTitle className="text-lg">საკომისიოს წესები: {employees.find(e => e.id === selectedCommEmp)?.full_name}</CardTitle></CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>სერვისი</TableHead>
+                          <TableHead>პროცენტი (%)</TableHead>
+                          <TableHead>ფიქსირებული (₾)</TableHead>
+                          <TableHead></TableHead>
                         </TableRow>
-                      );
-                    })}
-                    {reviews.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t('no_reviews') || 'No reviews yet'}</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {products.filter(p => p.type === 'service').map(service => {
+                          const rule = commissionRules.find(r => r.employee_id === selectedCommEmp && r.service_id === service.id);
+                          return (
+                            <TableRow key={service.id}>
+                              <TableCell className="text-xs font-medium">{service.name}</TableCell>
+                              <TableCell>
+                                <Input 
+                                  type="number" 
+                                  className="w-20 h-8 text-xs font-mono" 
+                                  defaultValue={rule?.percentage || 0}
+                                  onBlur={(e) => saveCommissionRule.mutate({ employee_id: selectedCommEmp, service_id: service.id, percentage: Number(e.target.value) })}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input 
+                                  type="number" 
+                                  className="w-20 h-8 text-xs font-mono" 
+                                  defaultValue={rule?.fixed_amount || 0}
+                                  onBlur={(e) => saveCommissionRule.mutate({ employee_id: selectedCommEmp, service_id: service.id, fixed_amount: Number(e.target.value) })}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                {(rule?.percentage! > 0 || rule?.fixed_amount! > 0) && <Badge variant="secondary" className="bg-green-100 text-green-700">აქტიური</Badge>}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="md:col-span-3 flex items-center justify-center p-20 border-2 border-dashed rounded-xl grayscale opacity-50">
+                   <p className="text-muted-foreground">აირჩიეთ თანამშრომელი წესების დასამატებლად</p>
+                </div>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
 

@@ -21,13 +21,15 @@ import { ReceiptPopup } from '@/components/ReceiptPopup';
 import { createFiscalReceipt, saveWaybill } from '@/lib/rsge';
 import { BarcodeScanner } from '@/components/BarcodeScanner';
 import { POSProductGrid, POSCart, POSPaymentDialog, POSShiftDialog, POSMobileCart, POSSalesHistory } from '@/components/pos';
+import { POSHoldOrdersDrawer, HoldOrderSaveDialog, type HoldOrder } from '@/components/pos/POSHoldOrdersDrawer';
+import { POSPromotionsDialog } from '@/components/pos/POSPromotionsDialog'; // New import
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { CreditCard, Search, History, ScanLine, Keyboard, DollarSign, ShoppingCart } from 'lucide-react';
+import { CreditCard, Search, History, ScanLine, Keyboard, DollarSign, ShoppingCart, Tag } from 'lucide-react'; // Added Tag icon
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,8 +37,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useHardwareScanner } from '@/hooks/useHardwareScanner';
 import { useI18n } from '@/hooks/useI18n';
 import { getTranslatedField } from '@/lib/i18n/content';
-
-interface CartItem { id: string; productId: string; name: string; price: number; quantity: number; categoryId?: string; image?: string; }
+import type { CartItem } from '@/components/pos/POSCart';
+import { useHotkeys } from 'react-hotkeys-hook'; // New import
 
 export default function POSPage() {
   useRealtimeSync(['products', 'transactions', 'shift_sales', 'queue_tickets']);
@@ -50,7 +52,7 @@ export default function POSPage() {
   const queryClient = useQueryClient();
   const { addInvoice, getNextInvoiceNumber } = useInvoices();
   const { receiptConfig } = useReceiptConfig();
-  const { currentShift, openShift, closeShift, addSaleToShift } = useShifts();
+  const { currentShift, openShift, closeShift, addSaleToShift, refundSale } = useShifts();
   const { employees, authenticateByPin } = useEmployees();
   const { setActiveCashier } = useActiveCashier();
   const { useCoupon } = usePricing();
@@ -65,9 +67,16 @@ export default function POSPage() {
   const [shiftOpen, setShiftOpen] = useState(false);
   const [pinOpen, setPinOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [promotionsOpen, setPromotionsOpen] = useState(false); // New state
   const [pin, setPin] = useState('');
   const [startingCash, setStartingCash] = useState('');
   const [offlineSales, setOfflineSales] = useState<any[]>([]);
+
+  const [holdOrders, setHoldOrders] = useState<HoldOrder[]>(() => {
+    try { return JSON.parse(localStorage.getItem('pos_hold_orders') || '[]'); } catch { return []; }
+  });
+  const [holdOrderOpen, setHoldOrderOpen] = useState(false);
+  const [holdOrderSaveOpen, setHoldOrderSaveOpen] = useState(false);
 
   const syncOfflineQueue = async () => {
     if (!navigator.onLine) return;
@@ -104,6 +113,7 @@ export default function POSPage() {
   const [cardAmount, setCardAmount] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
+  const [tipAmount, setTipAmount] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -175,9 +185,15 @@ export default function POSPage() {
     clientLoyaltyTier: selectedClientData?.loyalty_tier
   });
 
-  const finalTotal = Math.max(0, cartTotal - couponDiscount - loyaltyDiscount - bundleDiscount - priceRulesDiscount);
+  const finalTotal = Math.max(0, cartTotal - couponDiscount - loyaltyDiscount - bundleDiscount - priceRulesDiscount) + (parseFloat(tipAmount) || 0);
   const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
   const pointsToEarn = Math.floor(finalTotal * 0.1);
+
+  const shiftSales = currentShift?.sales || [];
+  const nonRefundedSales = shiftSales.filter(s => !s.isRefunded);
+  const shiftTotal = nonRefundedSales.reduce((sum, s) => sum + s.total, 0);
+  const shiftCash = nonRefundedSales.reduce((sum, s) => sum + (s.cashAmount || 0), 0);
+  const shiftCard = nonRefundedSales.reduce((sum, s) => sum + (s.cardAmount || 0), 0);
 
   // Hardware barcode scanner support
   useHardwareScanner(
@@ -211,11 +227,64 @@ export default function POSPage() {
         productId: product.id, 
         name: getTranslatedField(product, 'name', lang), 
         price: product.sell_price, 
+        originalPrice: product.sell_price,
         quantity: 1, 
         categoryId: product.category_id, 
-        image: product.images?.[0] 
+        image: product.images?.[0],
+        employeeId: undefined // Let user select in cart
       }];
     });
+  };
+
+  const updateCartItemEmployee = (cartItemId: string, employeeId: string) => {
+    setCart(prev => prev.map(item => item.id === cartItemId ? { ...item, employeeId } : item));
+  };
+
+  const updateItemDetails = (cartItemId: string, updates: Partial<CartItem>) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === cartItemId) {
+        const updated = { ...item, ...updates };
+        if ('discount' in updates || 'discountType' in updates || 'originalPrice' in updates) {
+          if (updated.discount) {
+            updated.price = updated.discountType === 'fixed' 
+              ? Math.max(0, updated.originalPrice - updated.discount)
+              : Math.max(0, updated.originalPrice * (1 - updated.discount / 100));
+          } else {
+            updated.price = updated.originalPrice;
+          }
+        } else if ('price' in updates) {
+          updated.discount = 0;
+        }
+        return updated;
+      }
+      return item;
+    }));
+  };
+
+  const handleHoldOrderSave = (name: string) => {
+    const newOrder: HoldOrder = { id: crypto.randomUUID(), name, timestamp: Date.now(), cart, finalTotal };
+    const updated = [...holdOrders, newOrder];
+    setHoldOrders(updated);
+    try { localStorage.setItem('pos_hold_orders', JSON.stringify(updated)); } catch {}
+    clearCart();
+    setHoldOrderSaveOpen(false);
+    toast.success(`შეკვეთა "${name}" შეჩერებულია`);
+  };
+
+  const recallHoldOrder = (order: HoldOrder) => {
+    setCart(order.cart);
+    const updated = holdOrders.filter(h => h.id !== order.id);
+    setHoldOrders(updated);
+    try { localStorage.setItem('pos_hold_orders', JSON.stringify(updated)); } catch {}
+    setHoldOrderOpen(false);
+    toast.success(`შეკვეთა "${order.name}" დაბრუნდა კალათაში`);
+  };
+
+  const deleteHoldOrder = (id: string) => {
+    const updated = holdOrders.filter(h => h.id !== id);
+    setHoldOrders(updated);
+    try { localStorage.setItem('pos_hold_orders', JSON.stringify(updated)); } catch {}
+    toast.success(`შეჩერებული შეკვეთა წაიშალა`);
   };
 
   const addBundleToCart = (bundle: typeof bundles[0]) => {
@@ -246,6 +315,7 @@ export default function POSPage() {
     setCart([]);
     setCouponCode('');
     setCouponDiscount(0);
+    setTipAmount('');
     setSelectedClient('');
   };
 
@@ -275,7 +345,13 @@ export default function POSPage() {
 
       // Payload preparation
       const payload = {
-        p_cart: cart.map(({ productId, name, price, quantity }) => ({ product_id: productId, name, price, qty: quantity })),
+        p_cart: cart.map(({ productId, name, price, quantity, employeeId }) => ({ 
+          product_id: productId, 
+          name, 
+          price, 
+          qty: quantity,
+          employee_id: employeeId || null
+        })),
         p_payment: paymentType,
         p_total: finalTotal,
         p_cashier_id: currentShift.cashierId,
@@ -411,24 +487,28 @@ export default function POSPage() {
     } catch (err: any) { toast.error(err.message || t('error')); }
   };
 
+  const handleRefundSale = async (id: string) => {
+    try {
+      await refundSale.mutateAsync(id);
+      toast.success('შეკვეთა გადავიდა სტორნოში (გაუქმდა)');
+    } catch (err: any) { 
+      toast.error(err.message || 'გაუქმება ვერ მოხერხდა'); 
+    }
+  };
+
   const handleBarcodeScan = useCallback((code: string) => {
     const product = products.find((p) => p.barcode === code);
     if (product) { addToCart(product); toast.success(`${product.name} ${t('added_to_cart_scanner') || 'ოკ'}`); }
     else { toast.error(`${t('product_not_found_barcode') || 'ოკ'}: ${code}`); }
   }, [products, t]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'F1') { e.preventDefault(); if (cart.length > 0) setPaymentOpen(true); }
-    if (e.key === 'F2') { e.preventDefault(); setScannerOpen(true); }
-    if (e.key === 'F3') { e.preventDefault(); setHistoryOpen(true); }
-    if (e.key === 'F4') { e.preventDefault(); currentShift ? setShiftOpen(true) : setPinOpen(true); }
-    if (e.key === 'Escape') { clearCart(); }
-  }, [cart, currentShift]);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+  // Hotkeys for quick actions
+  useHotkeys('f1', () => { if (cart.length > 0) setPaymentOpen(true); }, { enableOnFormTags: true });
+  useHotkeys('f2', () => setScannerOpen(true), { enableOnFormTags: true });
+  useHotkeys('f3', () => setHistoryOpen(true), { enableOnFormTags: true });
+  useHotkeys('f4', () => currentShift ? setShiftOpen(true) : setPinOpen(true), { enableOnFormTags: true });
+  useHotkeys('f5', () => setPromotionsOpen(true), { enableOnFormTags: true }); // New hotkey
+  useHotkeys('escape', () => clearCart(), { enableOnFormTags: true });
 
   // Sync to Customer Display
   useEffect(() => {
@@ -491,6 +571,16 @@ export default function POSPage() {
             </div>
           </div>
 
+          {/* Shift KPIs Bar */}
+          {currentShift && (
+            <div className="flex gap-4 mb-3 px-3 py-2 bg-primary/5 rounded-lg border border-primary/10 overflow-x-auto text-sm shrink-0 items-center">
+               <div className="flex flex-col pr-4 border-r border-primary/10"><span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">ცვლაში სულ</span><span className="font-bold text-primary">₾{shiftTotal.toFixed(2)}</span></div>
+               <div className="flex flex-col px-4 border-r border-primary/10"><span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">ნაღდი</span><span className="font-bold text-emerald-600">₾{(shiftCash + currentShift.openingCash).toFixed(2)}</span></div>
+               <div className="flex flex-col px-4 border-r border-primary/10"><span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">ბარათი</span><span className="font-bold text-blue-600">₾{shiftCard.toFixed(2)}</span></div>
+               <div className="flex flex-col pl-4"><span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">შეკვეთები</span><span className="font-bold">{nonRefundedSales.length}</span></div>
+            </div>
+          )}
+
           {/* Search + actions */}
           <div className="flex items-center gap-2 mb-2">
             <div className="relative flex-1 min-w-0">
@@ -502,6 +592,15 @@ export default function POSPage() {
                 <Button size="sm" onClick={() => cart.length > 0 && setPaymentOpen(true)}>{t('pos_checkout_f1') || 'ოკ'}</Button>
                 <Button size="sm" variant="outline" onClick={() => setScannerOpen(true)}><ScanLine className="mr-1 h-4 w-4" />{t('pos_scanner_f2') || 'ოკ'}</Button>
                 <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>{t('pos_history_f3') || 'ოკ'}</Button>
+                <Button size="sm" variant="outline" onClick={() => setHoldOrderOpen(true)} className="relative">
+                  შეჩერებული
+                  {holdOrders.length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-amber-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold shadow-sm">
+                      {holdOrders.length}
+                    </span>
+                  )}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setPromotionsOpen(true)}><Tag className="mr-1 h-4 w-4" />აქციები (F5)</Button> {/* New Promotions button */}
                 <Popover>
                   <PopoverTrigger asChild><Button size="sm" variant="ghost"><Keyboard className="h-4 w-4" /></Button></PopoverTrigger>
                   <PopoverContent className="w-64 text-sm">
@@ -511,6 +610,7 @@ export default function POSPage() {
                       <div className="flex justify-between"><span>F2</span><span>{t('pos_scanner') || 'ოკ'}</span></div>
                       <div className="flex justify-between"><span>F3</span><span>{t('pos_history') || 'ოკ'}</span></div>
                       <div className="flex justify-between"><span>F4</span><span>{t('pos_shift') || 'ოკ'}</span></div>
+                      <div className="flex justify-between"><span>F5</span><span>აქციები</span></div> {/* Added F5 shortcut */}
                       <div className="flex justify-between"><span>Esc</span><span>{t('pos_clear') || 'ოკ'}</span></div>
                       <div className="flex justify-between"><span>Enter</span><span>{t('pos_quick_add') || 'ოკ'}</span></div>
                     </div>
@@ -582,8 +682,11 @@ export default function POSPage() {
         {/* Right: Cart (desktop) */}
         {!isMobile && (
           <POSCart
-            cart={cart} finalTotal={finalTotal} cartItemCount={cartItemCount}
-            onUpdateQuantity={updateQuantity} onRemove={removeFromCart} onClear={clearCart}
+            cart={cart} employees={employees} finalTotal={finalTotal} cartItemCount={cartItemCount}
+            onUpdateQuantity={updateQuantity} onUpdateEmployee={updateCartItemEmployee} 
+            onUpdateItemDetails={updateItemDetails}
+            onHoldOrder={() => setHoldOrderSaveOpen(true)}
+            onRemove={removeFromCart} onClear={clearCart}
             onPayment={() => cart.length > 0 && setPaymentOpen(true)}
             onShiftToggle={() => currentShift ? setShiftOpen(true) : setPinOpen(true)}
             currentShift={!!currentShift}
@@ -597,8 +700,9 @@ export default function POSPage() {
         isMobile && (
           <POSMobileCart
             open={cartOpen} onOpenChange={setCartOpen}
-            cart={cart} finalTotal={finalTotal} cartItemCount={cartItemCount} couponDiscount={couponDiscount}
-            onUpdateQuantity={updateQuantity} onRemove={removeFromCart} onClear={clearCart}
+            cart={cart} employees={employees} finalTotal={finalTotal} cartItemCount={cartItemCount} couponDiscount={couponDiscount}
+            onUpdateQuantity={updateQuantity} onUpdateEmployee={updateCartItemEmployee}
+            onRemove={removeFromCart} onClear={clearCart}
             onPayment={() => setPaymentOpen(true)}
           />
         )
@@ -620,6 +724,8 @@ export default function POSPage() {
         selectedClientData={selectedClientData}
         createWaybill={createWaybill}
         onCreateWaybillChange={setCreateWaybill}
+        tipAmount={tipAmount}
+        onTipAmountChange={setTipAmount}
       />
 
       {/* Shift Dialog */}
@@ -656,6 +762,20 @@ export default function POSPage() {
         }} 
         transactions={transactions} 
         offlineSales={offlineSales}
+        onRefund={handleRefundSale}
+      />
+      
+      <POSHoldOrdersDrawer open={holdOrderOpen} onOpenChange={setHoldOrderOpen} holdOrders={holdOrders} onRecall={recallHoldOrder} onDelete={deleteHoldOrder} />
+      <HoldOrderSaveDialog open={holdOrderSaveOpen} onOpenChange={setHoldOrderSaveOpen} onSave={handleHoldOrderSave} />
+
+      {/* Promotions Dialog */}
+      <POSPromotionsDialog 
+        isOpen={promotionsOpen}
+        onOpenChange={setPromotionsOpen}
+        onSelect={(coupon) => {
+          setCouponCode(coupon.code);
+          toast.success(`აქცია "${coupon.code}" დაემატა კალათაში`);
+        }}
       />
 
       <BarcodeScanner open={scannerOpen} onOpenChange={setScannerOpen} onScan={handleBarcodeScan} />

@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 
 interface Transaction {
   id: string;
@@ -17,9 +18,10 @@ interface POSSalesHistoryProps {
   onOpenChange: (open: boolean) => void;
   transactions: Transaction[];
   offlineSales?: any[];
+  onRefund?: (id: string) => void;
 }
 
-export function POSSalesHistory({ open, onOpenChange, transactions, offlineSales = [] }: POSSalesHistoryProps) {
+export function POSSalesHistory({ open, onOpenChange, transactions, offlineSales = [], onRefund }: POSSalesHistoryProps) {
     const allSales = [
         ...offlineSales.map(os => ({
             id: os.id,
@@ -62,6 +64,20 @@ export function POSSalesHistory({ open, onOpenChange, transactions, offlineSales
                       >
                         {t.status === 'offline_pending' ? 'მოლოდინში (Offline)' : t.status === 'refunded' ? 'სტორნო' : 'დასრულ.'}
                       </Badge>
+                      {t.status !== 'offline_pending' && t.status !== 'refunded' && onRefund && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-xs text-destructive hover:text-destructive/90 ml-2 px-2 h-6"
+                          onClick={() => {
+                            if (window.confirm("ნამდვილად გსურთ არჩეული შეკვეთის გაუქმება (სტორნირება)?")) {
+                              onRefund(t.id);
+                            }
+                          }}
+                        >
+                          გაუქმება
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

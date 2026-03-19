@@ -6,6 +6,13 @@ export interface SupabaseCategory {
   id: string;
   user_id: string;
   name: string;
+  name_en?: string;
+  name_ru?: string;
+  name_az?: string;
+  description?: string;
+  description_en?: string;
+  description_ru?: string;
+  description_az?: string;
   created_at: string;
 }
 
@@ -60,18 +67,18 @@ export function useCategories() {
   });
 
   const addCategory = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (category: Partial<SupabaseCategory>) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('არ ხართ ავტორიზებული');
-      const { error } = await supabase.from('categories').insert({ name, user_id: user.id });
+      const { error } = await supabase.from('categories').insert({ ...category, user_id: user.id });
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
   });
 
   const updateCategory = useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const { error } = await supabase.from('categories').update({ name }).eq('id', id);
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<SupabaseCategory> }) => {
+      const { error } = await supabase.from('categories').update(updates).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),

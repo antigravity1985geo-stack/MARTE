@@ -19,6 +19,15 @@ export interface ClinicPatient {
   created_at?: string;
 }
 
+export interface ClinicMedicalRecord {
+  id: string;
+  patient_id: string;
+  employee_id: string;
+  notes: string;
+  photo_urls: string[];
+  created_at: string;
+}
+
 export function useClinicPatients() {
   const queryClient = useQueryClient();
 
@@ -82,5 +91,59 @@ export function useClinicPatients() {
     },
   });
 
-  return { patients, isLoading, error, addPatient, updatePatient, deletePatient };
+  // --- Clinic Medical Records (EMR) ---
+  const clinicRecordsQuery = (patientId: string) => useQuery({
+    queryKey: ['clinic_medical_records', patientId],
+    enabled: !!patientId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clinic_medical_records')
+        .select(`*, employees(full_name)`)
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const addClinicRecord = useMutation({
+    mutationFn: async (record: Partial<ClinicMedicalRecord>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      // Assume tenant_id is handled by database triggers or policies as for other tables
+      const { data, error } = await supabase
+        .from('clinic_medical_records')
+        .insert({ ...record, user_id: user?.id })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['clinic_medical_records', vars.patient_id] });
+    },
+  });
+
+  const uploadMedicalPhoto = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `records/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('medical_files')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('medical_files')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
+  return { 
+    patients, isLoading, error, 
+    addPatient, updatePatient, deletePatient,
+    clinicRecordsQuery, addClinicRecord, uploadMedicalPhoto
+  };
 }

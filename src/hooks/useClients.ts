@@ -13,7 +13,8 @@ export interface SupabaseClient {
   total_purchases: number;
   total_spent: number;
   loyalty_points: number;
-  loyalty_tier: 'bronze' | 'silver' | 'gold' | 'platinum';
+  lifetime_points: number;
+  loyalty_tier: string;
   segment: 'new' | 'regular' | 'vip' | 'at_risk' | 'lost';
   first_purchase: string;
   last_purchase: string | null;
@@ -22,6 +23,13 @@ export interface SupabaseClient {
   created_at: string;
   referral_code?: string;
   referred_by?: string;
+}
+
+export interface LoyaltyTierInfo {
+  id: string;
+  name: string;
+  threshold: number;
+  multiplier: number;
 }
 
 export interface Promotion {
@@ -67,6 +75,18 @@ export function useClients() {
     },
   });
 
+  const loyaltyTiersQuery = useQuery({
+    queryKey: ['loyalty_tiers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('loyalty_tiers')
+        .select('*')
+        .order('threshold', { ascending: true });
+      if (error) throw error;
+      return data as LoyaltyTierInfo[];
+    },
+  });
+
   const addClient = useMutation({
     mutationFn: async (client: Partial<SupabaseClient>) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -96,7 +116,7 @@ export function useClients() {
       // 1. Get current client data
       const { data: client, error: fetchError } = await supabase
         .from('clients')
-        .select('total_spent, loyalty_points')
+        .select('total_spent, loyalty_points, lifetime_points')
         .eq('id', clientId)
         .single();
 
@@ -105,12 +125,6 @@ export function useClients() {
       const newTotalSpent = (Number(client.total_spent) || 0) + amount;
       const newPoints = (Number(client.loyalty_points) || 0) + pointsEarned;
 
-      // 2. Determine new tier (Dynamic Logic)
-      // Tier thresholds: Silver: 2k+, Gold: 8k+, Platinum: 15k+
-      let newTier: SupabaseClient['loyalty_tier'] = 'bronze';
-      if (newTotalSpent >= 15000) newTier = 'platinum';
-      else if (newTotalSpent >= 8000) newTier = 'gold';
-      else if (newTotalSpent >= 2000) newTier = 'silver';
 
       // 3. Update client
       const { error: updateError } = await supabase
@@ -118,7 +132,7 @@ export function useClients() {
         .update({
           total_spent: newTotalSpent,
           loyalty_points: newPoints,
-          loyalty_tier: newTier,
+          lifetime_points: (client.lifetime_points || 0) + pointsEarned,
           last_purchase: new Date().toISOString()
         })
         .eq('id', clientId);
@@ -139,7 +153,7 @@ export function useClients() {
         if (historyError) throw historyError;
       }
 
-      return { newTier, newPoints };
+      return { newPoints };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
@@ -245,7 +259,8 @@ export function useClients() {
     clients: clientsQuery.data || [],
     promotions: promotionsQuery.data || [],
     campaigns: campaignsQuery.data || [],
-    isLoading: clientsQuery.isLoading || promotionsQuery.isLoading || campaignsQuery.isLoading,
+    loyaltyTiers: loyaltyTiersQuery.data || [],
+    isLoading: clientsQuery.isLoading || promotionsQuery.isLoading || campaignsQuery.isLoading || loyaltyTiersQuery.isLoading,
     pointsHistory: pointsHistoryQuery,
     addClient,
     updateClient,

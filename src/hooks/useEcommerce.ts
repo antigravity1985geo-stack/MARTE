@@ -74,6 +74,7 @@ export function useEcommerce() {
     },
   });
 
+
   const connectPlatform = useMutation({
     mutationFn: async (platform: Partial<EcommercePlatform>) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -123,21 +124,53 @@ export function useEcommerce() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ecommerce_mappings'] }),
   });
 
+
   const simulateSync = useMutation({
     mutationFn: async (platformSlug: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Unauthorized');
 
+      // Try to get real mappings to make simulation better
+      const { data: mappings } = await supabase.from('ecommerce_product_mappings')
+        .select('*')
+        .eq('platform_slug', platformSlug)
+        .eq('user_id', user.id);
+
+      let orderItems = [{ name: 'Simulated Product', quantity: 1, price: 15 }];
+
+      let subtotal = 15;
+
+      if (mappings && mappings.length > 0) {
+        // Pick 1-2 random products from mappings
+        const count = Math.min(mappings.length, Math.floor(Math.random() * 2) + 1);
+        const shuffled = [...mappings].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, count);
+        
+        orderItems = selected.map(m => ({
+          name: m.platform_product_name || 'Mapped Product',
+          quantity: Math.floor(Math.random() * 2) + 1,
+          price: m.price_platform || 10,
+          external_id: m.platform_product_id
+        }));
+        
+        subtotal = orderItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+      }
+
+      const deliveryFee = 3.50;
+      const platformFee = subtotal * 0.15; // 15% commission simulation
+
       // Generate a fake order
       const fakeOrder = {
         platform_slug: platformSlug,
         platform_order_id: 'SIM-' + Math.floor(Math.random() * 100000),
-        customer_name: 'Simulated Customer',
-        customer_phone: '+995 5XX XX XX XX',
-        customer_address: 'Tbilisi, Georgia (Simulated)',
-        items: [{ name: 'Simulated Product', quantity: 1, price: 15 }],
-        subtotal: 15,
-        total: 15,
+        customer_name: ['გიორგი ბერიძე', 'ნინო კაპანაძე', 'დავით მესხი', 'ანი ტყემალაძე'][Math.floor(Math.random() * 4)],
+        customer_phone: '+995 5' + Math.floor(10000000 + Math.random() * 90000000),
+        customer_address: 'Tbilisi, Street #' + Math.floor(Math.random() * 50),
+        items: orderItems,
+        subtotal: subtotal,
+        delivery_fee: deliveryFee,
+        platform_fee: platformFee,
+        total: subtotal + deliveryFee,
         status: 'new' as const,
         user_id: user.id
       };
@@ -145,7 +178,10 @@ export function useEcommerce() {
       const { error } = await supabase.from('ecommerce_orders').insert(fakeOrder);
       if (error) throw error;
 
-      await supabase.from('ecommerce_platforms').update({ last_sync: new Date().toISOString() }).eq('platform_slug', platformSlug).eq('user_id', user.id);
+      await supabase.from('ecommerce_platforms').update({ 
+        last_sync: new Date().toISOString(),
+        connected: true // Ensure it stays connected during sync
+      }).eq('platform_slug', platformSlug).eq('user_id', user.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ecommerce_orders'] });

@@ -70,6 +70,15 @@ export interface PerformanceReview {
   reviewer_name?: string;
 }
 
+export interface StaffWorkingHours {
+  id: string;
+  employee_id: string;
+  day_of_week: number;
+  start_time: string | null;
+  end_time: string | null;
+  is_off: boolean;
+}
+
 export function useEmployees() {
   const queryClient = useQueryClient();
   const { log } = useActivityLog();
@@ -301,6 +310,34 @@ export function useEmployees() {
     },
   });
 
+  // ---- Working Hours (Schedules) ----
+  const workingHoursQuery = (employeeId?: string) => useQuery({
+    queryKey: ['staff_working_hours', employeeId],
+    enabled: !!employeeId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('staff_working_hours')
+        .select('*')
+        .eq('employee_id', employeeId);
+      if (error) throw error;
+      return (data || []) as StaffWorkingHours[];
+    },
+  });
+
+  const saveWorkingHours = useMutation({
+    mutationFn: async (hours: Partial<StaffWorkingHours>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('staff_working_hours')
+        .upsert({ ...hours, user_id: user?.id });
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['staff_working_hours', vars.employee_id] });
+      toast?.success?.('გრაფიკი შენახულია');
+    },
+  });
+
   const authenticateByPin = async (pin: string): Promise<Employee | null> => {
     const employees = query.data || [];
     return employees.find((e) => e.pin_code === pin && e.is_active) || null;
@@ -323,5 +360,7 @@ export function useEmployees() {
     updateLeaveStatus,
     addPerformanceReview,
     authenticateByPin,
+    workingHours: workingHoursQuery,
+    saveWorkingHours,
   };
 }

@@ -9,6 +9,15 @@ export interface BankStatementUpload {
     status: 'pending' | 'processing' | 'completed' | 'cancelled';
     total_lines: number;
     matched_lines: number;
+    tenant_id?: string;
+}
+
+export interface BankMappingRule {
+    id: string;
+    tenant_id: string;
+    keyword: string;
+    account_code: string;
+    description_override?: string | null;
 }
 
 export interface BankStatementLine {
@@ -27,7 +36,21 @@ export interface BankStatementLine {
 
 export function useReconciliation() {
     const [uploads, setUploads] = useState<BankStatementUpload[]>([]);
+    const [rules, setRules] = useState<BankMappingRule[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        fetchUploads();
+        fetchRules();
+    }, []);
+
+    const fetchRules = async () => {
+        const { data, error } = await supabase
+            .from('bank_mapping_rules')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (!error) setRules(data || []);
+    };
 
     useEffect(() => {
         fetchUploads();
@@ -61,6 +84,32 @@ export function useReconciliation() {
         return { data, error };
     };
 
+    const addRule = async (keyword: string, account_code: string) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { error: new Error('Not authenticated') };
+        
+        // We will assume RLS handles tenant_id correctly based on the user's tenant_id, 
+        // but if it's required during insert, we can fetch it, or rely on a trigger.
+        // Given we don't have the user's tenant_id immediately, let's fetch it from employees:
+        const { data: employee } = await supabase.from('employees').select('tenant_id').eq('id', user.id).single();
+        if (!employee) return { error: new Error('Employee record not found') };
+
+        const { data, error } = await supabase
+            .from('bank_mapping_rules')
+            .insert([{ keyword, account_code, tenant_id: employee.tenant_id }])
+            .select()
+            .single();
+
+        if (!error && data) setRules(prev => [data, ...prev]);
+        return { data, error };
+    };
+
+    const deleteRule = async (id: string) => {
+        const { error } = await supabase.from('bank_mapping_rules').delete().eq('id', id);
+        if (!error) setRules(prev => prev.filter(r => r.id !== id));
+        return { error };
+    };
+
     const addLines = async (lines: Omit<BankStatementLine, 'id'>[]) => {
         const { error } = await supabase
             .from('bank_statement_lines')
@@ -83,13 +132,38 @@ export function useReconciliation() {
         return { data, error };
     };
 
+    const runAutoCategorize = async (uploadId: string) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { error: new Error('Not authenticated') };
+        const { data: employee } = await supabase.from('employees').select('tenant_id').eq('id', user.id).single();
+        
+        const { data, error } = await supabase.rpc('auto_categorize_bank_lines', { 
+            p_upload_id: uploadId,
+            p_tenant_id: employee?.tenant_id 
+        });
+        return { data, error };
+    };
+
+    const markLineMatched = async (lineId: string, account_code: string) => {
+        const { error } = await supabase
+            .from('bank_statement_lines')
+            .update({ match_status: 'matched', account_code, match_reason: 'Manually categorized & entered' })
+            .eq('id', lineId);
+        return { error };
+    };
+
     return {
         uploads,
+        rules,
         isLoading,
         createUpload,
         addLines,
         getLines,
         runAutoMatch,
+        runAutoCategorize,
+        addRule,
+        deleteRule,
+        markLineMatched,
         refresh: fetchUploads
     };
 }

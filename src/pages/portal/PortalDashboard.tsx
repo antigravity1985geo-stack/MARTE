@@ -20,7 +20,7 @@ export const PortalDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('*')
+        .select('*, loyalty_points, loyalty_tier, lifetime_points')
         .eq('tenant_id', tenant.id)
         .eq('user_id', user?.id)
         .maybeSingle();
@@ -31,19 +31,31 @@ export const PortalDashboard = () => {
     enabled: !!tenant.id && !!user?.id
   });
 
+  const { data: tiers } = useQuery({
+    queryKey: ['loyalty-tiers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('loyalty_tiers')
+        .select('*')
+        .order('threshold', { ascending: true });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const loyaltyPoints = clientData?.loyalty_points || 0;
-  const loyaltyTier = (clientData?.loyalty_tier || 'bronze').toUpperCase();
+  const lifetimePoints = clientData?.lifetime_points || 0;
+  const currentTierName = clientData?.loyalty_tier || 'bronze';
   
-  // Logic for next tier
-  const tiers = {
-    'BRONZE': { next: 'SILVER', goal: 500 },
-    'SILVER': { next: 'GOLD', goal: 1500 },
-    'GOLD': { next: 'PLATINUM', goal: 5000 },
-    'PLATINUM': { next: 'MAX', goal: 10000 }
-  };
+  const currentTier = tiers?.find(t => t.name === currentTierName);
+  const nextTier = tiers?.find(t => t.threshold > lifetimePoints);
   
-  const currentTierInfo = tiers[loyaltyTier as keyof typeof tiers] || tiers['BRONZE'];
-  const progress = Math.min(Math.round((loyaltyPoints / currentTierInfo.goal) * 100), 100);
+  const progress = nextTier 
+    ? Math.min(Math.round(((lifetimePoints - (currentTier?.threshold || 0)) / (nextTier.threshold - (currentTier?.threshold || 0))) * 100), 100)
+    : 100;
+
+  const displayTier = currentTierName.toUpperCase();
+  const nextTierName = nextTier ? nextTier.name.toUpperCase() : 'MAX';
 
   return (
     <div className="space-y-6 p-4 pb-20">
@@ -105,8 +117,8 @@ export const PortalDashboard = () => {
       {/* Loyalty Card */}
       <LoyaltyCard 
         points={loyaltyPoints}
-        tier={loyaltyTier}
-        nextTier={currentTierInfo.next}
+        tier={displayTier}
+        nextTier={nextTierName}
         progress={progress}
         clientId={user?.id || ''}
         primaryColor={tenant?.primary_color}

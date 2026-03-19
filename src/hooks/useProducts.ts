@@ -24,6 +24,7 @@ export interface SupabaseProduct {
   description_en?: string;
   description_ru?: string;
   description_az?: string;
+  type?: 'product' | 'service';
 }
 
 export type ProductInsert = Omit<SupabaseProduct, 'id' | 'created_at' | 'user_id'>;

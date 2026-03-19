@@ -33,15 +33,15 @@ interface LoyaltyTier {
   perks_en: string[];
 }
 
-const LOYALTY_TIERS: LoyaltyTier[] = [
-  { name_ka: 'ბრინჯაო', name_en: 'Bronze', key: 'bronze', minPoints: 0, discountPercent: 2, pointsMultiplier: 1, color: 'hsl(30, 60%, 50%)', icon: Star, perks_ka: ['2% ფასდაკლება', '1x ქულები'], perks_en: ['2% Discount', '1x Points'] },
-  { name_ka: 'ვერცხლი', name_en: 'Silver', key: 'silver', minPoints: 2000, discountPercent: 5, pointsMultiplier: 1.5, color: 'hsl(0, 0%, 65%)', icon: Star, perks_ka: ['5% ფასდაკლება', '1.5x ქულები', 'დაბადების დღის ბონუსი'], perks_en: ['5% Discount', '1.5x Points', 'Birthday Bonus'] },
-  { name_ka: 'ოქრო', name_en: 'Gold', key: 'gold', minPoints: 10000, discountPercent: 10, pointsMultiplier: 2, color: 'hsl(45, 100%, 50%)', icon: Crown, perks_ka: ['10% ფასდაკლება', '2x ქულები', 'უფასო მიწოდება'], perks_en: ['10% Discount', '2x Points', 'Free Delivery'] },
-  { name_ka: 'პლატინა', name_en: 'Platinum', key: 'platinum', minPoints: 25000, discountPercent: 15, pointsMultiplier: 3, color: 'hsl(220, 20%, 60%)', icon: Award, perks_ka: ['15% ფასდაკლება', '3x ქულები', 'VIP მომსახურება'], perks_en: ['15% Discount', '3x Points', 'VIP Service'] },
-];
+const TIER_VISUALS: Record<string, { icon: React.ElementType; color: string }> = {
+  bronze: { icon: Star, color: 'hsl(30, 60%, 50%)' },
+  silver: { icon: Star, color: 'hsl(0, 0%, 65%)' },
+  gold: { icon: Crown, color: 'hsl(45, 100%, 50%)' },
+  platinum: { icon: Award, color: 'hsl(220, 20%, 60%)' },
+};
 
 export default function CRMPage() {
-  const { clients, promotions, campaigns, isLoading, addPromotion: addPromoMutation, runSegmentationUpdate, sendCampaign, pointsHistory } = useClients();
+  const { clients, promotions, campaigns, loyaltyTiers, isLoading, addPromotion: addPromoMutation, runSegmentationUpdate, sendCampaign, pointsHistory } = useClients();
   const { t, lang } = useI18n();
   const [searchTerm, setSearchTerm] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('all');
@@ -55,9 +55,14 @@ export default function CRMPage() {
   const [campaignName, setCampaignName] = useState('');
   const [newPromo, setNewPromo] = useState({ name: '', type: 'percentage' as any, value: '', target_segment: 'all', start_date: '', end_date: '', promo_code: '' });
 
-  // Helper: tier name for current language
-  const tierName = (tier: LoyaltyTier) => lang === 'en' ? tier.name_en : tier.name_ka;
-  const tierPerks = (tier: LoyaltyTier) => lang === 'en' ? tier.perks_en : tier.perks_ka;
+  // Helper: tier visuals and names
+  const getTierVisual = (tierKey: string) => TIER_VISUALS[tierKey.toLowerCase()] || { icon: Star, color: 'hsl(var(--muted-foreground))' };
+  const getTierName = (tier: any) => {
+    if (!tier) return '-';
+    // If it's a string (tier key from client), find info in loyaltyTiers
+    const info = typeof tier === 'string' ? loyaltyTiers.find(t => t.id === tier || t.name.toLowerCase() === tier.toLowerCase()) : tier;
+    return info?.name || tier;
+  };
 
   const filtered = clients.filter(c => {
     if (searchTerm && !c.name.toLowerCase().includes(searchTerm.toLowerCase()) && !c.phone.includes(searchTerm) && !c.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -125,9 +130,9 @@ export default function CRMPage() {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  const tierBadge = (tier: any) => {
-    const tObj = LOYALTY_TIERS.find(lt => lt.key === tier);
-    return <Badge variant="outline" style={{ borderColor: tObj?.color, color: tObj?.color }}>{tObj ? tierName(tObj) : tier}</Badge>;
+  const tierBadge = (tier: string) => {
+    const visual = getTierVisual(tier);
+    return <Badge variant="outline" style={{ borderColor: visual.color, color: visual.color }}>{getTierName(tier)}</Badge>;
   };
 
   const segmentCounts = {
@@ -255,7 +260,7 @@ export default function CRMPage() {
               <SelectTrigger className="w-36"><SelectValue placeholder={t('crm_tier')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('crm_segment_all')} {t('crm_tier')}</SelectItem>
-                {LOYALTY_TIERS.map(tr => <SelectItem key={tr.key} value={tr.key}>{tierName(tr)}</SelectItem>)}
+                {loyaltyTiers.map(tr => <SelectItem key={tr.id} value={tr.name.toLowerCase()}>{tr.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -273,6 +278,7 @@ export default function CRMPage() {
                   {segmentBadge(selectedCustomer.segment)}
                   {tierBadge(selectedCustomer.loyalty_tier)}
                   <Badge variant="outline"><Star className="h-3 w-3 mr-1" />{selectedCustomer.loyalty_points} {t('crm_points')}</Badge>
+                  <Badge variant="outline"><TrendingUp className="h-3 w-3 mr-1" />{selectedCustomer.lifetime_points} Total</Badge>
                 </div>
                 <div className="grid md:grid-cols-3 gap-4 text-sm">
                   <div className="space-y-1">
@@ -315,9 +321,10 @@ export default function CRMPage() {
                   </TableHeader>
                   <TableBody>
                     {filtered.map(c => {
-                      const tier = LOYALTY_TIERS.find(tr => tr.key === c.loyalty_tier)!;
-                      const nextTier = tier ? LOYALTY_TIERS[LOYALTY_TIERS.indexOf(tier) + 1] : undefined;
-                      const progress = nextTier && tier ? ((c.total_spent - (tier.minPoints || 0)) / (nextTier.minPoints - (tier.minPoints || 0))) * 100 : 100;
+                      const tier = loyaltyTiers.find(tr => tr.name.toLowerCase() === c.loyalty_tier?.toLowerCase());
+                      const tierIndex = tier ? loyaltyTiers.indexOf(tier) : -1;
+                      const nextTier = tierIndex !== -1 ? loyaltyTiers[tierIndex + 1] : loyaltyTiers[0];
+                      const progress = nextTier ? Math.min(100, (c.lifetime_points / nextTier.threshold) * 100) : 100;
                       return (
                         <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedCustomer(c)}>
                           <TableCell><div><p className="font-medium">{c.name}</p><p className="text-xs text-muted-foreground">{c.phone}</p></div></TableCell>
@@ -346,25 +353,25 @@ export default function CRMPage() {
         {/* LOYALTY TAB */}
         <TabsContent value="loyalty" className="space-y-4">
           <div className="grid md:grid-cols-4 gap-4">
-            {LOYALTY_TIERS.map(tier => {
-              const Icon = tier.icon;
-              const count = clients.filter(c => c.loyalty_tier === tier.key).length;
+            {loyaltyTiers.map(tier => {
+              const visual = getTierVisual(tier.name);
+              const Icon = visual.icon;
+              const count = clients.filter(c => c.loyalty_tier?.toLowerCase() === tier.name.toLowerCase()).length;
               return (
-                <Card key={tier.key} className="relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: tier.color }} />
+                <Card key={tier.id} className="relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: visual.color }} />
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Icon className="h-5 w-5" style={{ color: tier.color }} />
-                        <h3 className="font-bold">{tierName(tier)}</h3>
+                        <Icon className="h-5 w-5" style={{ color: visual.color }} />
+                        <h3 className="font-bold">{tier.name}</h3>
                       </div>
                       <Badge variant="outline">{count} {t('crm_tab_clients')}</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">{tier.minPoints}+ {t('crm_points')}</p>
+                    <p className="text-xs text-muted-foreground">{tier.threshold}+ {t('crm_points')}</p>
                     <div className="space-y-1">
-                      {tierPerks(tier).map((perk, i) => (
-                        <p key={i} className="text-sm flex items-center gap-1"><Zap className="h-3 w-3 text-primary" />{perk}</p>
-                      ))}
+                      <p className="text-sm flex items-center gap-1"><Zap className="h-3 w-3 text-primary" />{tier.multiplier}x {t('crm_points')}</p>
+                      <p className="text-sm flex items-center gap-1"><Percent className="h-3 w-3 text-primary" />{Math.round((tier.multiplier - 1) * 100)}% {t('pos_discount')}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -375,9 +382,11 @@ export default function CRMPage() {
             <CardHeader><CardTitle className="text-base">{t('crm_loyalty_rating')}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {[...clients].sort((a, b) => b.loyalty_points - a.loyalty_points).map((c, i) => {
-                const tier = LOYALTY_TIERS.find(tr => tr.key === c.loyalty_tier)!;
-                const nextTier = tier ? LOYALTY_TIERS[LOYALTY_TIERS.indexOf(tier) + 1] : undefined;
-                const progress = nextTier && tier ? ((c.loyalty_points - tier.minPoints) / (nextTier.minPoints - tier.minPoints)) * 100 : 100;
+                const tier = loyaltyTiers.find(tr => tr.name.toLowerCase() === c.loyalty_tier?.toLowerCase());
+                const tierIndex = tier ? loyaltyTiers.indexOf(tier) : -1;
+                const nextTier = tierIndex !== -1 ? loyaltyTiers[tierIndex + 1] : loyaltyTiers[0];
+                const visual = getTierVisual(c.loyalty_tier || '');
+                const progress = nextTier ? Math.min(100, (c.lifetime_points / nextTier.threshold) * 100) : 100;
                 return (
                   <div key={c.id} className="flex items-center gap-3">
                     <span className="text-lg font-bold w-6 text-muted-foreground">{i + 1}</span>
@@ -385,13 +394,13 @@ export default function CRMPage() {
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{c.name}</span>
-                          {tierBadge(c.loyalty_tier)}
+                          {tierBadge(c.loyalty_tier || '')}
                         </div>
-                        <span className="font-bold" style={{ color: tier?.color }}>{c.loyalty_points} {t('crm_points')}</span>
+                        <span className="font-bold" style={{ color: visual.color }}>{c.loyalty_points} {t('crm_points')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Progress value={progress} className="h-1.5 flex-1" />
-                        {nextTier && <span className="text-[10px] text-muted-foreground">{nextTier.minPoints - c.loyalty_points} → {tierName(nextTier)}</span>}
+                        {nextTier && <span className="text-[10px] text-muted-foreground">{nextTier.threshold - c.lifetime_points} → {getTierName(nextTier)}</span>}
                       </div>
                     </div>
                   </div>

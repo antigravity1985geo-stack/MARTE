@@ -30,6 +30,7 @@ DECLARE
   v_entry_num text;
   v_debit_delta numeric;
   v_credit_delta numeric;
+  v_material record;
 BEGIN
   -- 1. ADVISORY LOCKS / STOCK CHECKS
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_cart) LOOP
@@ -65,6 +66,13 @@ BEGIN
     UPDATE products 
     SET stock = stock - (v_item->>'qty')::numeric 
     WHERE id = (v_item->>'product_id')::uuid;
+
+    -- 3.5 Deduct service materials if any
+    FOR v_material IN SELECT * FROM salon_service_materials WHERE service_id = (v_item->>'product_id')::uuid LOOP
+      UPDATE products 
+      SET stock = stock - (v_material.quantity * (v_item->>'qty')::numeric)
+      WHERE id = v_material.product_id;
+    END LOOP;
   END LOOP;
 
   -- 4. UPDATE LOYALTY (If applicable)

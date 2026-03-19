@@ -12,8 +12,8 @@
     --card-foreground: 0.15 0.02 250;
     --popover: 1 0 0;
     --popover-foreground: 0.15 0.02 250;
-    --primary: 0.50 0.22 255;
-    --primary-foreground: 0.98 0.01 250;
+    --primary: 162 72% 38%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 0.95 0.01 250;
     --secondary-foreground: 0.25 0.03 250;
     --muted: 0.95 0.01 250;
@@ -364,6 +364,61 @@
     background-position: center;
     background-attachment: fixed;
     background-repeat: no-repeat;
+  }
+
+  .hero-banner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 0%, rgba(10, 12, 16, 0.4) 100%);
+    pointer-events: none;
+  }
+
+  /* Landing Page Utilities */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .dark .glass, .dark .glass-strong {
+    background: rgba(10, 12, 16, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .shadow-stack {
+    box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 2px 4px rgba(0,0,0,.05), 0 12px 24px rgba(0,0,0,.05);
+  }
+
+  .shadow-stack-lg {
+    box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 4px 8px rgba(0,0,0,.04), 0 24px 48px rgba(0,0,0,.08);
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 20px hsl(162 72% 38% / 0.3);
+  }
+
+  .concentric-outer {
+    @apply rounded-[24px] p-8;
+  }
+
+  .concentric-inner {
+    @apply rounded-[16px];
+  }
+
+  @keyframes animate-pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px hsl(162 72% 38% / 0.2); transform: scale(1); }
+    50% { box-shadow: 0 0 30px hsl(162 72% 38% / 0.4); transform: scale(1.02); }
+  }
+
+  .animate-pulse-glow {
+    animation: animate-pulse-glow 2s ease-in-out infinite;
   }
 
   .hero-banner::after {

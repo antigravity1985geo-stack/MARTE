@@ -374,42 +374,153 @@ export default function AccountingPage() {
           {/* P&L */}
           <TabsContent value="pl">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-              <Card className="border-border overflow-hidden">
-                <CardHeader className="bg-muted/20 border-b border-border pb-4">
-                  <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" />{t('accounting_pl')}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-5 space-y-4">
-                  <div className="rounded-xl bg-success/8 border border-success/15 p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-success/15 flex items-center justify-center"><ArrowUpRight className="h-4 w-4 text-success" /></div>
-                        <div><p className="text-sm text-muted-foreground">{t('accounting_revenue')}</p><p className="text-xs text-muted-foreground/70">Revenue</p></div>
-                      </div>
-                      <span className="text-2xl font-bold font-mono text-success">₾{pl.revenue.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-destructive/8 border border-destructive/15 p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-destructive/15 flex items-center justify-center"><ArrowDownRight className="h-4 w-4 text-destructive" /></div>
-                        <div><p className="text-sm text-muted-foreground">{t('accounting_expenses')}</p><p className="text-xs text-muted-foreground/70">Expenses</p></div>
-                      </div>
-                      <span className="text-2xl font-bold font-mono text-destructive">₾{pl.expenses.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <div className={`rounded-xl p-5 border-2 ${pl.netIncome >= 0 ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pl.netIncome >= 0 ? 'bg-success/20' : 'bg-destructive/20'}`}>
-                          <TrendingUp className={`h-5 w-5 ${pl.netIncome >= 0 ? 'text-success' : 'text-destructive'}`} />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Visual Summary Column */}
+                <div className="lg:col-span-1 space-y-4">
+                  <Card className="border-border overflow-hidden">
+                    <CardHeader className="bg-muted/20 border-b border-border pb-4">
+                      <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" />{t('accounting_pl')} Overview</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-5 space-y-4">
+                      
+                      {/* Revenue */}
+                      <div className="rounded-xl bg-primary/5 border border-primary/10 p-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm font-medium text-muted-foreground">{t('accounting_revenue') || 'Revenue'}</p>
+                          <ArrowUpRight className="h-4 w-4 text-primary" />
                         </div>
-                        <div><p className="font-semibold text-foreground">{t('accounting_net_income')}</p><p className="text-xs text-muted-foreground">Net Income</p></div>
+                        <span className="text-xl font-bold font-mono text-foreground">₾{pl.revenue.toFixed(2)}</span>
                       </div>
-                      <span className={`text-3xl font-bold font-mono ${pl.netIncome >= 0 ? 'text-success' : 'text-destructive'}`}>₾{pl.netIncome.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+
+                      {/* Gross Profit */}
+                      <div className="rounded-xl bg-success/10 border border-success/20 p-4 relative overflow-hidden">
+                        <div className="absolute right-0 top-0 h-full w-1 bg-success/50" />
+                        <div className="flex items-center justify-between mb-1">
+                          <div>
+                            <p className="text-sm font-bold text-foreground">საერთო მოგება</p>
+                            <p className="text-[10px] text-muted-foreground">Gross Profit</p>
+                          </div>
+                          <Badge variant="secondary" className="bg-success/20 text-success border-success/30 font-mono">
+                            {pl.grossMargin.toFixed(1)}% აკრეფა
+                          </Badge>
+                        </div>
+                        <span className="text-2xl font-bold font-mono text-success">₾{pl.grossProfit.toFixed(2)}</span>
+                      </div>
+
+                      {/* Net Income */}
+                      <div className={`rounded-xl p-4 border-2 ${pl.netIncome >= 0 ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="font-bold text-foreground">{t('accounting_net_income')}</p>
+                            <p className="text-xs text-muted-foreground">Net Profit / (Loss)</p>
+                          </div>
+                          <Badge variant="outline" className={`font-mono ${pl.netIncome >= 0 ? 'text-success border-success/30' : 'text-destructive border-destructive/30'}`}>
+                            {pl.netMargin.toFixed(1)}% მარჟა
+                          </Badge>
+                        </div>
+                        <span className={`text-3xl font-bold font-mono ${pl.netIncome >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          ₾{pl.netIncome.toFixed(2)}
+                        </span>
+                      </div>
+                      
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Detailed Breakdown Column */}
+                <div className="lg:col-span-2">
+                  <Card className="border-border">
+                    <CardHeader className="bg-muted/10 border-b border-border py-4">
+                      <CardTitle className="text-base text-muted-foreground">Detailed Statement</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-auto max-h-[500px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/5 hover:bg-muted/5">
+                              <TableHead className="font-semibold text-foreground w-[100px]">{t('accounting_code')}</TableHead>
+                              <TableHead className="font-semibold text-foreground">{t('accounting_account')}</TableHead>
+                              <TableHead className="font-semibold text-foreground text-right">{t('amount')}</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {/* Revenue Section */}
+                            <TableRow className="bg-primary/5 hover:bg-primary/5">
+                              <TableCell colSpan={3} className="font-bold text-primary py-2 text-xs uppercase tracking-wider">
+                                {t('accounting_revenue') || 'შემოსავლები'}
+                              </TableCell>
+                            </TableRow>
+                            {pl.breakdown?.revenue.map((acc: any) => (
+                              <TableRow key={acc.code} className="group hover:bg-muted/30">
+                                <TableCell className="font-mono text-muted-foreground">{acc.code}</TableCell>
+                                <TableCell className="font-medium text-sm pl-6">{acc.name}</TableCell>
+                                <TableCell className="text-right font-mono font-medium text-foreground">₾{Math.abs(acc.balance).toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow className="bg-muted/5 font-semibold">
+                              <TableCell colSpan={2} className="text-right text-xs text-muted-foreground">სრული შემოსავალი:</TableCell>
+                              <TableCell className="text-right font-mono text-primary">₾{pl.revenue.toFixed(2)}</TableCell>
+                            </TableRow>
+
+                            {/* COGS Section */}
+                            <TableRow className="bg-destructive/5 hover:bg-destructive/5">
+                              <TableCell colSpan={3} className="font-bold text-destructive py-2 text-xs uppercase tracking-wider">
+                                თვითღირებულება (COGS)
+                              </TableCell>
+                            </TableRow>
+                            {pl.breakdown?.cogs.map((acc: any) => (
+                              <TableRow key={acc.code} className="group hover:bg-muted/30">
+                                <TableCell className="font-mono text-muted-foreground">{acc.code}</TableCell>
+                                <TableCell className="font-medium text-sm pl-6">{acc.name}</TableCell>
+                                <TableCell className="text-right font-mono font-medium text-destructive">- ₾{Math.abs(acc.balance).toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow className="bg-muted/5 font-semibold">
+                              <TableCell colSpan={2} className="text-right text-xs text-muted-foreground">სრული თვითღირებულება:</TableCell>
+                              <TableCell className="text-right font-mono text-destructive">- ₾{pl.cogsTotal.toFixed(2)}</TableCell>
+                            </TableRow>
+
+                            {/* Gross Profit Subtotal */}
+                            <TableRow className="bg-success/5 border-b-2">
+                              <TableCell colSpan={2} className="text-right font-bold text-foreground">საერთო მოგება (Gross Profit):</TableCell>
+                              <TableCell className="text-right font-mono font-bold text-success">₾{pl.grossProfit.toFixed(2)}</TableCell>
+                            </TableRow>
+
+                            {/* Operating Expenses Section */}
+                            <TableRow className="bg-warning/5 hover:bg-warning/5">
+                              <TableCell colSpan={3} className="font-bold text-warning py-2 text-xs uppercase tracking-wider">
+                                საოპერაციო ხარჯები (Operating Expenses)
+                              </TableCell>
+                            </TableRow>
+                            {pl.breakdown?.operating.map((acc: any) => (
+                              <TableRow key={acc.code} className="group hover:bg-muted/30">
+                                <TableCell className="font-mono text-muted-foreground">{acc.code}</TableCell>
+                                <TableCell className="font-medium text-sm pl-6">{acc.name}</TableCell>
+                                <TableCell className="text-right font-mono font-medium text-warning">- ₾{Math.abs(acc.balance).toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow className="bg-muted/5 font-semibold">
+                              <TableCell colSpan={2} className="text-right text-xs text-muted-foreground">სრული საოპერაციო ხარჯი:</TableCell>
+                              <TableCell className="text-right font-mono text-warning">- ₾{pl.operatingExpenses.toFixed(2)}</TableCell>
+                            </TableRow>
+
+                            {/* Net Income Subtotal */}
+                            <TableRow className={`border-b-4 ${pl.netIncome >= 0 ? 'bg-success/10 border-success' : 'bg-destructive/10 border-destructive'}`}>
+                              <TableCell colSpan={2} className="text-right font-bold text-lg text-foreground uppercase tracking-wider py-4">
+                                {t('accounting_net_income')}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono font-bold text-xl py-4 ${pl.netIncome >= 0 ? 'text-success' : 'text-destructive'}`}>
+                                ₾{pl.netIncome.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </motion.div>
           </TabsContent>
 

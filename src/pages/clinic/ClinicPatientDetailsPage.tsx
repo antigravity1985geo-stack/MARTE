@@ -10,10 +10,28 @@ import { TreatmentPlanner } from '@/components/clinic/TreatmentPlanner';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ka } from 'date-fns/locale';
+import { useClinicPatients } from '@/hooks/useClinicPatients';
+import { useEmployees } from '@/hooks/useEmployees';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { Image as ImageIcon, Save } from 'lucide-react';
 
 export default function ClinicPatientDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  const { clinicRecordsQuery, addClinicRecord, uploadMedicalPhoto } = useClinicPatients();
+  const { employees = [] } = useEmployees();
+  
+  const [emrForm, setEmrForm] = useState({
+    notes: '',
+    employee_id: '',
+    photo_urls: [] as string[]
+  });
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: patient, isLoading: isPatientLoading } = useQuery({
     queryKey: ['clinic_patient', id],
@@ -25,6 +43,8 @@ export default function ClinicPatientDetailsPage() {
     },
     enabled: !!id,
   });
+
+  const { data: records = [] } = clinicRecordsQuery(id || '');
 
   const { data: documents, isLoading: isDocsLoading } = useQuery({
     queryKey: ['clinic_documents', id],
@@ -72,6 +92,43 @@ export default function ClinicPatientDetailsPage() {
     enabled: !!id,
   });
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsUploading(true);
+    try {
+      const urls = [];
+      for (let i = 0; i < files.length; i++) {
+        const url = await uploadMedicalPhoto(files[i]);
+        urls.push(url);
+      }
+      setEmrForm(prev => ({ ...prev, photo_urls: [...prev.photo_urls, ...urls] }));
+      toast.success('ფოტო აიტვირთა');
+    } catch (err: any) {
+      toast.error('ფოტოს ატვირთვა ვერ მოხერხდა: ' + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAddEMR = async () => {
+    if (!id) return;
+    if (!emrForm.notes) { toast.error('ჩანაწერი ცარიელია'); return; }
+    
+    try {
+      await addClinicRecord.mutateAsync({
+        patient_id: id,
+        notes: emrForm.notes,
+        employee_id: emrForm.employee_id || undefined,
+        photo_urls: emrForm.photo_urls
+      });
+      setEmrForm({ notes: '', employee_id: '', photo_urls: [] });
+      toast.success('ჩანაწერი დაემატა');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   if (isPatientLoading) {
     return <PageTransition><div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></PageTransition>;
   }
@@ -94,8 +151,7 @@ export default function ClinicPatientDetailsPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">ვიზიტის დამატება</Button>
-            <Button style={{ background: 'var(--gradient-primary)' }}>ახალი ჩანაწერი (EHR)</Button>
+            <Button style={{ background: 'var(--gradient-primary)' }}>EHR-ში გადასვლა</Button>
           </div>
         </div>
 
@@ -146,24 +202,144 @@ export default function ClinicPatientDetailsPage() {
           <div className="md:col-span-2">
             <Tabs defaultValue="history" className="w-full">
               <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="history">ანამნეზი</TabsTrigger>
+                <TabsTrigger value="history">EHR (ისტორია/ფოტოები)</TabsTrigger>
                 <TabsTrigger value="appointments">ვიზიტები</TabsTrigger>
                 <TabsTrigger value="prescriptions">რეცეპტები</TabsTrigger>
-                <TabsTrigger value="documents">EHR (დოკ.)</TabsTrigger>
+                <TabsTrigger value="documents">ფაილები</TabsTrigger>
                 <TabsTrigger value="treatments">ფინანსები</TabsTrigger>
               </TabsList>
 
               <TabsContent value="history" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">შემოკლებული სამედიცინო ანამნეზი</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap leading-relaxed text-sm">
-                      {patient.medical_history || 'ანამნეზი ცარიელია.'}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Left Column: Form & General History */}
+                  <div className="md:col-span-1 space-y-6">
+                    <Card>
+                      <CardHeader className="py-4">
+                        <CardTitle className="text-base font-semibold">ახალი ჩანაწერი (EHR)</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-1.5">
+                          <Label>ექიმი / სპეციალისტი</Label>
+                          <select 
+                            className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                            value={emrForm.employee_id}
+                            onChange={(e) => setEmrForm({ ...emrForm, employee_id: e.target.value })}
+                          >
+                            <option value="">არჩეული არ არის</option>
+                            {employees?.map((emp: any) => (
+                              <option key={emp.id} value={emp.id}>{emp.full_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>ჩანაწერი / ობიექტური მონაცემები</Label>
+                          <Textarea 
+                            placeholder="აღწერეთ ვიზიტის მიზანი, დიაგნოზი..." 
+                            className="min-h-[100px]"
+                            value={emrForm.notes}
+                            onChange={(e) => setEmrForm({ ...emrForm, notes: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>ფოტოების ატვირთვა (Before/After)</Label>
+                          <div className="flex items-center gap-2">
+                            <Input 
+                              type="file" 
+                              multiple 
+                              accept="image/*" 
+                              onChange={handlePhotoUpload} 
+                              disabled={isUploading}
+                              className="file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                            />
+                            {isUploading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                          </div>
+                          <div className="flex gap-2 mt-2 overflow-x-auto hide-scrollbar">
+                            {emrForm.photo_urls.map((url, i) => (
+                               <div key={i} className="relative w-12 h-12 rounded-md border overflow-hidden flex-shrink-0">
+                                 <img src={url} alt="Upload preview" className="object-cover w-full h-full" />
+                               </div>
+                            ))}
+                          </div>
+                        </div>
+                        <Button className="w-full gap-2" onClick={handleAddEMR} disabled={addClinicRecord.isPending || isUploading}>
+                          <Save className="h-4 w-4" /> ბარათში ჩაწერა
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="py-4">
+                        <CardTitle className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">ზოგადი ანამნეზი</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="bg-muted/50 p-3 rounded-md text-sm whitespace-pre-wrap leading-relaxed">
+                          {patient.medical_history || 'არ ფიქსირდება'}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Right Column: Timeline */}
+                  <div className="md:col-span-2">
+                    <Card className="h-full">
+                      <CardHeader>
+                        <CardTitle className="text-lg">ვიზიტების ისტორია & ფოტოები</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {records.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                              ჩანაწერები ჯერ არ არის
+                            </div>
+                          ) : (
+                            records.map((record: any) => (
+                              <div key={record.id} className="relative pl-6 pb-6 border-l last:pb-0">
+                                <div className="absolute left-[-5px] top-1 h-2 w-2 rounded-full bg-primary" />
+                                <div className="bg-muted/20 p-4 rounded-xl border">
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground font-medium">
+                                        {format(new Date(record.created_at), 'dd.MM.yyyy HH:mm')}
+                                      </p>
+                                      {record.employees?.full_name && (
+                                        <Badge variant="secondary" className="mt-1 bg-primary/10 text-primary hover:bg-primary/20">
+                                          {record.employees.full_name}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="space-y-3">
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                      {record.notes}
+                                    </p>
+                                    
+                                    {record.photo_urls && record.photo_urls.length > 0 && (
+                                      <div className="mt-4 pt-4 border-t border-border/50">
+                                        <span className="font-semibold block text-xs text-muted-foreground mb-3 flex items-center gap-1.5 uppercase tracking-wide">
+                                          <ImageIcon className="w-3.5 h-3.5"/> მიმაგრებული ფოტოები
+                                        </span>
+                                        <div className="flex gap-3 overflow-x-auto pb-2">
+                                          {record.photo_urls.map((url: string, i: number) => (
+                                            <a key={i} href={url} target="_blank" rel="noreferrer" className="shrink-0 group relative rounded-xl overflow-hidden border-2 border-transparent hover:border-primary/50 transition-all shadow-sm block">
+                                              <img src={url} alt="Medical Record" className="h-32 w-32 object-cover" />
+                                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-sm">
+                                                <ImageIcon className="h-6 w-6" />
+                                              </div>
+                                            </a>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="treatments" className="mt-4">

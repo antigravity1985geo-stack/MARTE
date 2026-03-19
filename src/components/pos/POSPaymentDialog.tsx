@@ -4,9 +4,13 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DollarSign, SmartphoneNfc, QrCode, Truck } from 'lucide-react';
+import { DollarSign, SmartphoneNfc, QrCode, Truck, Check, ChevronsUpDown } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Switch } from '@/components/ui/switch';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 interface Client {
   id: string;
@@ -39,6 +43,8 @@ interface POSPaymentDialogProps {
   selectedClientData?: any;
   createWaybill: boolean;
   onCreateWaybillChange: (val: boolean) => void;
+  tipAmount?: string;
+  onTipAmountChange?: (val: string) => void;
 }
 
 export function POSPaymentDialog({
@@ -49,9 +55,12 @@ export function POSPaymentDialog({
   couponCode, onCouponCodeChange, couponDiscount, onCouponValidate,
   selectedClient, onSelectedClientChange, clients,
   onPayment, isPending, change,
-  loyaltyDiscount = 0, pointsToEarn = 0, selectedClientData,
-  createWaybill, onCreateWaybillChange
+  selectedClientData,
+  createWaybill, onCreateWaybillChange,
+  tipAmount = '', onTipAmountChange
 }: POSPaymentDialogProps) {
+  const [openClientPopover, setOpenClientPopover] = useState(false);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -166,20 +175,75 @@ export function POSPaymentDialog({
         </Tabs>
 
         <div className="flex gap-2">
-          <Input placeholder="კუპონის კოდი" value={couponCode} onChange={(e) => onCouponCodeChange(e.target.value)} />
-          <Button variant="outline" onClick={onCouponValidate}>ვალიდაცია</Button>
+          <div className="flex-1 space-y-1">
+            <Label className="text-xs">კუპონი</Label>
+            <div className="flex gap-2">
+              <Input placeholder="კოდი" value={couponCode} onChange={(e) => onCouponCodeChange(e.target.value)} className="h-9" />
+              <Button variant="outline" className="h-9 px-3" onClick={onCouponValidate}>ოკ</Button>
+            </div>
+          </div>
+          {onTipAmountChange && (
+            <div className="w-[100px] space-y-1">
+              <Label className="text-xs">Tip / чай (₾)</Label>
+              <Input type="number" placeholder="0.00" value={tipAmount} onChange={(e) => onTipAmountChange(e.target.value)} className="h-9" />
+            </div>
+          )}
         </div>
+
         <div className="space-y-1">
           {couponDiscount > 0 && <p className="text-sm text-success flex justify-between"><span>კუპონის ფასდაკლება:</span> <span>-₾{couponDiscount.toFixed(2)}</span></p>}
           {loyaltyDiscount > 0 && <p className="text-sm text-primary flex justify-between font-medium"><span>ლოიალობის ფასდაკლება ({selectedClientData?.loyalty_tier}):</span> <span>-₾{loyaltyDiscount.toFixed(2)}</span></p>}
         </div>
 
-        <Select value={selectedClient} onValueChange={onSelectedClientChange}>
-          <SelectTrigger><SelectValue placeholder="კლიენტის არჩევა (არასავალდებულო)" /></SelectTrigger>
-          <SelectContent>
-            {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <div className="space-y-1 mt-2">
+          <Label className="text-xs">კლიენტის ძიება</Label>
+          <Popover open={openClientPopover} onOpenChange={setOpenClientPopover}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={openClientPopover}
+                className="w-full justify-between h-10 font-normal"
+              >
+                {selectedClient
+                  ? clients.find((c) => c.id === selectedClient)?.name
+                  : "აირჩიეთ კლიენტი (არასავალდებულო)"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[400px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="ძიება სახელით ან ნომრით..." className="h-9" />
+                <CommandEmpty>კლიენტი ვერ მოიძებნა.</CommandEmpty>
+                <CommandGroup className="max-h-[200px] overflow-y-auto">
+                  <CommandItem
+                    value="none"
+                    onSelect={() => {
+                      onSelectedClientChange('');
+                      setOpenClientPopover(false);
+                    }}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", selectedClient === '' ? "opacity-100" : "opacity-0")} />
+                    -- კლიენტის გარეშე --
+                  </CommandItem>
+                  {clients.map((c) => (
+                    <CommandItem
+                      key={c.id}
+                      value={`${c.name} ${c.tin || ''}`}
+                      onSelect={() => {
+                        onSelectedClientChange(c.id);
+                        setOpenClientPopover(false);
+                      }}
+                    >
+                      <Check className={cn("mr-2 h-4 w-4", selectedClient === c.id ? "opacity-100" : "opacity-0")} />
+                      {c.name} {c.tin && <span className="text-muted-foreground ml-1 text-xs">({c.tin})</span>}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
 
         {selectedClientData?.tin && (
           <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5 animate-in fade-in slide-in-from-top-1">
