@@ -8,7 +8,12 @@ import {
   ReturnDraft,
   CreateReturnResult,
   Return,
+  ProductReturn,
+  ProductReturnStatus,
+  ProductReturnType,
 } from '@/types/returns'
+
+export type ReturnRecord = ProductReturn
 import toast from 'react-hot-toast'
 
 // ─── Search original transaction ─────────────────────────────────
@@ -226,4 +231,113 @@ export function useReturnHistory(txId: string | null) {
   }, [txId])
 
   return { returns, loading, refetch: fetch }
+}
+
+// ─── Generic Product Returns (Inventory Module) ────────────────
+
+export function useReturns() {
+  const [returns, setReturns] = useState<ProductReturn[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const user = useAuthStore(s => s.user)
+  const tenantId = useAuthStore(s => s.activeTenantId)
+
+  const fetchReturns = useCallback(async () => {
+    if (!tenantId) return
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('product_returns')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setReturns(data || [])
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [tenantId])
+
+  // Initial fetch
+  useState(() => {
+    fetchReturns()
+  })
+
+  // Mutations (Mocking for now to satisfy component, real Supabase calls)
+  const addReturn = {
+    mutateAsync: async (input: {
+      type: ProductReturnType
+      productId: string
+      productName: string
+      quantity: number
+      price: number
+      counterpartyId: string
+      counterpartyName: string
+      reason: string
+    }) => {
+      if (!tenantId || !user) throw new Error('Not authenticated')
+      
+      const { data, error } = await supabase
+        .from('product_returns')
+        .insert({
+          tenant_id: tenantId,
+          user_id: user.id,
+          type: input.type,
+          product_id: input.productId,
+          product_name: input.productName,
+          counterparty_id: input.counterpartyId,
+          counterparty_name: input.counterpartyName,
+          quantity: input.quantity,
+          reason: input.reason,
+          status: 'pending'
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      setReturns(prev => [data, ...prev])
+      toast.success('დაბრუნება დამატებულია')
+      return data
+    }
+  }
+
+  const processReturn = {
+    mutateAsync: async (input: {
+      returnId: string
+      // other fields ignored for now as they are for stock adjustment
+    }) => {
+      const { error } = await supabase
+        .from('product_returns')
+        .update({ status: 'completed' })
+        .eq('id', input.returnId)
+
+      if (error) throw error
+      setReturns(prev => prev.map(r => r.id === input.returnId ? { ...r, status: 'completed' } : r))
+      toast.success('დაბრუნება დასრულდა')
+    },
+    isPending: false
+  }
+
+  const updateStatus = {
+    mutate: async (input: { id: string, status: ProductReturnStatus }) => {
+      const { error } = await supabase
+        .from('product_returns')
+        .update({ status: input.status })
+        .eq('id', input.id)
+
+      if (error) throw error
+      setReturns(prev => prev.map(r => r.id === input.id ? { ...r, status: input.status } : r))
+    }
+  }
+
+  return {
+    returns,
+    isLoading,
+    addReturn,
+    processReturn,
+    updateStatus,
+    refetch: fetchReturns
+  }
 }

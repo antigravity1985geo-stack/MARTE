@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { CreditCard, Search, History, ScanLine, Keyboard, DollarSign, ShoppingCart, Tag } from 'lucide-react'; // Added Tag icon
+import { CreditCard, Search, History, ScanLine, Keyboard, DollarSign, ShoppingCart, Tag, FileText } from 'lucide-react'; // Added Tag and FileText icons
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,11 +43,13 @@ import { NoCashDrawerBanner, CashDrawerStatusWidget, useCashPaymentGuard } from 
 import { RefundButton } from '@/components/pos/POSRefundIntegration';
 import { SplitPaymentButton } from '@/components/pos/POSSplitPaymentIntegration';
 import SplitPaymentModal from '@/components/pos/SplitPaymentModal';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useHotkeys } from 'react-hotkeys-hook';
 import type { CartItem } from '@/components/pos/POSCart';
 
 export default function POSPage() {
+  const navigate = useNavigate();
   useRealtimeSync(['products', 'transactions', 'shift_sales', 'queue_tickets']);
 
   const { products } = useProducts();
@@ -635,6 +637,10 @@ export default function POSPage() {
                 <Button size="sm" variant="outline" onClick={() => setScannerOpen(true)}><ScanLine className="mr-1 h-4 w-4" />{t('pos_scanner_f2') || 'ოკ'}</Button>
                 <RefundButton compact={!isMobile} />
                 <SplitPaymentButton onClick={() => cart.length > 0 && setSplitPaymentOpen(true)} disabled={cart.length === 0} />
+                <Button size="sm" variant="outline" onClick={() => navigate('/app/pos/shift-report')}>
+                  <FileText className="mr-1 h-4 w-4" />
+                  {t('pos_shift_report') || 'ანგარიში'}
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>{t('pos_history_f3') || 'ოკ'}</Button>
                 <Button size="sm" variant="outline" onClick={() => setHoldOrderOpen(true)} className="relative">
                   შეჩერებული

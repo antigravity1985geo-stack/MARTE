@@ -84,6 +84,7 @@ const PropertyList = lazy(() => import('@/pages/real-estate/PropertyList'));
 const MortgageManagement = lazy(() => import('@/pages/real-estate/MortgageManagement'));
 const MarteDistributorPage = lazy(() => import('@/pages/MarteDistributorPage'));
 const RefundPage = lazy(() => import('@/pages/pos/RefundPage'));
+const ShiftReportPage = lazy(() => import('@/pages/pos/ShiftReportPage'));
 
 // Portal Pages
 const PortalLayout = lazy(() => import('@/components/portal/PortalLayout').then(m => ({ default: m.PortalLayout })));
@@ -213,6 +214,7 @@ const App = () => (
                   <Route path="pos" element={<ErrorBoundary><POSPage /></ErrorBoundary>} />
                   <Route path="pos/refund" element={<ErrorBoundary><RefundPage /></ErrorBoundary>} />
                   <Route path="pos/cash-drawer" element={<ErrorBoundary><CashDrawerPage /></ErrorBoundary>} />
+                  <Route path="pos/shift-report" element={<ErrorBoundary><ShiftReportPage /></ErrorBoundary>} />
                   <Route path="products" element={<ErrorBoundary><ProductsPage /></ErrorBoundary>} />
                   <Route path="bundles" element={<ErrorBoundary><BundlesPage /></ErrorBoundary>} />
                   <Route path="price-rules" element={<ErrorBoundary><PriceRulesPage /></ErrorBoundary>} />

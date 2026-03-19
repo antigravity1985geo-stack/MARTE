@@ -110,3 +110,25 @@ export const RETURN_REASONS = [
   'ვადა გასული',
   'სხვა',
 ]
+
+// ─── Product Returns (Inventory) ──────────────────────────────
+
+export type ProductReturnStatus = 'pending' | 'approved' | 'completed' | 'rejected'
+export type ProductReturnType   = 'supplier' | 'customer'
+
+export interface ProductReturn {
+  id:                 string
+  tenant_id:          string
+  user_id:            string
+  type:               ProductReturnType
+  product_id:         string
+  product_name:       string
+  counterparty_id:    string
+  counterparty_name:  string
+  quantity:           number
+  reason:             string | null
+  status:             ProductReturnStatus
+  created_at:         string
+  image_url:          string | null
+  total?:             number
+}

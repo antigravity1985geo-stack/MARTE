@@ -703,6 +703,7 @@ const t = {
   pos_no_bundles: { ka: 'კომბოები ჯერ არდამატებულა.', en: 'No bundles added yet.' },
   pos_pin_code: { ka: 'PIN კოდი', en: 'PIN code' },
   pos_demo_pin: { ka: 'დემო PIN: 1234, 5678, 0000', en: 'Demo PIN: 1234, 5678, 0000' },
+  pos_shift_report: { ka: 'სმენის ანგარიში', en: 'Shift Report' },
 
   // --- Products Keys ---
   product_updated: { ka: 'პროდუქტი განახლდა', en: 'Product updated' },
