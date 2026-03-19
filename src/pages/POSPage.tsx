@@ -41,6 +41,8 @@ import { calculateCartTotal, calculateLoyaltyDiscount } from '@/lib/posMath';
 import { useActiveSession, useDrawers, useCashDrawerActions } from '@/hooks/useCashDrawer';
 import { NoCashDrawerBanner, CashDrawerStatusWidget, useCashPaymentGuard } from '@/components/pos/POSCashDrawerIntegration';
 import { RefundButton } from '@/components/pos/POSRefundIntegration';
+import { SplitPaymentButton } from '@/components/pos/POSSplitPaymentIntegration';
+import SplitPaymentModal from '@/components/pos/SplitPaymentModal';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useHotkeys } from 'react-hotkeys-hook';
 import type { CartItem } from '@/components/pos/POSCart';
@@ -100,6 +102,7 @@ export default function POSPage() {
   });
   const [holdOrderOpen, setHoldOrderOpen] = useState(false);
   const [holdOrderSaveOpen, setHoldOrderSaveOpen] = useState(false);
+  const [splitPaymentOpen, setSplitPaymentOpen] = useState(false);
 
   const syncOfflineQueue = async () => {
     if (!navigator.onLine) return;
@@ -631,6 +634,7 @@ export default function POSPage() {
                 <Button size="sm" onClick={() => cart.length > 0 && setPaymentOpen(true)}>{t('pos_checkout_f1') || 'ოკ'}</Button>
                 <Button size="sm" variant="outline" onClick={() => setScannerOpen(true)}><ScanLine className="mr-1 h-4 w-4" />{t('pos_scanner_f2') || 'ოკ'}</Button>
                 <RefundButton compact={!isMobile} />
+                <SplitPaymentButton onClick={() => cart.length > 0 && setSplitPaymentOpen(true)} disabled={cart.length === 0} />
                 <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>{t('pos_history_f3') || 'ოკ'}</Button>
                 <Button size="sm" variant="outline" onClick={() => setHoldOrderOpen(true)} className="relative">
                   შეჩერებული
@@ -808,6 +812,37 @@ export default function POSPage() {
       
       <POSHoldOrdersDrawer open={holdOrderOpen} onOpenChange={setHoldOrderOpen} holdOrders={holdOrders} onRecall={recallHoldOrder} onDelete={deleteHoldOrder} />
       <HoldOrderSaveDialog open={holdOrderSaveOpen} onOpenChange={setHoldOrderSaveOpen} onSave={handleHoldOrderSave} />
+
+      {splitPaymentOpen && (
+        <SplitPaymentModal
+          total={finalTotal}
+          cartItems={cart.map(i => ({
+            product_id: i.productId,
+            name: i.name,
+            qty: i.quantity,
+            unit_price: i.price,
+            discount: i.discount || 0,
+            line_total: i.price * i.quantity,
+            tax_rate: 18
+          }))}
+          totals={{
+            subtotal: cartTotal,
+            discountTotal: couponDiscount + loyaltyDiscount + bundleDiscount + priceRulesDiscount,
+            taxTotal: finalTotal * 0.18 / 1.18, 
+            total: finalTotal
+          }}
+          clientId={selectedClient}
+          clientName={selectedClientData?.name}
+          onClose={() => setSplitPaymentOpen(false)}
+          onSuccess={() => {
+            setCart([]);
+            setSplitPaymentOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            toast.success('გაყიდვა წარმატებით დასრულდა');
+          }}
+        />
+      )}
 
       {/* Promotions Dialog */}
       <POSPromotionsDialog 

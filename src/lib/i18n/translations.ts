@@ -618,6 +618,7 @@ const t = {
   shift_closed: { ka: 'ცვლა დახურულია!', en: 'Shift closed!' },
   pos_bundles: { ka: 'კომბოები (Bundles)', en: 'Bundles' },
   pos_checkout_f1: { ka: 'გადახდა F1', en: 'Checkout F1' },
+  split_payment: { ka: 'გაყოფა', en: 'Split Payment' },
   pos_scanner_f2: { ka: 'სკანერი F2', en: 'Scanner F2' },
   pos_history_f3: { ka: 'ისტორია F3', en: 'History F3', ru: 'История F3', az: 'Tarixçə F3' },
   pos_shortcuts: { ka: 'Shortcuts', en: 'Shortcuts', ru: 'Shortcuts', az: 'Shortcuts' },
