@@ -1,7 +1,7 @@
-// src/hooks/useReturns.ts
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuthStore } from '@/stores/useAuthStore'
+import toast from 'react-hot-toast'
 import {
   OriginalTransaction,
   OriginalTransactionItem,
@@ -14,7 +14,6 @@ import {
 } from '@/types/returns'
 
 export type ReturnRecord = ProductReturn
-import toast from 'react-hot-toast'
 
 // ─── Search original transaction ─────────────────────────────────
 
@@ -261,9 +260,9 @@ export function useReturns() {
   }, [tenantId])
 
   // Initial fetch
-  useState(() => {
+  useEffect(() => {
     fetchReturns()
-  })
+  }, [fetchReturns])
 
   // Mutations (Mocking for now to satisfy component, real Supabase calls)
   const addReturn = {
