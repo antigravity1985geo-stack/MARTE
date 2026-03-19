@@ -13,6 +13,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
+import { addGeorgianFont } from '@/lib/pdfHelper';
 
 export default function ReportsPage() {
     const { transactions, isLoading: txLoading } = useTransactions();
@@ -74,10 +75,11 @@ export default function ReportsPage() {
     };
 
     // 3. P&L Report (PDF)
-    const exportPnLReport = () => {
+    const exportPnLReport = async () => {
         setExporting('pnl-pdf');
         try {
             const doc = new jsPDF();
+            const hasGeorgianFont = await addGeorgianFont(doc);
             const now = format(new Date(), 'dd.MM.yyyy HH:mm');
 
             doc.setFontSize(18);
@@ -98,7 +100,13 @@ export default function ReportsPage() {
                     ['მთლიანი მოგება (Gross Profit)', `₾${grossProfit.toFixed(2)}`],
                 ],
                 theme: 'striped',
-                headStyles: { fillColor: [16, 185, 129] }
+                headStyles: { 
+                  fillColor: [16, 185, 129],
+                  font: hasGeorgianFont ? 'NotoSansGeorgian' : undefined,
+                },
+                bodyStyles: {
+                  font: hasGeorgianFont ? 'NotoSansGeorgian' : undefined,
+                }
             });
 
             doc.save(`PnL_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);

@@ -110,7 +110,15 @@
 
 ## 🟢 Medium Priority (Nice to have)
 
+- [x] **MARTEHOME (Real Estate)** ✅ Completed
+  - [x] Property management (CRUD)
+  - [x] Mortgage calculator & management
+  - [x] Real estate specific dashboard & analytics
+  - [x] RLS policies and table schema
+  - [x] Sidebar & Route integration
+
 - [ ] **Production Module**
+  - [~] **Construction Module Research** (In Progress)
   - [ ] Add Bill of Materials (BOM)
   - [ ] Add production cost calculation
   - [ ] Add work order management
@@ -163,10 +171,10 @@
 
 ## 🔵 Low Priority (Future enhancements)
 
-- [ ] **Multi-language Support**
-  - [ ] Add i18n library (react-i18next)
-  - [ ] Translate to English
-  - [ ] Add language switcher
+- [x] **Multi-language Support** ✅ Completed (4 Languages)
+  - [x] Add i18n system (Zustand store + translation dictionary)
+  - [x] Support Georgian (GE), English (EN), Russian (RU), Azerbaijani (AZ)
+  - [x] Implement language switcher in Settings/Sidebar
   
 - [ ] **Mobile App**
   - [ ] Convert to React Native
@@ -268,4 +276,4 @@
 - [~] In progress
 - [!] Blocked
 
-**Last Updated:** 2026-03-18 (Phase 2 complete — File Storage + Realtime + HR)
+**Last Updated:** 2026-03-19 (Phase 4 scope expanding — i18n + MarteHome + Construction Research)

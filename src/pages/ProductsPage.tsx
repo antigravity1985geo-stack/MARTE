@@ -25,6 +25,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTranslatedField } from '@/lib/i18n/content';
 import { Textarea } from '@/components/ui/textarea';
 import { useServiceManagement } from '@/hooks/useServiceManagement';
+import { z } from 'zod';
+import { productSchema } from '@/lib/validation';
 
 export default function ProductsPage() {
   const { categories } = useCategories();
@@ -127,43 +129,46 @@ export default function ProductsPage() {
 
 
   const handleSave = async () => {
-    if (!form.name || !form.buyPrice || !form.sellPrice) {
-      toast.error(t('fill_all_fields') || 'Fill all fields');
-      return;
-    }
-
-    const data: any = {
-      name: form.name.trim(),
-      description: form.description.trim(),
-      name_en: form.name_en.trim(),
-      description_en: form.description_en.trim(),
-      name_ru: form.name_ru.trim(),
-      description_ru: form.description_ru.trim(),
-      name_az: form.name_az.trim(),
-      description_az: form.description_az.trim(),
-      barcode: form.barcode.trim(),
-      buy_price: parseFloat(form.buyPrice),
-      sell_price: parseFloat(form.sellPrice),
-      category_id: form.category || null,
-      unit: form.unit,
-      min_stock: parseInt(form.minStock) || 0,
-      stock: parseInt(form.stock) || 0,
-      images: form.images,
-      warehouse_id: null,
-      type: form.type
-    };
-
     try {
+      const validatedData = productSchema.parse({
+        name: form.name.trim(),
+        description: form.description.trim(),
+        name_en: form.name_en.trim(),
+        description_en: form.description_en.trim(),
+        name_ru: form.name_ru.trim(),
+        description_ru: form.description_ru.trim(),
+        name_az: form.name_az.trim(),
+        description_az: form.description_az.trim(),
+        barcode: form.barcode.trim(),
+        buy_price: parseFloat(form.buyPrice) || 0,
+        sell_price: parseFloat(form.sellPrice) || 0,
+        category_id: form.category || undefined,
+        unit: form.unit,
+        min_stock: parseInt(form.minStock) || 0,
+        stock: parseInt(form.stock) || 0,
+        images: form.images,
+        type: form.type
+      });
+
+      const payload: any = {
+        ...validatedData,
+        warehouse_id: null
+      };
+
       if (editingId) {
-        await updateProduct.mutateAsync({ id: editingId, updates: data });
+        await updateProduct.mutateAsync({ id: editingId, updates: payload });
         toast.success(t('product_updated') || 'Product updated');
       } else {
-        await addProduct.mutateAsync(data);
+        await addProduct.mutateAsync(payload);
         toast.success(t('product_added') || 'Product added');
       }
       setDialogOpen(false);
     } catch (err: any) {
-      toast.error(err.message);
+      if (err instanceof z.ZodError) {
+        toast.error(err.errors[0].message);
+      } else {
+        toast.error(err.message);
+      }
     }
   };
 

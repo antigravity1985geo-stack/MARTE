@@ -55,6 +55,7 @@ export function POSPaymentDialog({
   couponCode, onCouponCodeChange, couponDiscount, onCouponValidate,
   selectedClient, onSelectedClientChange, clients,
   onPayment, isPending, change,
+  loyaltyDiscount = 0, pointsToEarn = 0,
   selectedClientData,
   createWaybill, onCreateWaybillChange,
   tipAmount = '', onTipAmountChange

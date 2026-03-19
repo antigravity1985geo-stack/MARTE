@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addGeorgianFont } from '@/lib/pdfHelper';
 
 export default function SalesPage() {
   const { transactions, isLoading } = useTransactions();
@@ -59,8 +60,10 @@ export default function SalesPage() {
     toast.success(t('excel_downloaded'));
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const doc = new jsPDF();
+    const hasGeorgianFont = await addGeorgianFont(doc);
+    
     doc.text(t('sales_report'), 14, 16);
     autoTable(doc, {
       head: [[t('date'), t('products_title'), t('total'), t('sales_method')]],
@@ -71,6 +74,9 @@ export default function SalesPage() {
         tr.payment_method,
       ]),
       startY: 22,
+      styles: {
+        font: hasGeorgianFont ? 'NotoSansGeorgian' : undefined,
+      },
     });
     doc.save('sales.pdf');
     toast.success(t('pdf_downloaded'));

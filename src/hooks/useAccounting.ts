@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { calculateTrialBalance, calculateProfitLoss } from '@/lib/accountingMath';
 
 // ==========================================
 // Types
@@ -387,51 +388,9 @@ export function useAccounting() {
     const journalEntries = journalQuery.data || [];
     const vatRecords = vatQuery.data || [];
 
-    const getTrialBalance = () =>
-        accounts.map((a) => ({
-            code: a.code,
-            name: a.name,
-            debit: ['asset', 'expense'].includes(a.type) ? Math.max(0, a.balance) : Math.max(0, -a.balance),
-            credit: ['liability', 'equity', 'revenue'].includes(a.type) ? Math.max(0, a.balance) : Math.max(0, -a.balance),
-        }));
+    const getTrialBalance = () => calculateTrialBalance(accounts);
 
-    const getProfitLoss = () => {
-        const revenueAccounts = accounts.filter((a) => a.type === 'revenue');
-        const expenseAccounts = accounts.filter((a) => a.type === 'expense');
-
-        const revenue = revenueAccounts.reduce((s, a) => s + Math.abs(a.balance), 0);
-        
-        // Define COGS (Cost of Goods Sold) as 5100, 7100, 7110
-        const cogsAccounts = expenseAccounts.filter((a) => ['5100', '7100', '7110'].includes(a.code));
-        const cogsTotal = cogsAccounts.reduce((s, a) => s + Math.abs(a.balance), 0);
-
-        // Operating Expenses are all other expenses
-        const operatingAccounts = expenseAccounts.filter((a) => !['5100', '7100', '7110'].includes(a.code));
-        const operatingExpenses = operatingAccounts.reduce((s, a) => s + Math.abs(a.balance), 0);
-
-        const grossProfit = revenue - cogsTotal;
-        const totalExpenses = cogsTotal + operatingExpenses;
-        const netIncome = grossProfit - operatingExpenses;
-
-        const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-        const netMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0;
-
-        return { 
-            revenue, 
-            cogsTotal, 
-            grossProfit, 
-            operatingExpenses, 
-            totalExpenses, 
-            netIncome,
-            grossMargin,
-            netMargin,
-            breakdown: {
-                revenue: revenueAccounts,
-                cogs: cogsAccounts,
-                operating: operatingAccounts
-            }
-        };
-    };
+    const getProfitLoss = () => calculateProfitLoss(accounts);
 
     return {
         accounts,

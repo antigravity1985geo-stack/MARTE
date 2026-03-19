@@ -39,6 +39,7 @@ import { useI18n } from '@/hooks/useI18n';
 import { getTranslatedField } from '@/lib/i18n/content';
 import type { CartItem } from '@/components/pos/POSCart';
 import { useHotkeys } from 'react-hotkeys-hook'; // New import
+import { calculateCartTotal, calculateLoyaltyDiscount } from '@/lib/posMath';
 
 export default function POSPage() {
   useRealtimeSync(['products', 'transactions', 'shift_sales', 'queue_tickets']);
@@ -60,7 +61,9 @@ export default function POSPage() {
   const { t, lang } = useI18n();
   const isMobile = useIsMobile();
 
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try { return JSON.parse(localStorage.getItem('pos_cart') || '[]'); } catch { return []; }
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -108,6 +111,11 @@ export default function POSPage() {
     window.addEventListener('online', syncOfflineQueue);
     return () => window.removeEventListener('online', syncOfflineQueue);
   }, []);
+
+  // Persist cart to localStorage so it survives page refresh
+  useEffect(() => {
+    localStorage.setItem('pos_cart', JSON.stringify(cart));
+  }, [cart]);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'combined' | 'bog_qr' | 'tbc_pay' | 'keepz' | 'bnpl'>('cash');
   const [cashAmount, setCashAmount] = useState('');
   const [cardAmount, setCardAmount] = useState('');
@@ -133,13 +141,9 @@ export default function POSPage() {
   } | null>(null);
 
   const { recordPurchase } = useClients();
-  const cartTotal = cart.reduce((s, item) => s + item.price * item.quantity, 0);
+  const cartTotal = calculateCartTotal(cart);
   const selectedClientData = clients.find(c => c.id === selectedClient);
-  const loyaltyDiscountPct = selectedClientData?.loyalty_tier === 'platinum' ? 0.1 :
-    selectedClientData?.loyalty_tier === 'gold' ? 0.05 :
-      selectedClientData?.loyalty_tier === 'silver' ? 0.03 : 0;
-
-  const loyaltyDiscount = cartTotal * loyaltyDiscountPct;
+  const loyaltyDiscount = calculateLoyaltyDiscount(cartTotal, selectedClientData?.loyalty_tier);
 
   // Calculate Auto Bundle Discount
   let bundleDiscount = 0;

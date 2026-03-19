@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Stethoscope, UtensilsCrossed, ShoppingBag, ArrowRight } from "lucide-react";
+import { Stethoscope, UtensilsCrossed, ShoppingBag, ArrowRight, Building2 } from "lucide-react";
 
 const industries = [
   {
@@ -31,6 +31,16 @@ const industries = [
     color: "from-blue-500/20 to-purple-500/20",
     border: "border-blue-500/20",
     text: "text-blue-500"
+  },
+  {
+    id: "construction",
+    title: "სამშენებლო ERP",
+    desc: "პროექტების მართვა, Gantt Chart, ხარჯთაღრიცხვა და ტექნიკის კონტროლი. იდეალურია დეველოპერებისთვის.",
+    icon: Building2,
+    image: "/images/industries/construction.png",
+    color: "from-yellow-500/20 to-orange-500/20",
+    border: "border-yellow-500/20",
+    text: "text-yellow-600"
   }
 ];
 
@@ -58,7 +68,7 @@ const IndustryShowcase = () => {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {industries.map((item, index) => (
             <motion.div
               key={item.id}

@@ -21,6 +21,7 @@ import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { addGeorgianFont } from '@/lib/pdfHelper';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -76,8 +77,9 @@ export default function AccountingPage() {
     { label: t('accounting_net_income'), value: pl.netIncome, icon: TrendingUp, color: pl.netIncome >= 0 ? 'text-success' : 'text-destructive', bg: pl.netIncome >= 0 ? 'bg-success/10' : 'bg-destructive/10', border: pl.netIncome >= 0 ? 'border-success/20' : 'border-destructive/20' },
   ];
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
     const doc = new jsPDF();
+    const hasGeorgianFont = await addGeorgianFont(doc);
     const dateStr = new Date().toLocaleDateString('ka-GE');
     doc.setFontSize(18); doc.text('MARTE - ' + t('accounting_title'), 14, 15);
     doc.setFontSize(10); doc.text(`${t('date')}: ${dateStr}`, 14, 22);
@@ -89,7 +91,7 @@ export default function AccountingPage() {
         startY: yPos,
         head: [[t('accounting_code'), t('accounting_account'), t('type'), t('accounting_balance')]],
         body: accounts.map(a => [a.code, a.name, typeMap[a.type], `₾${Math.abs(a.balance).toFixed(2)}`]),
-        styles: { fontSize: 9 }, headStyles: { fillColor: [22, 163, 74] },
+        styles: { fontSize: 9, font: hasGeorgianFont ? 'NotoSansGeorgian' : undefined }, headStyles: { fillColor: [22, 163, 74] },
       });
       yPos = (doc as any).lastAutoTable.finalY + 10;
     }
@@ -102,7 +104,7 @@ export default function AccountingPage() {
         head: [[t('accounting_code'), t('accounting_account'), t('accounting_debit'), t('accounting_credit')]],
         body: tbData.map(tb => [tb.code, tb.name, tb.debit > 0 ? `₾${tb.debit.toFixed(2)}` : '', tb.credit > 0 ? `₾${tb.credit.toFixed(2)}` : '']),
         foot: [['', t('accounting_grand_total'), `₾${trialBalance.reduce((s, tb) => s + tb.debit, 0).toFixed(2)}`, `₾${trialBalance.reduce((s, tb) => s + tb.credit, 0).toFixed(2)}`]],
-        styles: { fontSize: 9 }, headStyles: { fillColor: [22, 163, 74] }, footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
+        styles: { fontSize: 9, font: hasGeorgianFont ? 'NotoSansGeorgian' : undefined }, headStyles: { fillColor: [22, 163, 74] }, footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
       });
     }
     if (activeTab === 'pl' || activeTab === 'all') {
@@ -111,9 +113,9 @@ export default function AccountingPage() {
       autoTable(doc, {
         startY: yPos,
         head: [['', t('amount')]],
-        body: [[t('accounting_revenue'), `₾${pl.revenue.toFixed(2)}`], [t('accounting_expenses'), `₾${pl.expenses.toFixed(2)}`]],
+        body: [[t('accounting_revenue'), `₾${pl.revenue.toFixed(2)}`], [t('accounting_expenses'), `₾${pl.totalExpenses.toFixed(2)}`]],
         foot: [[t('accounting_net_income'), `₾${pl.netIncome.toFixed(2)}`]],
-        styles: { fontSize: 9 }, headStyles: { fillColor: [22, 163, 74] },
+        styles: { fontSize: 9, font: hasGeorgianFont ? 'NotoSansGeorgian' : undefined }, headStyles: { fillColor: [22, 163, 74] },
         footStyles: { fillColor: pl.netIncome >= 0 ? [220, 252, 231] : [254, 226, 226], fontStyle: 'bold' },
       });
     }
@@ -130,7 +132,7 @@ export default function AccountingPage() {
     const tbData = trialBalance.filter(tb => tb.debit > 0 || tb.credit > 0);
     const trialData = [[t('accounting_code'), t('accounting_account'), t('accounting_debit'), t('accounting_credit')], ...tbData.map(tb => [tb.code, tb.name, tb.debit > 0 ? tb.debit.toFixed(2) : '', tb.credit > 0 ? tb.credit.toFixed(2) : '']), ['', t('accounting_grand_total'), trialBalance.reduce((s, tb) => s + tb.debit, 0).toFixed(2), trialBalance.reduce((s, tb) => s + tb.credit, 0).toFixed(2)]];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trialData), t('accounting_trial'));
-    const plData = [['', t('amount')], [t('accounting_revenue'), pl.revenue.toFixed(2)], [t('accounting_expenses'), pl.expenses.toFixed(2)], [t('accounting_net_income'), pl.netIncome.toFixed(2)]];
+    const plData = [['', t('amount')], [t('accounting_revenue'), pl.revenue.toFixed(2)], [t('accounting_expenses'), pl.totalExpenses.toFixed(2)], [t('accounting_net_income'), pl.netIncome.toFixed(2)]];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(plData), t('accounting_pl'));
     XLSX.writeFile(wb, `accounting-report-${new Date().toLocaleDateString('ka-GE')}.xlsx`);
     toast.success(t('excel_downloaded'));

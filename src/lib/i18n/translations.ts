@@ -4,6 +4,12 @@ const t = {
   // --- Auth Keys ---
   invalid_email: { ka: 'შეიყვანეთ ვალიდური ელ-ფოსტა', en: 'Enter a valid email', ru: 'Введите корректный email', az: 'Valid e-poçt daxil edin' },
   password_min_length: { ka: 'პაროლი უნდა შეიცავდეს მინიმუმ 6 სიმბოლოს', en: 'Password must contain at least 6 characters', ru: 'Пароль должен содержать минимум 6 символов', az: 'Şifrə ən azı 6 simvoldan ibarət olmalıdır' },
+  password_min_8: { ka: 'პაროლი უნდა შეიცავდეს მინიმუმ 8 სიმბოლოს', en: 'Password must contain at least 8 characters', ru: 'Пароль должен содержать минимум 8 символов', az: 'Şifrə ən azı 8 simvoldan ibarət olmalıdır' },
+  password_upper: { ka: 'პაროლი უნდა შეიცავდეს დიდ ასოს', en: 'Password must contain an uppercase letter', ru: 'Пароль должен содержать заглавную букву', az: 'Şifrədə böyük hərf olmalıdır' },
+  password_digit: { ka: 'პაროლი უნდა შეიცავდეს ციფრს', en: 'Password must contain a digit', ru: 'Пароль должен содержать цифру', az: 'Şifrədə rəqəm olmalıdır' },
+  forgot_password: { ka: 'დაგავიწყდა პაროლი?', en: 'Forgot password?', ru: 'Забыли пароль?', az: 'Şifrəni unutmusunuz?' },
+  or: { ka: 'ან', en: 'or', ru: 'или', az: 'və ya' },
+  sign_in_google: { ka: 'შესვლა Google-ით', en: 'Sign in with Google', ru: 'Войти через Google', az: 'Google ilə daxil olun' },
   field_required: { ka: 'ამ ველის შევსება სავალდებულოა', en: 'This field is required', ru: 'Это поле обязательно', az: 'Bu sahə mütləqdir' },
   select_industry: { ka: 'აირჩიეთ ინდუსტრია', en: 'Select industry', ru: 'Выберите отрасль', az: 'Sənaye seçin' },
   login_success: { ka: 'წარმატებით შეხვედით!', en: 'Logged in successfully!', ru: 'Успешный вход!', az: 'Uğurla daxil oldunuz!' },
