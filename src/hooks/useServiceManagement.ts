@@ -214,10 +214,10 @@ export function useServiceManagement() {
 
   const calculateAndSaveCommission = useMutation({
     mutationFn: async ({ appointmentId, specialistId, serviceName }: { appointmentId: string, specialistId: string, serviceName: string }) => {
-      // 1. Fetch service price
+      // 1. Fetch service details
       const { data: service, error: serviceErr } = await supabase
         .from('salon_services')
-        .select('price')
+        .select('id, price')
         .eq('name', serviceName)
         .single();
       
@@ -232,7 +232,7 @@ export function useServiceManagement() {
       
       if (specErr) throw new Error('სპეციალისტის საკომისიო ვერ მოიძებნა');
 
-      // 3. Calculate amount
+      // 3. Calculate commission amount
       let amount = 0;
       if (specialist.commission_type === 'percentage') {
         amount = (Number(service.price) * (Number(specialist.commission_rate) || 0)) / 100;
@@ -240,21 +240,57 @@ export function useServiceManagement() {
         amount = Number(specialist.commission_fixed) || 0;
       }
 
-      if (amount <= 0) return null;
-
       // 4. Save to commissions
       const { data, error } = await supabase
         .from('salon_commissions')
         .insert({
           appointment_id: appointmentId,
           specialist_id: specialistId,
-          amount,
+          amount: Math.max(0, amount),
           is_paid: false
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // 5. Automatic Material Deduction
+      const { data: materials, error: matErr } = await supabase
+        .from('salon_service_materials')
+        .select('*')
+        .eq('service_id', service.id);
+
+      if (!matErr && materials && materials.length > 0) {
+        for (const mat of materials) {
+          // Fetch current stock
+          const { data: product, error: prodErr } = await supabase
+            .from('products')
+            .select('stock, name')
+            .eq('id', mat.product_id)
+            .single();
+
+          if (!prodErr && product) {
+            const newStock = Math.max(0, (Number(product.stock) || 0) - Number(mat.quantity));
+            await supabase
+              .from('products')
+              .update({ stock: newStock })
+              .eq('id', mat.product_id);
+            
+            // Log activity
+            log({ 
+              action: 'update', 
+              entityType: 'product', 
+              entityId: mat.product_id, 
+              details: { 
+                reason: `Salon service material deduction: ${serviceName}`,
+                previous_stock: product.stock,
+                new_stock: newStock
+              } 
+            });
+          }
+        }
+      }
+
       return data;
     },
     onSuccess: () => {

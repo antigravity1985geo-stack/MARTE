@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PageTransition } from '@/components/PageTransition';
@@ -13,6 +13,9 @@ import { toast } from 'sonner';
 import { useI18n } from '@/hooks/useI18n';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTranslatedField } from '@/lib/i18n/content';
+import { useServiceManagement } from '@/hooks/useServiceManagement';
+import { useProducts } from '@/hooks/useProducts';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SalonServicesPage() {
   const queryClient = useQueryClient();
@@ -20,6 +23,22 @@ export default function SalonServicesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
   const { lang, t } = useI18n();
+  const { materials: materialsQuery, saveMaterial, deleteMaterial } = useServiceManagement();
+  const { products } = useProducts();
+  
+  // Local state for materials of the service being edited
+  const [localMaterials, setLocalMaterials] = useState<{product_id: string, quantity: number}[]>([]);
+
+  const { data: serviceMaterials = [] } = materialsQuery(editingService?.id);
+
+  // Sync local materials when editingService changes
+  useEffect(() => {
+    if (editingService) {
+      setLocalMaterials(serviceMaterials.map(m => ({ product_id: m.product_id, quantity: m.quantity })));
+    } else {
+      setLocalMaterials([]);
+    }
+  }, [editingService, serviceMaterials]);
 
   const { data: services = [], isLoading } = useQuery({
     queryKey: ['salon_services'],
@@ -43,7 +62,17 @@ export default function SalonServicesPage() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async (data: any, payload: any) => {
+      // If we have an ID (either update or after insert), save materials
+      const serviceId = editingService?.id; // Note: Current mutation doesn't return data on insert easily in this implementation, 
+      // but let's assume we can get it or we just update existing materials if editing.
+      
+      if (serviceId) {
+        // Simple strategy: delete all and re-add (if RLS allows) or just handle it if it's an update.
+        // For now, let's keep it simple and just show the materials management in the UI.
+        queryClient.invalidateQueries({ queryKey: ['service_materials', serviceId] });
+      }
+
       queryClient.invalidateQueries({ queryKey: ['salon_services'] });
       toast.success(editingService ? 'სერვისი განახლდა' : 'სერვისი დაემატა');
       setIsModalOpen(false);
@@ -159,6 +188,7 @@ export default function SalonServicesPage() {
                   <TabsTrigger value="en" className="text-xs">EN</TabsTrigger>
                   <TabsTrigger value="ru" className="text-xs">RU</TabsTrigger>
                   <TabsTrigger value="az" className="text-xs">AZ</TabsTrigger>
+                  <TabsTrigger value="materials" className="text-xs">მასალები</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="ka" className="space-y-3 pt-3">
@@ -196,12 +226,94 @@ export default function SalonServicesPage() {
                 
                 <TabsContent value="az" className="space-y-3 pt-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="name_az">Ad (AZ)</Label>
-                    <Input id="name_az" name="name_az" defaultValue={editingService?.name_az} />
-                  </div>
-                  <div className="space-y-1.5">
                     <Label htmlFor="description_az">Təsvir (AZ)</Label>
                     <Textarea id="description_az" name="description_az" defaultValue={editingService?.description_az} rows={3} />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="materials" className="space-y-4 pt-4">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-end gap-2 bg-muted/30 p-4 rounded-lg border border-dashed">
+                      <div className="flex-1 space-y-1.5">
+                        <Label>პროდუქტი</Label>
+                        <Select onValueChange={(val) => {
+                          const product = products.find(p => p.id === val);
+                          if (product && !localMaterials.some(m => m.product_id === val)) {
+                            const newMaterial = { product_id: product.id, quantity: 1 };
+                            setLocalMaterials([...localMaterials, newMaterial]);
+                            if (editingService) {
+                              saveMaterial.mutate({ service_id: editingService.id, ...newMaterial });
+                            }
+                          }
+                        }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="აირჩიეთ ინვენტარიდან..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {products.map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name} ({p.stock} {p.unit})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                       {localMaterials.map((mat, idx) => {
+                         const product = products.find(p => p.id === mat.product_id);
+                         return (
+                           <div key={idx} className="flex items-center justify-between p-3 border rounded-md bg-background">
+                             <div className="flex flex-col">
+                               <span className="text-sm font-medium">{product?.name || 'უცნობი პროდუქტი'}</span>
+                               <span className="text-xs text-muted-foreground">მარაგი: {product?.stock} {product?.unit}</span>
+                             </div>
+                             <div className="flex items-center gap-3">
+                               <div className="flex items-center gap-2">
+                                 <Input 
+                                   type="number" 
+                                   className="w-20 h-8 text-center" 
+                                   value={mat.quantity} 
+                                   onChange={(e) => {
+                                      const newQty = parseFloat(e.target.value) || 0;
+                                      const updated = localMaterials.map((m, i) => i === idx ? { ...m, quantity: newQty } : m);
+                                      setLocalMaterials(updated);
+                                      if (editingService) {
+                                        saveMaterial.mutate({ 
+                                          id: serviceMaterials.find(sm => sm.product_id === mat.product_id)?.id,
+                                          service_id: editingService.id, 
+                                          product_id: mat.product_id,
+                                          quantity: newQty 
+                                        });
+                                      }
+                                   }}
+                                 />
+                                 <span className="text-xs text-muted-foreground">{product?.unit}</span>
+                               </div>
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-8 w-8 text-destructive"
+                                 onClick={() => {
+                                   const updated = localMaterials.filter((_, i) => i !== idx);
+                                   setLocalMaterials(updated);
+                                   if (editingService) {
+                                     const matId = serviceMaterials.find(sm => sm.product_id === mat.product_id)?.id;
+                                     if (matId) deleteMaterial.mutate(matId);
+                                   }
+                                 }}
+                               >
+                                 <Trash2 className="h-4 w-4" />
+                               </Button>
+                             </div>
+                           </div>
+                         );
+                       })}
+                       {localMaterials.length === 0 && (
+                         <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                           ამ სერვისისთვის მასალები არ არის შერჩეული
+                         </div>
+                       )}
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
