@@ -27,6 +27,7 @@ import { PrescriptionDialog } from '@/components/clinic/PrescriptionDialog';
 import { PrescriptionPrintTemplate } from '@/components/clinic/PrescriptionPrintTemplate';
 import { AnamnesisDialog } from '@/components/clinic/AnamnesisDialog';
 import { useRef } from 'react';
+import ConsentFormsPage from './ConsentFormsPage';
 
 export default function ClinicPatientDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -290,6 +291,7 @@ export default function ClinicPatientDetailsPage() {
                 <TabsTrigger value="history">EHR (ისტორია/ფოტოები)</TabsTrigger>
                 <TabsTrigger value="appointments">ვიზიტები</TabsTrigger>
                 <TabsTrigger value="prescriptions">რეცეპტები</TabsTrigger>
+                <TabsTrigger value="consent">თანხმობა</TabsTrigger>
                 <TabsTrigger value="documents">ფაილები</TabsTrigger>
                 <TabsTrigger value="lab_orders">ლაბ. შეკვეთები</TabsTrigger>
                 <TabsTrigger value="treatments">ფინანსები</TabsTrigger>
@@ -651,6 +653,14 @@ export default function ClinicPatientDetailsPage() {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="consent" className="mt-4">
+                <ConsentFormsPage 
+                  patientId={id} 
+                  patientName={`${patient.first_name} ${patient.last_name}`}
+                  hideHeader={true}
+                />
               </TabsContent>
 
               <TabsContent value="lab_orders" className="mt-4">

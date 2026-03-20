@@ -142,6 +142,7 @@ const t = {
   nav_returns: { ka: 'დაბრუნებები', en: 'Returns', ru: 'Возвраты', az: 'Qayıdışlar' },
   nav_lab_orders: { ka: 'ლაბ. შეკვეთები', en: 'Lab Orders', ru: 'Лаб. заказы', az: 'Laboratoriya Sifarişləri' },
   nav_doctor_performance: { ka: 'ექიმების ანალიტიკა', en: 'Doctor Performance', ru: 'Аналитика врачей', az: 'Həkim Analitikası' },
+  nav_consent_forms: { ka: 'თანხმობის ფორმები', en: 'Consent Forms', ru: 'Формы согласия', az: 'Razılıq Formaları' },
   logout: { ka: 'გამოსვლა', en: 'Logout' },
 
   // ─── Auth Page ────────────────────────────────────────────────────────────

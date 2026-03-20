@@ -66,6 +66,8 @@ const getSections = (
     operationItems.push({ title: t('nav_patients'), icon: Users, path: '/app/clinic/patients' });
     operationItems.push({ title: t('nav_lab_orders'), icon: TestTube, path: '/app/clinic/lab-orders' });
     operationItems.push({ title: t('nav_doctor_performance'), icon: TrendingUp, path: '/app/clinic/performance' });
+    operationItems.push({ title: 'ბილინგი', icon: Wallet2, path: '/app/clinic/billing' });
+    operationItems.push({ title: t('nav_consent_forms'), icon: ClipboardList, path: '/app/clinic/consent-forms' });
   }
   if (isEnabled('sales') || isSuperadmin) {
     operationItems.push({ title: t('nav_sales'), icon: TrendingUp, path: '/app/sales' });

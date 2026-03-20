@@ -87,6 +87,8 @@ const MarteDistributorPage = lazy(() => import('@/pages/MarteDistributorPage'));
 const RefundPage = lazy(() => import('@/pages/pos/RefundPage'));
 const ShiftReportPage = lazy(() => import('@/pages/pos/ShiftReportPage'));
 const LabOrdersPage = lazy(() => import('@/pages/clinic/LabOrdersPage'));
+const MedicalBillingPage = lazy(() => import('@/pages/clinic/MedicalBillingPage'));
+const ConsentFormsPage = lazy(() => import('@/pages/clinic/ConsentFormsPage'));
 
 // Portal Pages
 const PortalLayout = lazy(() => import('@/components/portal/PortalLayout').then(m => ({ default: m.PortalLayout })));
@@ -276,6 +278,8 @@ const App = () => (
                   <Route path="clinic/services" element={<RoleRoute path="/clinic/services"><ErrorBoundary><ClinicServicesPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/lab-orders" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><LabOrdersPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/performance" element={<RoleRoute path="/clinic/calendar"><ErrorBoundary><DoctorPerformanceDashboard /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/billing" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><MedicalBillingPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/consent-forms" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ConsentFormsPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="salon/services" element={<RoleRoute path="/salon/services"><ErrorBoundary><SalonServicesPage /></ErrorBoundary></RoleRoute>} />
                   
                   {/* MARTEHOME (Real Estate) */}

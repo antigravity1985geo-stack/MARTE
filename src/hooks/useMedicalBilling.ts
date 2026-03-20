@@ -1,7 +1,7 @@
 // hooks/useMedicalBilling.ts
 import { useState, useEffect, useCallback } from 'react'
 import { addMonths, addWeeks, addDays, format } from 'date-fns'
-import { supabase }  from '@/lib/supabase'
+import { supabase }  from '@/integrations/supabase/client'
 import { useAuth }   from '@/hooks/useAuth'
 import { useTenant } from '@/hooks/useTenant'
 import {
@@ -10,13 +10,14 @@ import {
   InsuranceCompany, PatientInsurance,
   CreateInvoiceInput, InvoiceItemInput, PaymentMethod, Frequency,
 } from '@/types/medicalBilling'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 // ─── Insurers list ────────────────────────────────────────────
 export function useInsurers() {
   const { tenantId } = useTenant()
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([])
   useEffect(() => {
+    if (!tenantId) return
     supabase.from('insurance_companies').select('*')
       .eq('tenant_id', tenantId).eq('is_active', true).order('name')
       .then(({ data }) => setInsurers(data ?? []))
@@ -29,7 +30,7 @@ export function usePatientInsurance(patientId: string | null) {
   const { tenantId } = useTenant()
   const [policies, setPolicies] = useState<PatientInsurance[]>([])
   useEffect(() => {
-    if (!patientId) return
+    if (!tenantId || !patientId) return
     supabase.from('patient_insurance')
       .select('*, insurer:insurance_companies(name,coverage_pct,claim_email)')
       .eq('tenant_id', tenantId).eq('patient_id', patientId).eq('is_active', true)
@@ -49,6 +50,7 @@ export function useInvoices(opts?: {
   const [loading,  setLoading]  = useState(true)
 
   const load = useCallback(async () => {
+    if (!tenantId) return
     setLoading(true)
     let q = supabase.from('medical_invoices').select('*')
       .eq('tenant_id', tenantId)
@@ -63,6 +65,7 @@ export function useInvoices(opts?: {
 
   useEffect(() => {
     load()
+    if (!tenantId) return
     const ch = supabase.channel('invoices_rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'medical_invoices', filter: `tenant_id=eq.${tenantId}` }, load)
       .subscribe()
@@ -110,6 +113,7 @@ export function useCreateInvoice() {
   const [busy, setBusy] = useState(false)
 
   const create = useCallback(async (input: CreateInvoiceInput): Promise<MedicalInvoice | null> => {
+    if (!tenantId || !user) return null
     setBusy(true)
     try {
       // Compute totals
@@ -157,7 +161,7 @@ export function useCreateInvoice() {
           issue_date:  format(new Date(), 'yyyy-MM-dd'),
           due_date:    input.due_date,
           status:      'draft',
-          created_by:  user!.id,
+          created_by:  user.id,
         })
         .select().single()
 
@@ -207,6 +211,7 @@ export function useRecordPayment() {
     notes?:    string,
     scheduleId?: string,
   ): Promise<boolean> => {
+    if (!tenantId || !user) return false
     setBusy(true)
     try {
       const { data: pay, error } = await supabase
@@ -217,7 +222,7 @@ export function useRecordPayment() {
           amount, method,
           reference: reference ?? null,
           notes:     notes ?? null,
-          recorded_by: user!.id,
+          recorded_by: user.id,
         })
         .select().single()
 
@@ -280,6 +285,7 @@ export function useInsuranceClaims(opts?: { status?: ClaimStatus | 'all' }) {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
+    if (!tenantId) return
     setLoading(true)
     let q = supabase.from('insurance_claims')
       .select('*, insurer:insurance_companies(name), invoice:medical_invoices(invoice_number,patient_name,total)')
@@ -309,6 +315,7 @@ export function useClaimActions() {
     procCodes:    string[],
     notes?:       string,
   ): Promise<InsuranceClaim | null> => {
+    if (!tenantId || !user) return null
     setBusy(true)
     const { data, error } = await supabase.from('insurance_claims')
       .insert({
@@ -317,7 +324,7 @@ export function useClaimActions() {
         claim_number: '', claimed_amount: claimedAmount,
         diagnosis_codes: diagCodes, procedure_codes: procCodes,
         notes: notes ?? null, status: 'draft',
-        created_by: user!.id,
+        created_by: user.id,
       })
       .select('*, insurer:insurance_companies(name)').single()
     setBusy(false)
@@ -384,6 +391,7 @@ export function useCreateInstallmentPlan() {
     firstDueDate: string,
     interestPct:  number,
   ): Promise<InstallmentPlan | null> => {
+    if (!tenantId || !user) return null
     setBusy(true)
     try {
       const financed  = totalAmount - downPayment
@@ -397,7 +405,7 @@ export function useCreateInstallmentPlan() {
           financed_amount: financed, installment_count: count,
           installment_amount: perInst, frequency,
           first_due_date: firstDueDate, interest_pct: interestPct,
-          status: 'active', created_by: user!.id,
+          status: 'active', created_by: user.id,
         }).select().single()
 
       if (error) throw error
@@ -410,7 +418,7 @@ export function useCreateInstallmentPlan() {
         await supabase.from('invoice_payments').insert({
           tenant_id: tenantId, invoice_id: invoiceId,
           amount: downPayment, method: 'cash',
-          notes: 'განვადების წინასწარი გადახდა', recorded_by: user!.id,
+          notes: 'განვადების წინასწარი გადახდა', recorded_by: user.id,
         })
       }
 

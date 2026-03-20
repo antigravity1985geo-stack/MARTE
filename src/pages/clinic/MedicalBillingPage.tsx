@@ -1,4 +1,4 @@
-// components/MedicalBillingPage.tsx
+// src/pages/clinic/MedicalBillingPage.tsx
 // Design: structured-document aesthetic — clean tabular layouts,
 // invoice-like precision, deep navy + emerald signal color.
 // Feels like a real billing system, not a demo.
@@ -27,6 +27,7 @@ import {
   INVOICE_STATUS_META, CLAIM_STATUS_META, METHOD_LABELS, FREQ_LABELS,
   InvoiceItemInput,
 } from '@/types/medicalBilling'
+import { toast } from 'sonner'
 
 // ─── Utils ────────────────────────────────────────────────────
 const fmt = (n: number) => new Intl.NumberFormat('ka-GE', {
@@ -108,11 +109,13 @@ function CreateInvoiceModal({ onSave, onClose }: {
 
   const handleSave = async () => {
     if (!patientName || items.some(i => !i.description || !i.unit_price)) {
-      toast?.('შეავსეთ სავალდებულო ველები')
+      toast.error('შეავსეთ სავალდებულო ველები')
       return
     }
+    // Note: in a real app, you'd have a patient selector. 
+    // For now, we use a placeholder patient ID if not selected.
     const result = await create({
-      patient_id:     crypto.randomUUID(), // replace with real patient picker
+      patient_id:     '00000000-0000-0000-0000-000000000000', // needs real picker
       patient_name:   patientName,
       patient_phone:  patientPhone || undefined,
       doctor_name:    doctorName || undefined,
@@ -610,7 +613,7 @@ function InvoiceDetailPanel({ invoiceId, onClose, onRefresh }: {
 }) {
   const { invoice, loading, refetch } = useInvoice(invoiceId)
   const { issue, cancel, busy: actBusy } = useInvoiceActions()
-  const { claimActions } = { claimActions: useClaimActions() }
+  const { submitClaim, updateClaim, busy: clmBusy } = useClaimActions()
   const [showPay,    setShowPay]    = useState(false)
   const [showInst,   setShowInst]   = useState(false)
   const [showClaim,  setShowClaim]  = useState(false)
@@ -686,7 +689,7 @@ function InvoiceDetailPanel({ invoiceId, onClose, onRefresh }: {
         <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
           {invoice.items.map((item, i) => (
             <div key={item.id} className={`flex items-center justify-between px-4 py-3
-              ${i < invoice.items!.length - 1 ? 'border-b border-slate-50' : ''}`}>
+              ${i < (invoice.items?.length ?? 0) - 1 ? 'border-b border-slate-50' : ''}`}>
               <div className="flex-1 min-w-0 pr-3">
                 <p className="text-sm text-slate-800 truncate">{item.description}</p>
                 {item.procedure_code && (
