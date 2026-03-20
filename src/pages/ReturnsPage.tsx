@@ -71,13 +71,6 @@ export default function ReturnsPage() {
       const product = products.find(p => p.id === r.product_id);
       await processReturn.mutateAsync({
         returnId: r.id,
-        type: r.type,
-        productId: r.product_id,
-        quantity: r.quantity,
-        price: r.type === 'supplier' ? (product?.buy_price || 0) : (product?.sell_price || 0),
-        counterpartyId: r.counterparty_id,
-        counterpartyName: r.counterparty_name,
-        reason: r.reason
       });
     } catch (err: any) {
       toast.error(err.message);

@@ -111,7 +111,7 @@ export default function DashboardPage() {
   const todaySales = salesTransactions.filter((t) => t.date.startsWith(today));
   const todayRevenue = todaySales.reduce((s, t) => s + t.total, 0);
 
-  const { revenue: accRevenue, expenses: accExpenses, netIncome } = getProfitLoss();
+  const { revenue: accRevenue, totalExpenses: accExpenses, netIncome } = getProfitLoss();
   const bankBalance = accounts.find(a => a.code === '2320')?.balance || 0;
   const cashBalance = accounts.find(a => a.code === '2310')?.balance || 0;
 

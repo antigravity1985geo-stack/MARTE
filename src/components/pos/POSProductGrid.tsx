@@ -56,11 +56,11 @@ export function POSProductGrid({ products, cart, isMobile, onAddToCart }: POSPro
           onAddToCart(p);
           if (isMobile || compact) toast.success(`${p.name} +1`, { duration: 800 });
         }}
-        className={`stat-card text-left relative transition-all active:scale-[0.97] group
-          ${compact ? 'p-2' : isMobile ? 'p-2.5' : 'p-3'}
-          ${inCart ? 'ring-2 ring-primary/50 bg-primary/5' : ''}
-          ${isLowStock ? 'ring-2 ring-amber-400/60 animate-pulse-border' : ''}
-          ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : 'card-hover cursor-pointer'}`}
+        className={`glass-card text-left relative transition-all active:scale-[0.97] group border-primary/10
+          ${compact ? 'p-2 rounded-2xl' : isMobile ? 'p-2.5 rounded-2xl' : 'p-3 rounded-2xl'}
+          ${inCart ? 'ring-2 ring-primary bg-primary/10' : ''}
+          ${isLowStock ? 'ring-2 ring-amber-400/60 animate-pulse-glow' : ''}
+          ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:border-primary/50'}`}
       >
         {/* In-cart badge */}
         {inCart && (
@@ -82,7 +82,7 @@ export function POSProductGrid({ products, cart, isMobile, onAddToCart }: POSPro
 
         {/* Product Image */}
         {!compact && (
-          <div className="aspect-square w-full bg-muted rounded-lg mb-2 overflow-hidden flex items-center justify-center border border-border/50 group-hover:border-primary/20">
+          <div className="aspect-square w-full bg-primary/5 rounded-xl mb-2 overflow-hidden flex items-center justify-center border border-primary/5 group-hover:border-primary/20 transition-all shadow-inner">
             {p.images && p.images[0] ? (
               <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
             ) : (
@@ -96,7 +96,7 @@ export function POSProductGrid({ products, cart, isMobile, onAddToCart }: POSPro
           </div>
         )}
 
-        <p className={`font-medium truncate ${compact ? 'text-xs' : isMobile ? 'text-[11px]' : 'text-sm'}`}>{p.name}</p>
+        <p className={`font-bold text-foreground truncate ${compact ? 'text-xs' : isMobile ? 'text-[11px]' : 'text-sm'}`}>{p.name}</p>
         <div className="flex items-center justify-between mt-1">
           <span className={`text-primary font-bold ${isMobile || compact ? 'text-sm' : ''}`}>₾{p.sell_price.toFixed(2)}</span>
           <div className="flex items-center gap-1">
@@ -134,8 +134,12 @@ export function POSProductGrid({ products, cart, isMobile, onAddToCart }: POSPro
 
       {/* Main product grid */}
       <ScrollArea className="flex-1">
-        <div className={`grid gap-2 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'}`}>
-          {products.map(p => renderCard(p))}
+        <div className={`grid gap-3 p-1 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-4'}`}>
+          {products.map((p, idx) => (
+            <div key={p.id} className="animate-slide-up" style={{ animationDelay: `${idx * 0.03}s` }}>
+              {renderCard(p)}
+            </div>
+          ))}
         </div>
       </ScrollArea>
     </div>

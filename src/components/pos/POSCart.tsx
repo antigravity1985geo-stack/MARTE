@@ -5,6 +5,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CartDiscountLine } from './POSDiscountIntegration';
+import { DiscountResult } from '@/types/discount';
+
 
 export interface CartItem {
   id: string;
@@ -35,12 +38,13 @@ interface POSCartProps {
   onPayment: () => void;
   onShiftToggle: () => void;
   currentShift: boolean;
+  activeDiscount?: DiscountResult | null;
 }
 
 export function POSCart({
   cart, employees, finalTotal, cartItemCount,
   onUpdateQuantity, onUpdateEmployee, onUpdateItemDetails, onRemove, onClear, onHoldOrder,
-  onPayment, onShiftToggle, currentShift,
+  onPayment, onShiftToggle, currentShift, activeDiscount,
 }: POSCartProps) {
   return (
     <div className="w-[450px] flex flex-col border rounded-xl bg-card p-4 shadow-sm">
@@ -56,7 +60,7 @@ export function POSCart({
               const itemTotal = item.price * item.quantity;
               
               return (
-              <div key={item.id} className={`flex flex-col gap-2 p-2 rounded-xl bg-muted/30 border transition-all ${item.note ? 'border-primary/20 bg-primary/5' : 'border-transparent hover:border-primary/20'}`}>
+              <div key={item.id} className={`flex flex-col gap-2 p-3 rounded-2xl bg-white/5 border transition-all animate-slide-up group mb-2 ${item.note ? 'border-primary/30 bg-primary/10 shadow-sm' : 'border-white/5 hover:border-primary/20 hover:bg-white/10'}`}>
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0 border relative">
                     {item.image ? (
@@ -189,21 +193,24 @@ export function POSCart({
         )}
       </ScrollArea>
       <div className="border-t pt-3 mt-3 space-y-3">
+        {activeDiscount?.approved && (
+          <CartDiscountLine discount={activeDiscount} />
+        )}
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">ჯამი ({cartItemCount} ერთ.)</span>
           <span className="text-xl font-bold text-primary">₾{finalTotal.toFixed(2)}</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {onHoldOrder && (
-            <Button variant="outline" className="flex-1 min-w-[120px] bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700 border-amber-500/20" onClick={onHoldOrder} disabled={cart.length === 0}>
-              <PauseCircle className="mr-2 h-4 w-4" /> შეჩერება
-            </Button>
-          )}
           <Button variant="outline" className="flex-1 min-w-[120px] text-destructive hover:text-destructive hover:bg-destructive/10" onClick={onClear} disabled={cart.length === 0}>
             <Trash2 className="mr-2 h-4 w-4" /> წაშლა
           </Button>
-          <Button className="w-full h-12 text-lg" onClick={onPayment} disabled={cart.length === 0}>
-            <CreditCard className="mr-2 h-5 w-5" /> გადახდა
+          <Button 
+            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-10 shadow-lg"
+            onClick={onPayment}
+            disabled={cart.length === 0}
+          >
+            <CreditCard className="mr-2 h-4 w-4" />
+            გადახდა {cartItemCount > 0 ? `${cartItemCount} პოზიცია ₾${finalTotal.toFixed(2)}` : ''}
           </Button>
         </div>
         <Button variant="outline" className="w-full" onClick={onShiftToggle}>

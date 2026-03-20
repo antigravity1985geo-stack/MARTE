@@ -21,7 +21,7 @@ export default function CashFlowPage() {
   const bankAccount = accounts.find(a => a.code === '2320');
   const totalCash = (cashAccount?.balance || 0) + (bankAccount?.balance || 0);
 
-  const { revenue, expenses, netIncome } = getProfitLoss();
+  const { revenue, totalExpenses: expenses, netIncome } = getProfitLoss();
 
   const totalAssets = accounts.filter(a => a.type === 'asset').reduce((s, a) => s + Math.abs(a.balance), 0);
   const totalLiabilities = accounts.filter(a => a.type === 'liability').reduce((s, a) => s + Math.abs(a.balance), 0);

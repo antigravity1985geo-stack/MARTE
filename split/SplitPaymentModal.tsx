@@ -1,4 +1,4 @@
-// components/pos/SplitPaymentModal.tsx
+// components/SplitPaymentModal.tsx
 //
 // Design: dark terminal / cashier-grade UI
 // — high contrast, mono numbers, zero ambiguity under pressure
@@ -16,8 +16,8 @@ import {
   PaymentMethod, PaymentLeg, METHOD_META,
   QUICK_SPLITS, CARD_BRANDS, FinalizePaymentResult, CartItemInput,
 } from '@/types/splitPayment'
-import { supabase } from '@/integrations/supabase/client'
-import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
+import toast from 'react-hot-toast'
 
 // ─── Helpers ──────────────────────────────────────────────────
 

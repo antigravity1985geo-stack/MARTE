@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageTransition } from '@/components/PageTransition';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
@@ -21,8 +21,12 @@ import { ReceiptPopup } from '@/components/ReceiptPopup';
 import { createFiscalReceipt, saveWaybill } from '@/lib/rsge';
 import { BarcodeScanner } from '@/components/BarcodeScanner';
 import { POSProductGrid, POSCart, POSPaymentDialog, POSShiftDialog, POSMobileCart, POSSalesHistory } from '@/components/pos';
-import { POSHoldOrdersDrawer, HoldOrderSaveDialog, type HoldOrder } from '@/components/pos/POSHoldOrdersDrawer';
-import { POSPromotionsDialog } from '@/components/pos/POSPromotionsDialog'; // New import
+import HoldOrderPanel from '@/components/pos/HoldOrderPanel';
+import { HeldOrder, HeldOrderItem } from '@/types/holdOrder';
+import { POSPromotionsDialog } from '@/components/pos/POSPromotionsDialog';
+import { DiscountButton, CartDiscountLine } from '@/components/pos/POSDiscountIntegration';
+import DiscountAuthModal from '@/components/pos/DiscountAuthModal';
+import { DiscountResult } from '@/types/discount';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -41,16 +45,16 @@ import { calculateCartTotal, calculateLoyaltyDiscount } from '@/lib/posMath';
 import { useActiveSession, useDrawers, useCashDrawerActions } from '@/hooks/useCashDrawer';
 import { NoCashDrawerBanner, CashDrawerStatusWidget, useCashPaymentGuard } from '@/components/pos/POSCashDrawerIntegration';
 import { RefundButton } from '@/components/pos/POSRefundIntegration';
-import { SplitPaymentButton } from '@/components/pos/POSSplitPaymentIntegration';
-import SplitPaymentModal from '@/components/pos/SplitPaymentModal';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useHotkeys } from 'react-hotkeys-hook';
 import type { CartItem } from '@/components/pos/POSCart';
+import type { CartItemInput, FinalizePaymentResult } from '@/types/splitPayment';
 
 export default function POSPage() {
   const navigate = useNavigate();
-  useRealtimeSync(['products', 'transactions', 'shift_sales', 'queue_tickets']);
+  const syncTables = useMemo(() => ['products', 'transactions', 'shift_sales', 'queue_tickets'], []);
+  useRealtimeSync(syncTables);
 
   const { products } = useProducts();
   const { categories } = useCategories();
@@ -75,7 +79,8 @@ export default function POSPage() {
   const [selectedDrawerId, setSelectedDrawerId] = useState<string | null>(() => localStorage.getItem('pos_drawer_id'));
   const { session: activeSession } = useActiveSession(selectedDrawerId || '');
   const { recordSale } = useCashDrawerActions(activeTenantId || '');
-  const { canAcceptCash } = useCashPaymentGuard(selectedDrawerId || '');
+  const { canAcceptCash: guardCanAcceptCash } = useCashPaymentGuard(selectedDrawerId || '');
+  const canAcceptCash = drawers.length === 0 || guardCanAcceptCash;
 
   // Auto-select first drawer if none selected
   useEffect(() => {
@@ -98,13 +103,10 @@ export default function POSPage() {
   const [pin, setPin] = useState('');
   const [startingCash, setStartingCash] = useState('');
   const [offlineSales, setOfflineSales] = useState<any[]>([]);
-
-  const [holdOrders, setHoldOrders] = useState<HoldOrder[]>(() => {
-    try { return JSON.parse(localStorage.getItem('pos_hold_orders') || '[]'); } catch { return []; }
-  });
-  const [holdOrderOpen, setHoldOrderOpen] = useState(false);
-  const [holdOrderSaveOpen, setHoldOrderSaveOpen] = useState(false);
-  const [splitPaymentOpen, setSplitPaymentOpen] = useState(false);
+  
+  // Discount System State
+  const [activeDiscount, setActiveDiscount] = useState<DiscountResult | null>(null);
+  const [discountModalOpen, setDiscountModalOpen] = useState(false);
 
   const syncOfflineQueue = async () => {
     if (!navigator.onLine) return;
@@ -113,12 +115,55 @@ export default function POSPage() {
       let syncedCount = 0;
       for (const item of items) {
         if (item.status === 'failed' || item.status === 'pending') {
-          const { error: rpcError } = await supabase.rpc('process_sale', item.payload);
-          if (!rpcError) {
+          try {
+            let txId = item.transaction_id;
+
+            // 1. Sync to Database if not already synced
+            if (!txId) {
+              const { data: rpcData, error: rpcError } = await supabase.rpc('process_sale', item.payload);
+              if (rpcError) throw rpcError;
+              if (!rpcData?.success) throw new Error(rpcData?.error || 'Sale processing failed');
+              
+              txId = rpcData.transaction_id;
+              await offlineQueue.updateTransactionId(item.id, txId!);
+            }
+
+            // 2. Check Idempotency for RS.GE
+            const { data: txRecord, error: txError } = await supabase
+              .from('transactions')
+              .select('rsge_status')
+              .eq('id', txId)
+              .single();
+
+            if (txError) throw txError;
+
+            // 3. Fire RS.GE if it hasn't been sent successfully yet
+            if (txRecord?.rsge_status !== 'sent') {
+              const p = item.payload;
+              const itemsForRsge = p.p_cart.map((i: any) => ({
+                name: i.name,
+                qty: i.qty,
+                price: i.price,
+                total: i.price * i.qty
+              }));
+
+              await createFiscalReceipt({
+                items: itemsForRsge,
+                total: p.p_total,
+                paymentType: p.p_payment === 'mixed' ? 'combined' : p.p_payment,
+                cashierName: 'Offline Sync' // Better than nothing if shift cashier unavail
+              });
+
+              // Mark as successfully sent in database
+              await supabase.from('transactions').update({ rsge_status: 'sent' }).eq('id', txId);
+            }
+
+            // 4. Clean up queue entry upon full success
             await offlineQueue.removeFromQueue(item.id);
             syncedCount++;
-          } else {
-            await offlineQueue.markAsFailed(item.id, rpcError.message);
+          } catch (err: any) {
+            console.error('Offline Sync Error for item', item.id, err);
+            await offlineQueue.markAsFailed(item.id, err.message || 'Unknown error');
           }
         }
       }
@@ -128,7 +173,7 @@ export default function POSPage() {
         queryClient.invalidateQueries({ queryKey: ['products'] });
       }
     } catch (err) {
-      console.error('Offline Sync Error:', err);
+      console.error('Queue Fetch Error:', err);
     }
   };
 
@@ -141,7 +186,7 @@ export default function POSPage() {
   useEffect(() => {
     localStorage.setItem('pos_cart', JSON.stringify(cart));
   }, [cart]);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'combined' | 'bog_qr' | 'tbc_pay' | 'keepz' | 'bnpl'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'combined' | 'bog_qr' | 'tbc_pay' | 'keepz' | 'bnpl' | 'split'>('cash');
   const [cashAmount, setCashAmount] = useState('');
   const [cardAmount, setCardAmount] = useState('');
   const [couponCode, setCouponCode] = useState('');
@@ -214,9 +259,11 @@ export default function POSPage() {
     clientLoyaltyTier: selectedClientData?.loyalty_tier
   });
 
-  const finalTotal = Math.max(0, cartTotal - couponDiscount - loyaltyDiscount - bundleDiscount - priceRulesDiscount) + (parseFloat(tipAmount) || 0);
-  const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
-  const pointsToEarn = Math.floor(finalTotal * 0.1);
+  const manualDiscount = parseFloat(String(activeDiscount?.approved ? activeDiscount.discountAmount : 0)) || 0;
+  const finalTotal = Math.max(0, (cartTotal || 0) - (couponDiscount || 0) - (loyaltyDiscount || 0) - (bundleDiscount || 0) - (priceRulesDiscount || 0) - manualDiscount) + (parseFloat(String(tipAmount)) || 0);
+  const cartItemCount = cart.reduce((s, i) => s + (i.quantity || 0), 0);
+  const pointsToEarn = Math.floor((finalTotal || 0) * 0.1);
+
 
   const shiftSales = currentShift?.sales || [];
   const nonRefundedSales = shiftSales.filter(s => !s.isRefunded);
@@ -290,30 +337,49 @@ export default function POSPage() {
     }));
   };
 
-  const handleHoldOrderSave = (name: string) => {
-    const newOrder: HoldOrder = { id: crypto.randomUUID(), name, timestamp: Date.now(), cart, finalTotal };
-    const updated = [...holdOrders, newOrder];
-    setHoldOrders(updated);
-    try { localStorage.setItem('pos_hold_orders', JSON.stringify(updated)); } catch {}
+  const holdItems: HeldOrderItem[] = useMemo(() => cart.map(item => ({
+    product_id: item.productId,
+    name:       item.name,
+    barcode:    null,
+    price:      item.price,
+    qty:        item.quantity,
+    discount:   item.discount ?? 0,
+    line_total: item.quantity * item.price,
+    tax_rate:   18,
+  })), [cart]);
+
+  const handleLoadOrder = (order: HeldOrder) => {
     clearCart();
-    setHoldOrderSaveOpen(false);
-    toast.success(`შეკვეთა "${name}" შეჩერებულია`);
-  };
+    // Reconstruct cart from held items
+    const restoredCart: CartItem[] = order.items.map(item => ({
+      id: crypto.randomUUID(),
+      productId: item.product_id,
+      name: item.name,
+      price: item.price,
+      originalPrice: item.price + (item.discount || 0), // Estimate original
+      quantity: item.qty,
+      discount: item.discount,
+      discountType: 'fixed',
+    }));
+    setCart(restoredCart);
 
-  const recallHoldOrder = (order: HoldOrder) => {
-    setCart(order.cart);
-    const updated = holdOrders.filter(h => h.id !== order.id);
-    setHoldOrders(updated);
-    try { localStorage.setItem('pos_hold_orders', JSON.stringify(updated)); } catch {}
-    setHoldOrderOpen(false);
-    toast.success(`შეკვეთა "${order.name}" დაბრუნდა კალათაში`);
-  };
+    // Restore client if present
+    if (order.client_id) {
+      setSelectedClient(order.client_id);
+    }
 
-  const deleteHoldOrder = (id: string) => {
-    const updated = holdOrders.filter(h => h.id !== id);
-    setHoldOrders(updated);
-    try { localStorage.setItem('pos_hold_orders', JSON.stringify(updated)); } catch {}
-    toast.success(`შეჩერებული შეკვეთა წაიშალა`);
+    // Restore discount if present
+    if (order.discount_audit_id && order.discount_amount) {
+      setActiveDiscount({
+        approved: true,
+        discountAmount: order.discount_amount,
+        finalAmount: order.total,
+        overrideRequired: !!order.discount_audit_id,
+        logId: order.discount_audit_id
+      });
+    }
+
+    toast.success(`შეკვეთა #${order.hold_number} დაბრუნდა კალათაში`);
   };
 
   const addBundleToCart = (bundle: typeof bundles[0]) => {
@@ -346,6 +412,7 @@ export default function POSPage() {
     setCouponDiscount(0);
     setTipAmount('');
     setSelectedClient('');
+    setActiveDiscount(null);
   };
 
   const handleCouponValidate = () => {
@@ -567,9 +634,9 @@ export default function POSPage() {
 
   return (
     <PageTransition>
-      <div className={isMobile ? "flex flex-col h-[calc(100vh-7rem)]" : "flex gap-4 h-[calc(100vh-7rem)]"}>
+      <div className={`${isMobile ? "flex flex-col h-[calc(100vh-7rem)]" : "flex gap-4 h-[calc(100vh-7rem)]"} pos-mesh-background p-1 rounded-3xl overflow-hidden`}>
         {/* Left: Products */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 glass-card p-4 rounded-3xl border-white/5 shadow-2xl">
           <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
             {currentShift && (
               <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
@@ -617,11 +684,11 @@ export default function POSPage() {
 
           {/* Shift KPIs Bar */}
           {currentShift && (
-            <div className="flex gap-4 mb-3 px-3 py-2 bg-primary/5 rounded-lg border border-primary/10 overflow-x-auto text-sm shrink-0 items-center">
-               <div className="flex flex-col pr-4 border-r border-primary/10"><span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">ცვლაში სულ</span><span className="font-bold text-primary">₾{shiftTotal.toFixed(2)}</span></div>
-               <div className="flex flex-col px-4 border-r border-primary/10"><span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">ნაღდი</span><span className="font-bold text-emerald-600">₾{(shiftCash + currentShift.openingCash).toFixed(2)}</span></div>
-               <div className="flex flex-col px-4 border-r border-primary/10"><span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">ბარათი</span><span className="font-bold text-blue-600">₾{shiftCard.toFixed(2)}</span></div>
-               <div className="flex flex-col pl-4"><span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">შეკვეთები</span><span className="font-bold">{nonRefundedSales.length}</span></div>
+            <div className="flex gap-4 mb-4 px-5 py-2 glass-card rounded-2xl border-white/10 overflow-x-auto text-xs w-fit items-center shadow-xl shrink animate-float">
+               <div className="flex flex-col pr-3 border-r border-primary/10"><span className="text-[9px] uppercase text-muted-foreground font-semibold tracking-tight">ცვლაში სულ</span><span className="font-bold text-primary">₾{shiftTotal.toFixed(2)}</span></div>
+               <div className="flex flex-col px-3 border-r border-primary/10"><span className="text-[9px] uppercase text-muted-foreground font-semibold tracking-tight">ნაღდი</span><span className="font-bold text-emerald-600">₾{(shiftCash + currentShift.openingCash).toFixed(2)}</span></div>
+               <div className="flex flex-col px-3 border-r border-primary/10"><span className="text-[9px] uppercase text-muted-foreground font-semibold tracking-tight">ბარათი</span><span className="font-bold text-blue-600">₾{shiftCard.toFixed(2)}</span></div>
+               <div className="flex flex-col pl-3"><span className="text-[9px] uppercase text-muted-foreground font-semibold tracking-tight">შეკვეთები</span><span className="font-bold">{nonRefundedSales.length}</span></div>
             </div>
           )}
 
@@ -633,23 +700,32 @@ export default function POSPage() {
             </div>
             {!isMobile && (
               <>
-                <Button size="sm" onClick={() => cart.length > 0 && setPaymentOpen(true)}>{t('pos_checkout_f1') || 'ოკ'}</Button>
                 <Button size="sm" variant="outline" onClick={() => setScannerOpen(true)}><ScanLine className="mr-1 h-4 w-4" />{t('pos_scanner_f2') || 'ოკ'}</Button>
                 <RefundButton compact={!isMobile} />
-                <SplitPaymentButton onClick={() => cart.length > 0 && setSplitPaymentOpen(true)} disabled={cart.length === 0} />
                 <Button size="sm" variant="outline" onClick={() => navigate('/app/pos/shift-report')}>
                   <FileText className="mr-1 h-4 w-4" />
                   {t('pos_shift_report') || 'ანგარიში'}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>{t('pos_history_f3') || 'ოკ'}</Button>
-                <Button size="sm" variant="outline" onClick={() => setHoldOrderOpen(true)} className="relative">
-                  შეჩერებული
-                  {holdOrders.length > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-amber-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold shadow-sm">
-                      {holdOrders.length}
-                    </span>
-                  )}
-                </Button>
+                <DiscountButton 
+                  cartTotal={cartTotal} 
+                  activeDiscount={activeDiscount} 
+                  onPress={() => setDiscountModalOpen(true)}
+                  onRemove={() => setActiveDiscount(null)}
+                />
+                <HoldOrderPanel
+                  cartItems={holdItems}
+                  subtotal={cartTotal}
+                  discountTotal={couponDiscount + loyaltyDiscount + bundleDiscount + priceRulesDiscount + manualDiscount}
+                  taxTotal={0} // Tax already in prices for this project scope
+                  total={finalTotal}
+                  clientId={selectedClient}
+                  clientName={selectedClientData?.name}
+                  discountAuditId={activeDiscount?.logId}
+                  discountAmount={manualDiscount}
+                  drawerId={selectedDrawerId || undefined}
+                  onClearCart={clearCart}
+                  onLoadOrder={handleLoadOrder}
+                />
                 <Button size="sm" variant="outline" onClick={() => setPromotionsOpen(true)}><Tag className="mr-1 h-4 w-4" />აქციები (F5)</Button> {/* New Promotions button */}
                 <Popover>
                   <PopoverTrigger asChild><Button size="sm" variant="ghost"><Keyboard className="h-4 w-4" /></Button></PopoverTrigger>
@@ -716,8 +792,8 @@ export default function POSPage() {
                     <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground text-xs mr-2">{cartItemCount}</Badge>
                     <span className="ml-auto font-bold text-base">₾{finalTotal.toFixed(2)}</span>
                   </Button>
-                  <Button size="icon" variant="default" className="h-12 w-12 shrink-0" onClick={() => setPaymentOpen(true)}>
-                    <CreditCard className="h-5 w-5" />
+                  <Button size="icon" variant="default" className="h-12 w-12 shrink-0 bg-emerald-600 hover:bg-emerald-500" onClick={() => setPaymentOpen(true)}>
+                    <DollarSign className="h-5 w-5" />
                   </Button>
                 </div>
               ) : (
@@ -731,19 +807,20 @@ export default function POSPage() {
 
         {/* Right: Cart (desktop) */}
         {!isMobile && (
-          <POSCart
+          <div className="w-[450px] shrink-0 glass-card p-4 rounded-3xl border-white/5 shadow-2xl overflow-hidden flex flex-col">
+            <POSCart
             cart={cart} employees={employees} finalTotal={finalTotal} cartItemCount={cartItemCount}
             onUpdateQuantity={updateQuantity} onUpdateEmployee={updateCartItemEmployee} 
             onUpdateItemDetails={updateItemDetails}
-            onHoldOrder={() => setHoldOrderSaveOpen(true)}
             onRemove={removeFromCart} onClear={clearCart}
             onPayment={() => cart.length > 0 && setPaymentOpen(true)}
             onShiftToggle={() => currentShift ? setShiftOpen(true) : setPinOpen(true)}
             currentShift={!!currentShift}
+            activeDiscount={activeDiscount}
           />
-        )
-        }
-      </div >
+          </div>
+        )}
+      </div>
 
       {/* Mobile Cart Drawer */}
       {
@@ -777,7 +854,29 @@ export default function POSPage() {
         tipAmount={tipAmount}
         onTipAmountChange={setTipAmount}
         canAcceptCash={canAcceptCash}
+        cartItems={cart.map((item): CartItemInput => ({
+          product_id: item.productId,
+          name:       item.name,
+          qty:        item.quantity,
+          unit_price: item.originalPrice,
+          discount:   (item.originalPrice - item.price) * item.quantity,
+          line_total: item.price * item.quantity,
+          tax_rate:   18,
+        }))}
+        splitTotals={{
+          subtotal:      cart.reduce((s, i) => s + (i.originalPrice * i.quantity), 0),
+          discountTotal: cart.reduce((s, i) => s + ((i.originalPrice - i.price) * i.quantity), 0),
+          taxTotal:      parseFloat((finalTotal * 0.1525).toFixed(2)),
+          total:         finalTotal,
+        }}
+        onSplitSuccess={(result: FinalizePaymentResult) => {
+          clearCart();
+          setPaymentOpen(false);
+          toast.success(`გაყიდვა #${result.receipt_number} დასრულდა`);
+          queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        }}
       />
+
 
       {/* Shift Dialog */}
       <POSShiftDialog
@@ -816,39 +915,7 @@ export default function POSPage() {
         onRefund={handleRefundSale}
       />
       
-      <POSHoldOrdersDrawer open={holdOrderOpen} onOpenChange={setHoldOrderOpen} holdOrders={holdOrders} onRecall={recallHoldOrder} onDelete={deleteHoldOrder} />
-      <HoldOrderSaveDialog open={holdOrderSaveOpen} onOpenChange={setHoldOrderSaveOpen} onSave={handleHoldOrderSave} />
 
-      {splitPaymentOpen && (
-        <SplitPaymentModal
-          total={finalTotal}
-          cartItems={cart.map(i => ({
-            product_id: i.productId,
-            name: i.name,
-            qty: i.quantity,
-            unit_price: i.price,
-            discount: i.discount || 0,
-            line_total: i.price * i.quantity,
-            tax_rate: 18
-          }))}
-          totals={{
-            subtotal: cartTotal,
-            discountTotal: couponDiscount + loyaltyDiscount + bundleDiscount + priceRulesDiscount,
-            taxTotal: finalTotal * 0.18 / 1.18, 
-            total: finalTotal
-          }}
-          clientId={selectedClient}
-          clientName={selectedClientData?.name}
-          onClose={() => setSplitPaymentOpen(false)}
-          onSuccess={() => {
-            setCart([]);
-            setSplitPaymentOpen(false);
-            queryClient.invalidateQueries({ queryKey: ['transactions'] });
-            queryClient.invalidateQueries({ queryKey: ['products'] });
-            toast.success('გაყიდვა წარმატებით დასრულდა');
-          }}
-        />
-      )}
 
       {/* Promotions Dialog */}
       <POSPromotionsDialog 
@@ -871,6 +938,14 @@ export default function POSPage() {
         clientName={receiptData?.clientName} couponDiscount={receiptData?.couponDiscount}
         autoCloseMs={5000}
       />
+
+      {discountModalOpen && (
+        <DiscountAuthModal
+          cartTotal={cartTotal}
+          onApply={(res) => setActiveDiscount(res)}
+          onClose={() => setDiscountModalOpen(false)}
+        />
+      )}
     </PageTransition >
   );
 }

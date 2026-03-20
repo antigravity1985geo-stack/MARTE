@@ -1,7 +1,8 @@
-// src/components/pos/POSRefundIntegration.tsx
+import { lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RotateCcw, X } from 'lucide-react'
-import RefundPage from '@/pages/pos/RefundPage'
+import { RotateCcw, X, Loader2 } from 'lucide-react'
+
+const RefundPage = lazy(() => import('@/pages/pos/RefundPage'))
 import { Return } from '@/types/returns'
 import { useReturnHistory } from '@/hooks/useReturns'
 
@@ -43,7 +44,13 @@ export function RefundModal({ onClose }: { onClose: () => void }) {
         </div>
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1">
-          <RefundPage />
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            </div>
+          }>
+            <RefundPage />
+          </Suspense>
         </div>
       </div>
     </div>

@@ -77,38 +77,38 @@ export function RevenueChart({ data }: { data?: any[] }) {
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="oklch(0.28 0.05 255)"
+              stroke="hsl(var(--border))"
               vertical={false}
             />
             <XAxis
               dataKey="day"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "oklch(0.65 0.02 250)", fontSize: 12 }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
               dy={10}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "oklch(0.65 0.02 250)", fontSize: 12 }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
               tickFormatter={(value) => `₾${value / 1000}ათ`}
               dx={-10}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "oklch(0.17 0.04 255)",
-                border: "1px solid oklch(0.28 0.05 255)",
+                backgroundColor: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
                 boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
               }}
-              labelStyle={{ color: "oklch(0.95 0.01 250)", fontWeight: 600 }}
-              itemStyle={{ color: "oklch(0.75 0.02 250)" }}
+              labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+              itemStyle={{ color: "hsl(var(--muted-foreground))" }}
               formatter={(value: number) => [`₾${value.toLocaleString()}`, ""]}
             />
             <Area
               type="monotone"
               dataKey="revenue"
-              stroke="oklch(0.65 0.22 255)"
+              stroke="hsl(var(--primary))"
               strokeWidth={2}
               fill="url(#revenueGradient)"
               name="შემოსავალი"
@@ -116,7 +116,7 @@ export function RevenueChart({ data }: { data?: any[] }) {
             <Area
               type="monotone"
               dataKey="expenses"
-              stroke="oklch(0.7 0.18 180)"
+              stroke="hsl(var(--info))"
               strokeWidth={2}
               fill="url(#expensesGradient)"
               name="ხარჯები"

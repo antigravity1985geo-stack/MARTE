@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { ShiftReport, ShiftSummaryRow } from '@/types/shiftReport'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 // ─── Live X-report for an open session ───────────────────────
 export function useLiveShiftReport(sessionId: string | null) {
@@ -16,7 +16,7 @@ export function useLiveShiftReport(sessionId: string | null) {
     setError(null)
     try {
       const { data, error } = await supabase
-        .rpc('build_shift_report', { p_session_id: sessionId, p_save: false })
+        .rpc('build_shift_report', { p_session_id: sessionId })
       if (error) throw error
       setReport(data as ShiftReport)
     } catch (e: any) {
@@ -88,7 +88,7 @@ export function useRegenerateReport() {
     setBusy(true)
     try {
       const { data, error } = await supabase
-        .rpc('build_shift_report', { p_session_id: sessionId, p_save: true })
+        .rpc('build_shift_report', { p_session_id: sessionId })
       if (error) throw error
       toast.success('ანგარიში განახლდა')
       return data as ShiftReport

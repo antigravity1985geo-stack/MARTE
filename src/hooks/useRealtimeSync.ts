@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -12,16 +12,25 @@ const TABLE_QUERY_KEYS: Record<string, string[]> = {
   shift_sales: ['shift_sales', 'shifts'],
 };
 
+/**
+ * Hook to synchronize local TanStack Query cache with Supabase Realtime events.
+ * @param tables List of tables to monitor for changes.
+ */
 export function useRealtimeSync(tables: string[]) {
   const queryClient = useQueryClient();
   const { activeTenantId } = useAuthStore();
+  
+  // Use a stable key to prevent effect re-triggering on array literal changes
+  const tablesKey = useMemo(() => tables.sort().join(','), [tables]);
 
   useEffect(() => {
-    // Only subscribe if we are authenticated/have a tenant AND requested tables exist
-    if (!activeTenantId || tables.length === 0) return;
+    if (!activeTenantId || !tablesKey) return;
 
-    const channels = tables.map((table) => {
-      // Create a unique channel name per table
+    const tablesToSync = tablesKey.split(',').filter(Boolean);
+    
+    console.log('[Realtime Sync] Initializing for:', tablesToSync);
+
+    const channels = tablesToSync.map((table) => {
       return supabase
         .channel(`public:${table}`)
         .on(
@@ -34,22 +43,18 @@ export function useRealtimeSync(tables: string[]) {
             const queryKeys = TABLE_QUERY_KEYS[table] || [table];
             
             // Invalidate each mapped query key to trigger refetch
-            // Invalidating [key] will match any query array starting with that key
             queryKeys.forEach(key => {
               queryClient.invalidateQueries({ queryKey: [key] });
             });
           }
         )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log(`[Realtime Sync] Subscribed to ${table}`);
-          }
-        });
+        .subscribe();
     });
 
-    // Cleanup subscription on unmount
+    // Cleanup subscription on unmount or key change
     return () => {
+      console.log('[Realtime Sync] Cleaning up channels for:', tablesToSync);
       channels.forEach((channel) => supabase.removeChannel(channel));
     };
-  }, [tables, activeTenantId, queryClient]);
+  }, [tablesKey, activeTenantId, queryClient]);
 }

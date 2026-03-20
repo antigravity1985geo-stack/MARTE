@@ -18,7 +18,12 @@ export function useActiveSession(drawerId: string) {
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
-    if (!drawerId) return;
+    if (!drawerId) {
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
     const { data, error } = await supabase
       .from('cash_drawer_sessions')
       .select('*, drawer:cash_drawers(name, location)')
@@ -296,7 +301,12 @@ export function useSessionHistory(drawerId: string, limit = 20) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!drawerId) return;
+    if (!drawerId) {
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
     supabase
       .from('cash_drawer_sessions')
       .select('*')

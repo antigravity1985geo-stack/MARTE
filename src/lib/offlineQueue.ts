@@ -9,6 +9,7 @@ interface POSDB extends DBSchema {
             timestamp: number;
             status: 'pending' | 'failed';
             error?: string;
+            transaction_id?: string;
         };
     };
     products_cache: {
@@ -104,6 +105,17 @@ class OfflineQueue {
         if (item) {
             item.status = 'failed';
             item.error = error;
+            await db.put('sales_queue', item);
+        }
+    }
+
+    async updateTransactionId(id: string, transactionId: string) {
+        const db = await this.getDB();
+        if (!db) return;
+
+        const item = await db.get('sales_queue', id);
+        if (item) {
+            item.transaction_id = transactionId;
             await db.put('sales_queue', item);
         }
     }

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
 
-export const formatCurrency = (amount: number) => `₾${amount.toFixed(2)}`;
+import { formatCurrency } from '@/lib/utils';
 
 export interface CustomerDisplayState {
     cart: any[];

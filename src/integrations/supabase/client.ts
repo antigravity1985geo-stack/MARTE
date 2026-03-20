@@ -1,72 +1,83 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 1. Create the base client instance
+const baseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+  },
+});
 
-// Multi-Tenant Interceptor logic
+// 2. Multi-tenant configuration
 let getActiveTenantId: () => string | null = () => null;
 
+/**
+ * Configure the provider for the active tenant ID.
+ * This is used by the client wrapper to inject tenant filters.
+ */
 export const setTenantIdProvider = (provider: () => string | null) => {
   getActiveTenantId = provider;
 };
 
-const originalFrom = supabase.from.bind(supabase);
+// 3. Tables that should NOT have tenant_id automatic injection
 const EXCLUDED_TABLES = [
-  'tenants', 'tenant_members', 'user_roles', 'profiles', 'audit_logs', 
-  'global_announcements', 'rsge_configs', 'rsge_audit_logs', 'rsge_fiscal_shifts'
+  'tenants', 
+  'tenant_members', 
+  'user_roles', 
+  'profiles', 
+  'industry_configs', 
+  'subscription_plans',
+  'referral_usage',
+  'audit_logs',
+  'shift_summaries' // Usually session linked
 ];
 
-(supabase as any).from = (table: string) => {
+// 4. Wrap .from() to inject tenant logic
+const originalFrom = baseClient.from.bind(baseClient);
+
+(baseClient as any).from = (table: string) => {
   const query = originalFrom(table);
-  
+
+  // If table is excluded, return the original query builder
   if (EXCLUDED_TABLES.includes(table)) {
     return query;
   }
 
-  const originalInsert = query.insert.bind(query);
-  const originalUpsert = query.upsert.bind(query);
+  // Get current tenant
+  const tenantId = getActiveTenantId();
+  if (!tenantId) return query;
+
+  // Patch methods to inject tenant_id
   const originalSelect = query.select.bind(query);
+  const originalInsert = query.insert.bind(query);
   const originalUpdate = query.update.bind(query);
   const originalDelete = query.delete.bind(query);
 
-  const injectTenant = (payload: any) => {
-    const tenantId = getActiveTenantId();
-    if (!tenantId) return payload; 
-    
-    if (Array.isArray(payload)) {
-      return payload.map(item => ({ ...item, tenant_id: item.tenant_id || tenantId }));
-    } else {
-      return { ...payload, tenant_id: payload.tenant_id || tenantId };
-    }
-  };
-
+  query.select = (...args: any[]) => originalSelect(...args).eq('tenant_id', tenantId);
+  
   query.insert = (payload: any, options?: any) => {
-    return originalInsert(injectTenant(payload), options);
+    const inject = (obj: any) => ({ ...obj, tenant_id: tenantId });
+    const data = Array.isArray(payload) ? payload.map(inject) : inject(payload);
+    return originalInsert(data, options);
   };
 
-  query.upsert = (payload: any, options?: any) => {
-    return originalUpsert(injectTenant(payload), options);
+  query.update = (payload: any, options?: any) => {
+    return originalUpdate({ ...payload, tenant_id: tenantId }, options).eq('tenant_id', tenantId);
   };
 
-  query.select = (...args: any[]) => {
-    const q = originalSelect(...args);
-    const tenantId = getActiveTenantId();
-    return tenantId ? q.eq('tenant_id', tenantId) : q;
-  };
-
-  query.update = (...args: any[]) => {
-    const q = originalUpdate(...args);
-    const tenantId = getActiveTenantId();
-    return tenantId ? q.eq('tenant_id', tenantId) : q;
-  };
-
-  query.delete = (...args: any[]) => {
-    const q = originalDelete(...args);
-    const tenantId = getActiveTenantId();
-    return tenantId ? q.eq('tenant_id', tenantId) : q;
+  query.delete = (options?: any) => {
+    return originalDelete(options).eq('tenant_id', tenantId);
   };
 
   return query;
 };
+
+// 5. Build-time and runtime check
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables');
+}
+
+export const supabase: SupabaseClient = baseClient;

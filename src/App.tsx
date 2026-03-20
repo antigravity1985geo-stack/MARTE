@@ -211,10 +211,10 @@ const App = () => (
                 <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                   {/* ყველასთვის ხელმისაწვდომი */}
                   <Route index element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
-                  <Route path="pos" element={<ErrorBoundary><POSPage /></ErrorBoundary>} />
                   <Route path="pos/refund" element={<ErrorBoundary><RefundPage /></ErrorBoundary>} />
-                  <Route path="pos/cash-drawer" element={<ErrorBoundary><CashDrawerPage /></ErrorBoundary>} />
                   <Route path="pos/shift-report" element={<ErrorBoundary><ShiftReportPage /></ErrorBoundary>} />
+                  <Route path="pos/cash-drawer" element={<ErrorBoundary><CashDrawerPage /></ErrorBoundary>} />
+                  <Route path="pos" element={<ErrorBoundary><POSPage /></ErrorBoundary>} />
                   <Route path="products" element={<ErrorBoundary><ProductsPage /></ErrorBoundary>} />
                   <Route path="bundles" element={<ErrorBoundary><BundlesPage /></ErrorBoundary>} />
                   <Route path="price-rules" element={<ErrorBoundary><PriceRulesPage /></ErrorBoundary>} />

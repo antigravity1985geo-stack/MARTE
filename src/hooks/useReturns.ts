@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuthStore } from '@/stores/useAuthStore'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import {
   OriginalTransaction,
   OriginalTransactionItem,

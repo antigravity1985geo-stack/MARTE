@@ -1,3 +1,5 @@
+// types/splitPayment.ts
+
 export type PaymentMethod =
   | 'cash'
   | 'card'

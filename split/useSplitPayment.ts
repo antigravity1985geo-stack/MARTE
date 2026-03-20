@@ -1,13 +1,16 @@
+// hooks/useSplitPayment.ts
 import { useState, useMemo, useCallback } from 'react'
-import { supabase } from '@/integrations/supabase/client'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { v4 as uuid } from 'uuid'
+import { supabase } from '@/lib/supabase'
+import { useTenant } from '@/hooks/useTenant'
 import { useActiveSession } from '@/hooks/useCashDrawer'
 import { useDrawers }        from '@/hooks/useCashDrawer'
-import { toast } from 'sonner'
+import toast from 'react-hot-toast'
 import {
   PaymentLeg,
   PaymentMethod,
   SplitPaymentState,
+  FinalizePaymentInput,
   FinalizePaymentResult,
   CartItemInput,
 } from '@/types/splitPayment'
@@ -30,7 +33,7 @@ export function useSplitPaymentState(total: number) {
   const addLeg = useCallback((method: PaymentMethod) => {
     // Don't duplicate cash/card unless explicitly split
     if (legs.some(l => l.method === method)) {
-      toast.info('ეს მეთოდი უკვე დამატებულია — შეცვალეთ თანხა')
+      toast('ეს მეთოდი უკვე დამატებულია — შეცვალეთ თანხა', { icon: 'ℹ️' })
       return
     }
     const suggestedAmount = remaining > 0
@@ -38,7 +41,7 @@ export function useSplitPaymentState(total: number) {
       : 0
     setLegs(prev => [
       ...prev,
-      { id: crypto.randomUUID(), method, amount: suggestedAmount },
+      { id: uuid(), method, amount: suggestedAmount },
     ])
   }, [legs, remaining])
 
@@ -85,8 +88,8 @@ export function useSplitPaymentState(total: number) {
     const cashAmt = parseFloat((total * cashPct).toFixed(2))
     const cardAmt = parseFloat((total - cashAmt).toFixed(2))
     setLegs([
-      { id: crypto.randomUUID(), method: 'cash', amount: cashAmt },
-      { id: crypto.randomUUID(), method: 'card', amount: cardAmt },
+      { id: uuid(), method: 'cash', amount: cashAmt },
+      { id: uuid(), method: 'card', amount: cardAmt },
     ])
   }, [total])
 
@@ -114,7 +117,7 @@ export function useSplitPaymentState(total: number) {
 // ─── Finalize ────────────────────────────────────────────────
 
 export function useFinalizePayment() {
-  const activeTenantId = useAuthStore(s => s.activeTenantId)
+  const { tenantId }         = useTenant()
   const { drawers }          = useDrawers()
   const drawerId             = drawers[0]?.id ?? ''
   const { session }          = useActiveSession(drawerId)
@@ -140,7 +143,7 @@ export function useFinalizePayment() {
       }))
 
       const { data, error } = await supabase.rpc('finalize_split_payment', {
-        p_tenant_id:       activeTenantId,
+        p_tenant_id:       tenantId,
         p_cart_items:      cartItems,
         p_subtotal:        totals.subtotal,
         p_discount_total:  totals.discountTotal,
@@ -163,7 +166,7 @@ export function useFinalizePayment() {
     } finally {
       setBusy(false)
     }
-  }, [activeTenantId, session, drawerId])
+  }, [tenantId, session, drawerId])
 
   return { finalize, busy, cashAvailable: session?.status === 'open' }
 }
