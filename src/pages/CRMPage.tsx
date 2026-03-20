@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { useClients } from '@/hooks/useClients';
 import { useI18n } from '@/hooks/useI18n';
+import { AutomatedCampaignsTab } from '@/components/crm/AutomatedCampaignsTab';
 
 interface LoyaltyTier {
   name_ka: string;
@@ -41,7 +42,7 @@ const TIER_VISUALS: Record<string, { icon: React.ElementType; color: string }> =
 };
 
 export default function CRMPage() {
-  const { clients, promotions, campaigns, loyaltyTiers, isLoading, addPromotion: addPromoMutation, runSegmentationUpdate, sendCampaign, pointsHistory } = useClients();
+  const { clients, promotions, campaigns, loyaltyTiers, automatedRules, isLoading, addPromotion: addPromoMutation, runSegmentationUpdate, sendCampaign, updateAutomatedRule, triggerAutomatedCampaigns, pointsHistory } = useClients();
   const { t, lang } = useI18n();
   const [searchTerm, setSearchTerm] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('all');
@@ -236,6 +237,7 @@ export default function CRMPage() {
           <TabsTrigger value="loyalty"><Star className="h-4 w-4 mr-1" />{t('crm_tab_loyalty')}</TabsTrigger>
           <TabsTrigger value="promotions"><Gift className="h-4 w-4 mr-1" />{t('crm_tab_promotions')}</TabsTrigger>
           <TabsTrigger value="segments"><BarChart3 className="h-4 w-4 mr-1" />{t('crm_tab_segments')}</TabsTrigger>
+          <TabsTrigger value="automations" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Zap className="h-4 w-4 mr-1" />ავტომატიზაცია</TabsTrigger>
         </TabsList>
 
         {/* CUSTOMERS TAB */}
@@ -540,6 +542,15 @@ export default function CRMPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* AUTOMATIONS TAB */}
+        <TabsContent value="automations" className="space-y-4">
+          <AutomatedCampaignsTab 
+            rules={automatedRules} 
+            updateRule={updateAutomatedRule} 
+            triggerCampaigns={triggerAutomatedCampaigns}
+          />
         </TabsContent>
       </Tabs>
     </div>

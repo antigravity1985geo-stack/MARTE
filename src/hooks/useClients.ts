@@ -47,6 +47,17 @@ export interface Promotion {
   created_at: string;
 }
 
+export interface AutomatedCampaignRule {
+  id: string;
+  name: string;
+  trigger_type: 'birthday' | 'days_inactive' | 'tier_upgrade';
+  trigger_value: number | null;
+  channel: string;
+  message_template: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export function useClients() {
   const queryClient = useQueryClient();
   const { log } = useActivityLog();
@@ -84,6 +95,39 @@ export function useClients() {
         .order('threshold', { ascending: true });
       if (error) throw error;
       return data as LoyaltyTierInfo[];
+    },
+  });
+
+  const automatedRulesQuery = useQuery({
+    queryKey: ['automated_campaign_rules'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('automated_campaign_rules')
+        .select('*')
+        .order('id', { ascending: true });
+      if (error) throw error;
+      return data as AutomatedCampaignRule[];
+    },
+  });
+
+  const updateAutomatedRule = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<AutomatedCampaignRule> }) => {
+      const { error } = await supabase.from('automated_campaign_rules').update(updates).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automated_campaign_rules'] });
+    },
+  });
+
+  const triggerAutomatedCampaigns = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('process_automated_campaigns');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loyalty_campaigns'] });
     },
   });
 
@@ -260,7 +304,8 @@ export function useClients() {
     promotions: promotionsQuery.data || [],
     campaigns: campaignsQuery.data || [],
     loyaltyTiers: loyaltyTiersQuery.data || [],
-    isLoading: clientsQuery.isLoading || promotionsQuery.isLoading || campaignsQuery.isLoading || loyaltyTiersQuery.isLoading,
+    automatedRules: automatedRulesQuery.data || [],
+    isLoading: clientsQuery.isLoading || promotionsQuery.isLoading || campaignsQuery.isLoading || loyaltyTiersQuery.isLoading || automatedRulesQuery.isLoading,
     pointsHistory: pointsHistoryQuery,
     addClient,
     updateClient,
@@ -269,5 +314,7 @@ export function useClients() {
     recordPurchase,
     runSegmentationUpdate,
     sendCampaign,
+    updateAutomatedRule,
+    triggerAutomatedCampaigns,
   };
 }
