@@ -122,23 +122,23 @@
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  /* Custom scrollbar for the premium look */
+  /* Sleek modern scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: hsl(var(--background));
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 4px;
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 10px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
+    background: hsl(var(--primary) / 0.5);
   }
 }
 
@@ -423,5 +423,53 @@
     inset: 0;
     background: radial-gradient(circle at center, transparent 0%, rgba(10, 12, 16, 0.4) 100%);
     pointer-events: none;
+  }
+
+  /* PREMIUM UTILITIES: Visual Polish Engine */
+  
+  /* Super smooth dot background pattern */
+  .bg-dot-pattern {
+    background-image: radial-gradient(hsl(var(--foreground)/0.15) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  .dark .bg-dot-pattern {
+    background-image: radial-gradient(hsl(var(--foreground)/0.1) 1px, transparent 1px);
+  }
+
+  /* Elegant hover lift for cards */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out will-change-transform hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)] relative;
+  }
+
+  .hover-lift::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 0 1px hsl(var(--primary)/0) inset;
+    transition: all 0.3s ease-out;
+    pointer-events: none;
+  }
+
+  .hover-lift:hover::after {
+    box-shadow: 0 0 0 1px hsl(var(--primary)/0.5) inset;
+  }
+
+  /* Glass Pill for controls */
+  .glass-pill {
+    @apply bg-background/50 backdrop-blur-md border border-border/50 rounded-full shadow-sm transition-all;
+  }
+
+  .glass-pill:hover {
+    @apply border-border bg-background/80 shadow-md;
+  }
+
+  /* Appointment Card specifics */
+  .appointment-card {
+    @apply relative overflow-hidden transition-all duration-300 hover:-translate-y-[2px] hover:shadow-lg hover:z-20 cursor-pointer;
+    transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }

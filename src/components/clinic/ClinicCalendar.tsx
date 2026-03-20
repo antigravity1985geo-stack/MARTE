@@ -67,41 +67,61 @@ export function ClinicCalendar() {
     setIsModalOpen(true);
   };
 
-  const statusColors: Record<string, string> = {
-    scheduled: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))',
-    arrived: 'linear-gradient(135deg, hsl(35 90% 50%), hsl(35 90% 50% / 0.85))', // Amber
-    in_consultation: 'linear-gradient(135deg, hsl(280 80% 60%), hsl(280 80% 60% / 0.85))', // Purple
-    completed: 'linear-gradient(135deg, hsl(var(--success)), hsl(var(--success) / 0.85))', // Green
-    no_show: 'linear-gradient(135deg, hsl(var(--destructive)), hsl(var(--destructive) / 0.85))' // Red-ish
+  const statusColors: Record<string, { bg: string, border: string, shadow: string }> = {
+    scheduled: { 
+      bg: 'linear-gradient(135deg, hsl(var(--primary) / 0.9), hsl(var(--primary) / 0.7))', 
+      border: 'hsl(var(--primary))',
+      shadow: 'hsl(var(--primary) / 0.3)'
+    },
+    arrived: { 
+      bg: 'linear-gradient(135deg, hsl(35 90% 50% / 0.9), hsl(35 90% 50% / 0.7))', 
+      border: 'hsl(35 90% 50%)',
+      shadow: 'hsl(35 90% 50% / 0.3)'
+    },
+    in_consultation: { 
+      bg: 'linear-gradient(135deg, hsl(280 80% 60% / 0.9), hsl(280 80% 60% / 0.7))', 
+      border: 'hsl(280 80% 60%)',
+      shadow: 'hsl(280 80% 60% / 0.3)'
+    },
+    completed: { 
+      bg: 'linear-gradient(135deg, hsl(var(--success) / 0.9), hsl(var(--success) / 0.7))', 
+      border: 'hsl(var(--success))',
+      shadow: 'hsl(var(--success) / 0.3)'
+    },
+    no_show: { 
+      bg: 'linear-gradient(135deg, hsl(var(--destructive) / 0.8), hsl(var(--destructive) / 0.5))', 
+      border: 'hsl(var(--destructive))',
+      shadow: 'hsl(var(--destructive) / 0.2)'
+    }
   };
 
   return (
-    <Card className="border-border/50 shadow-sm relative overflow-hidden">
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b gap-4 bg-muted/20">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => setCurrentDate(subDays(currentDate, 1))}>
+    <Card className="glass-card border-border/10 shadow-2xl relative overflow-hidden rounded-[2rem]">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 pt-6 px-8 border-b border-white/5 gap-6 bg-background/40 backdrop-blur-md relative z-20">
+        <div className="flex items-center gap-2 glass-pill p-1.5 px-3">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-background/80" onClick={() => setCurrentDate(subDays(currentDate, 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-2 min-w-[200px] justify-center text-primary">
-            <CalendarIcon className="h-5 w-5" />
-            <h2 className="text-xl font-semibold capitalize tracking-tight font-heading">
+          <div className="flex items-center gap-2 min-w-[200px] justify-center text-primary px-4">
+            <CalendarIcon className="h-4 w-4 opacity-70" />
+            <h2 className="text-lg font-bold capitalize tracking-tight">
               {format(currentDate, 'dd MMMM, yyyy', { locale: ka })}
             </h2>
           </div>
-          <Button variant="outline" size="icon" onClick={() => setCurrentDate(addDays(currentDate, 1))}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-background/80" onClick={() => setCurrentDate(addDays(currentDate, 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <Button onClick={handleNewBooking} className="gap-2 shadow-sm font-semibold">
+        <Button onClick={handleNewBooking} className="gap-2 shadow-glow hover-lift rounded-full px-6 font-semibold bg-primary hover:bg-primary/90">
           <Plus className="h-4 w-4" />
           ახალი ვიზიტი
         </Button>
       </CardHeader>
       
-      <CardContent className="p-0 overflow-x-auto scrollbar-thin">
-        <div className="min-w-[800px] bg-background">
+      <CardContent className="p-0 overflow-x-auto scrollbar-thin relative z-10">
+        <div className="min-w-[800px] bg-background/30 bg-dot-pattern">
           {/* Header */}
-          <div className="flex border-b bg-muted/30 sticky top-0 z-10 backdrop-blur-sm">
+          <div className="flex border-b border-border/20 sticky top-0 z-30 bg-background/80 backdrop-blur-xl shadow-sm">
             <div className="w-20 lg:w-24 flex-shrink-0 border-r border-border/50 p-4 text-center font-medium text-muted-foreground/70 text-sm">
               დრო
             </div>
@@ -122,22 +142,25 @@ export function ClinicCalendar() {
           </div>
           
           {/* Grid */}
-          <div className="relative">
+          <div className="relative isolate">
             {HOURS.map(hour => (
-              <div key={hour} className="flex border-b border-border/50 h-[100px] group relative">
-                <div className="w-20 lg:w-24 flex-shrink-0 border-r border-border/50 p-2 flex items-start justify-center text-sm font-medium text-muted-foreground/70 bg-muted/5">
+              <div key={hour} className="flex border-b border-border/10 h-[100px] group relative">
+                <div className="w-20 lg:w-24 flex-shrink-0 border-r border-border/10 p-2 flex items-start justify-center text-xs font-semibold text-muted-foreground/50 bg-background/40 backdrop-blur-sm">
                   {hour.toString().padStart(2, '0')}:00
                 </div>
                 {doctors.map(doc => (
                   <div 
                     key={`${doc.id}-${hour}`} 
-                    className="flex-1 border-r border-border/50 last:border-0 hover:bg-primary/5 transition-colors cursor-pointer relative"
+                    className="flex-1 border-r border-border/50 last:border-0 hover:bg-primary/5 transition-colors duration-300 cursor-pointer relative"
                     onClick={() => handleSlotClick(hour, doc.id)}
                   >
-                    {/* Half-hour divider lines */}
-                    <div className="absolute top-[25%] left-0 right-0 border-t border-dashed border-border/20 w-full pointer-events-none" />
-                    <div className="absolute top-[50%] left-0 right-0 border-t border-dashed border-border/40 w-full pointer-events-none" />
-                    <div className="absolute top-[75%] left-0 right-0 border-t border-dashed border-border/20 w-full pointer-events-none" />
+                    {/* Hover highlight overlay */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+                    
+                    {/* Half-hour divider lines (Dotted for subtle look) */}
+                    <div className="absolute top-[25%] left-0 right-0 border-t border-dotted border-border/20 w-full pointer-events-none" />
+                    <div className="absolute top-[50%] left-0 right-0 border-t border-dotted border-border/30 w-full pointer-events-none" />
+                    <div className="absolute top-[75%] left-0 right-0 border-t border-dotted border-border/20 w-full pointer-events-none" />
                   </div>
                 ))}
               </div>
@@ -163,27 +186,32 @@ export function ClinicCalendar() {
               
               const patientName = apt.clinic_patients ? `${apt.clinic_patients.first_name} ${apt.clinic_patients.last_name}` : 'უცნობი პაციენტი';
 
+              const styleData = statusColors[apt.status] || statusColors.scheduled;
+
               return (
                 <div 
                   key={apt.id}
-                  className="absolute rounded-lg p-2.5 text-xs shadow-sm overflow-hidden border border-white/20 transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer flex flex-col justify-between"
+                  className="absolute p-3 text-xs appointment-card flex flex-col justify-between"
                   style={{
                     top: `${topPosition + 2}px`, // +2 for padding
                     height: `${height - 4}px`, // -4 for padding/gap
                     left: `calc(5rem + ${specIndex} * ((100% - 5rem) / ${doctors.length}) + 6px)`,
                     width: `calc(((100% - 5rem) / ${doctors.length}) - 12px)`,
-                    background: statusColors[apt.status] || statusColors.scheduled,
+                    background: styleData.bg,
+                    borderLeft: `4px solid ${styleData.border}`,
+                    boxShadow: `0 4px 14px 0 ${styleData.shadow}`,
+                    borderRadius: '12px',
                     color: 'white',
                     opacity: apt.status === 'no_show' ? 0.6 : 1
                   }}
                   onClick={(e) => handleAppointmentClick(e, apt)}
                   title={`სტატუსი: ${apt.status}\nმიზეზი: ${apt.reason || '-'}`}
                 >
-                  <div>
-                    <div className="font-bold text-[14px] leading-tight mb-1 truncate">{patientName}</div>
-                    <div className="opacity-90 leading-tight italic truncate text-[11px]">{apt.reason || 'კონსულტაცია'}</div>
+                  <div className="flex flex-col gap-0.5 z-10">
+                    <div className="font-bold text-[13px] leading-tight truncate tracking-wide drop-shadow-sm">{patientName}</div>
+                    <div className="opacity-90 leading-tight italic truncate text-[11px] font-medium mix-blend-overlay">{apt.reason || 'კონსულტაცია'}</div>
                   </div>
-                  <div className="opacity-80 font-mono text-[11px] mt-1 font-semibold flex items-center justify-between">
+                  <div className="opacity-80 font-mono text-[10px] mt-1 font-bold tracking-wider flex items-center justify-between bg-black/10 w-max px-2 py-0.5 rounded-md backdrop-blur-sm z-10">
                     <span>{format(startDate, 'HH:mm')} - {format(endDate, 'HH:mm')}</span>
                   </div>
                 </div>
