@@ -203,70 +203,66 @@
 
 ---
 
-## 🐛 Bug Fixes
+- [x] **Medical Consent Forms** ✅ Completed (Phase 3)
+  - [x] Create `clinic_consent_templates` and `patient_consents` tables
+  - [x] Build `SignatureCanvas` component with HTML5 Canvas
+  - [x] Create `ConsentFormDialog` with template selection
+  - [x] Implement PDF generation for signed forms
+  - [x] Add i18n support and integrate into Patient Details
+  
+- [x] **Patient Queue & Waiting Room** ✅ Completed (Phase 3)
+  - [x] Deploy `create_queue_system.sql` (Adjusted for `profiles` table)
+  - [x] Move `useQueue.ts` and `queue.ts` to hooks/types
+  - [x] Deploy `WaitingRoomDisplay.tsx` (Public TV display)
+  - [x] Deploy `QueueManagementPanel.tsx` (Staff dashboard)
+  - [x] Register routes in `App.tsx` and sidebar link
+  - [x] Add i18n translations (Georgian/English/Russian/Azerbaijani)
+  - [x] Verify Georgian TTS and sound notifications
+  - [x] Enable public access to Waiting Room via tenant slug
 
-- [ ] Fix localStorage overflow issue (5MB limit)
-- [ ] Fix mobile cart drawer scroll issue
-- [ ] Fix date picker timezone issues
-- [ ] Fix PDF export Georgian font rendering
-- [ ] Fix Excel export UTF-8 encoding
-
----
-
-## 🧪 Testing
-
-- [ ] Write unit tests for accounting calculations
-- [ ] Write integration tests for Supabase operations
-- [ ] Write E2E tests for critical flows (POS, accounting)
-- [ ] Add visual regression testing
-- [ ] Add performance testing
-- [ ] Add load testing
-
----
-
-## 📚 Documentation
-
-- [ ] Write user manual (Georgian)
-- [ ] Write admin guide
-- [ ] Write API documentation
-- [ ] Create video tutorials
-- [ ] Add inline help tooltips
-- [ ] Create FAQ section
-
----
-
-## 🚀 DevOps
-
-- [ ] Set up CI/CD pipeline
-- [ ] Add automated testing in CI
-- [ ] Add code quality checks (ESLint, Prettier)
-- [ ] Add dependency vulnerability scanning
-- [ ] Set up staging environment
-- [ ] Add database backup automation
-- [ ] Add monitoring and alerts
+- [x] **Patient Portal (High Security)** ✅ Completed (Phase 3)
+  - [x] Implement OTP-based authentication (Session-less)
+  - [x] Create EHR access (Records, Prescriptions, Consents)
+  - [x] Add Appointment Request panel for clinic dashboard
+  - [x] Mobile-optimized dashboard for patients
+  
+- [x] **Clinical Data Depth** ✅ Completed (Phase 3)
+  - [x] Interactive Dental Chart (v2 WOW version)
+  - [x] Lab Orders Module (Tracking & Management)
+  - [x] Doctor Performance Dashboard (Analytics)
+  - [x] Photo Comparison & EMR Timeline
+  - [x] Medical Billing & Installments
 
 ---
 
-## 📊 Performance
+## 🟡 High Priority (Phase 4: Scaling & Polish)
 
-- [ ] Add code splitting for all pages
-- [ ] Add virtual scrolling for large lists
-- [ ] Optimize bundle size
-- [ ] Add image optimization
-- [ ] Add lazy loading for images
-- [ ] Add caching strategy
-- [ ] Add service worker updates
+- [ ] **Construction & Industry Refinement**
+  - [ ] Finish Project-based cost tracking for Construction
+  - [ ] Add BoM (Bill of Materials) for manufacturing industry
+  - [ ] Implement asset depreciation for Logistics
+  
+- [ ] **Operational Automation**
+  - [ ] Add automated inventory reorder points (AI-driven)
+  - [ ] Add automated shift handover reports
+  - [ ] Implement multi-warehouse transfer approval workflow
 
+- [ ] **Messaging & Notifications**
+  - [ ] Integrated Email/SMS gateway for appointments
+  - [ ] WhatsApp integration for patient reminders
+  - [ ] Push notifications for PWA
+  
 ---
 
-## 🔒 Compliance
+## 🟢 Medium Priority (Advanced Features)
 
-- [ ] GDPR compliance (if EU customers)
-- [ ] Add data export feature
-- [ ] Add data deletion feature
-- [ ] Add privacy policy
-- [ ] Add terms of service
-- [ ] Add cookie consent
+- [ ] **AI-Powered Diagnostics (Medical)**
+  - [ ] Integrate X-ray analysis (placeholder/demo)
+  - [ ] AI-assisted anamnesis synthesis
+  
+- [ ] **E-Commerce Integration (Phase 2)**
+  - [ ] Sync MARTE products to external webshop
+  - [ ] Inventory sync with Shopify/WooCommerce
 
 ---
 
@@ -276,4 +272,4 @@
 - [~] In progress
 - [!] Blocked
 
-**Last Updated:** 2026-03-19 (Phase 4 scope expanding — i18n + MarteHome + Construction Research)
+**Last Updated:** 2026-03-20 (Phase 3 "Clinical Core" complete — Portal, Queue, Consent, Billing, Lab, Dental v2 all live)

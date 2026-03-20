@@ -46,6 +46,7 @@ const PIE_COLORS = [
 ];
 
 import RealEstateDashboard from './real-estate/RealEstateDashboard';
+import AppointmentRequestsPanel from '@/components/clinic/AppointmentRequestsPanel';
 
 export default function DashboardPage() {
   const { products } = useProducts();
@@ -247,6 +248,13 @@ export default function DashboardPage() {
             <QuickActions />
           </div>
         </div>
+
+        {/* Clinic Specific: Appointment Requests */}
+        {industry === 'clinic' && (
+          <div className="w-full">
+            <AppointmentRequestsPanel />
+          </div>
+        )}
 
         {/* Activity Table */}
         <div className="w-full">

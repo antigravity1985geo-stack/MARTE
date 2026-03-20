@@ -89,16 +89,17 @@ const ShiftReportPage = lazy(() => import('@/pages/pos/ShiftReportPage'));
 const LabOrdersPage = lazy(() => import('@/pages/clinic/LabOrdersPage'));
 const MedicalBillingPage = lazy(() => import('@/pages/clinic/MedicalBillingPage'));
 const ConsentFormsPage = lazy(() => import('@/pages/clinic/ConsentFormsPage'));
+const WaitingRoomDisplay = lazy(() => import('@/pages/clinic/WaitingRoomDisplay'));
+const QueueManagementPanel = lazy(() => import('@/components/clinic/QueueManagementPanel'));
+const SOAPNotesPage = lazy(() => import('@/pages/clinic/SOAPNotesPage'));
 
 // Portal Pages
+const PatientPortal = lazy(() => import('@/pages/portal/PatientPortal'));
+const PortalAuth = lazy(() => import('@/pages/portal/PortalAuth').then(m => ({ default: m.PortalAuth })));
 const PortalLayout = lazy(() => import('@/components/portal/PortalLayout').then(m => ({ default: m.PortalLayout })));
-const PortalDashboard = lazy(() => import('@/pages/portal/PortalDashboard').then(m => ({ default: m.PortalDashboard })));
+const PortalCatalog = lazy(() => import('@/pages/portal/PortalCatalog').then(m => ({ default: m.PortalCatalog })));
 const PortalBooking = lazy(() => import('@/pages/portal/PortalBooking').then(m => ({ default: m.PortalBooking })));
 const PortalHistory = lazy(() => import('@/pages/portal/PortalHistory').then(m => ({ default: m.PortalHistory })));
-const PortalCatalog = lazy(() => import('@/pages/portal/PortalCatalog').then(m => ({ default: m.PortalCatalog })));
-const PortalAuth = lazy(() => import('@/pages/portal/PortalAuth').then(m => ({ default: m.PortalAuth })));
-const PortalPaymentSuccess = lazy(() => import('@/pages/portal/PortalPaymentSuccess'));
-const PortalPaymentFailure = lazy(() => import('@/pages/portal/PortalPaymentFailure'));
 const PortalMedicalRecords = lazy(() => import('@/pages/portal/PortalMedicalRecords').then(m => ({ default: m.PortalMedicalRecords })));
 const PortalPrescriptions = lazy(() => import('@/pages/portal/PortalPrescriptions').then(m => ({ default: m.PortalPrescriptions })));
 const PortalConsentForms = lazy(() => import('@/pages/portal/PortalConsentForms').then(m => ({ default: m.PortalConsentForms })));
@@ -197,19 +198,16 @@ const App = () => (
                 <Route path="/martehome" element={<MarteHomeMarketplace />} />
                 <Route path="/martehome/property/:id" element={<PropertyDetail />} />
                 <Route path="/access-denied" element={<AccessDeniedPage />} />
+<Route path="/queue/display/:tenant_slug" element={<Suspense fallback={null}><WaitingRoomDisplay /></Suspense>} />
 
                 {/* Client Portals */}
                 <Route path="/portal/:tenant_slug/auth" element={<PortalAuth />} />
-                <Route path="/portal/:tenant_slug" element={<PortalLayout />}>
-                  <Route index element={<PortalDashboard />} />
+                <Route path="/portal/:tenant_slug" element={<PatientPortal />} />
+                <Route path="/portal/:tenant_slug/old" element={<PortalLayout />}>
                   <Route path="catalog" element={<PortalCatalog />} />
                   <Route path="booking" element={<PortalBooking />} />
                   <Route path="history" element={<PortalHistory />} />
-                  <Route path="payment-success" element={<PortalPaymentSuccess />} />
-                  <Route path="payment-failure" element={<PortalPaymentFailure />} />
-                  <Route path="medical" element={<PortalMedicalRecords />} />
-                  <Route path="prescriptions" element={<PortalPrescriptions />} />
-                  <Route path="consents" element={<PortalConsentForms />} />
+                  <Route path="payment" element={<PortalHistory />} /> {/* For legacy links */}
                 </Route>
 
                 {/* Legacy Redirects */}
@@ -286,6 +284,9 @@ const App = () => (
                   <Route path="clinic/performance" element={<RoleRoute path="/clinic/calendar"><ErrorBoundary><DoctorPerformanceDashboard /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/billing" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><MedicalBillingPage /></ErrorBoundary></RoleRoute>} />
                   <Route path="clinic/consent-forms" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><ConsentFormsPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/notes" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><SOAPNotesPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/notes/:id" element={<RoleRoute path="/clinic/patients"><ErrorBoundary><SOAPNotesPage /></ErrorBoundary></RoleRoute>} />
+                  <Route path="clinic/queue" element={<RoleRoute path="/clinic/calendar"><ErrorBoundary><QueueManagementPanel /></ErrorBoundary></RoleRoute>} />
                   <Route path="salon/services" element={<RoleRoute path="/salon/services"><ErrorBoundary><SalonServicesPage /></ErrorBoundary></RoleRoute>} />
                   
                   {/* MARTEHOME (Real Estate) */}

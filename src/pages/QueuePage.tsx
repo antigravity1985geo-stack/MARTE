@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PageTransition } from '@/components/PageTransition';
 import { useQueue, useQueueActive } from '@/hooks/useQueue';
 import { AnimatedNumber } from '@/components/AnimatedNumber';

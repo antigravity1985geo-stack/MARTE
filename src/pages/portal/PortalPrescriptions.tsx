@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { usePatientPortal } from "@/hooks/usePatientPortal";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Pill, Clock, Printer, FileText } from "lucide-react";

@@ -1,20 +1,18 @@
 // hooks/usePatientPortal.ts
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/integrations/supabase/client'
-import { 
-  PortalSession, PortalAppointment, PatientDocument, 
-  PortalNotification, AppointmentRequest, RequestStatus 
+import { useState, useEffect, useCallback, createContext, useContext } from 'react'
+import { supabase }  from '@/lib/supabase'
+import { useTenant } from '@/hooks/useTenant'
+import {
+  PortalSession, PortalAppointment, PatientDocument,
+  PortalNotification, AppointmentRequest, RequestStatus,
 } from '@/types/patientPortal'
-import { toast } from 'sonner'
-import { useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 
 const SESSION_KEY = 'portal_session'
 
 // ─── Session management ───────────────────────────────────────
 
 export function usePortalAuth() {
-  const { tenant_slug } = useParams();
   const [session, setSession] = useState<PortalSession | null>(() => {
     try {
       const raw = localStorage.getItem(SESSION_KEY)
@@ -29,13 +27,12 @@ export function usePortalAuth() {
     if (!session) return
     supabase.rpc('validate_portal_session', { p_token: session.session_token })
       .then(({ data }) => {
-        const res = data as any;
-        if (!res?.ok) {
+        if (!data?.ok) {
           localStorage.removeItem(SESSION_KEY)
           setSession(null)
         }
       })
-  }, [session])
+  }, [])
 
   const sendOtp = useCallback(async (
     tenantId:  string,
@@ -50,10 +47,10 @@ export function usePortalAuth() {
         p_patient_phone: phone,
       })
       if (error) throw error
-      
-      // In production: send SMS here
+      // In production: send SMS here with the OTP
+      // For dev: show in toast
       console.log('OTP:', data)
-      toast.success(`OTP გაგზავნილია: ${data}`) 
+      toast.success(`OTP გაგზავნილია: ${data}`) // remove in prod
       setOtpSent(true)
       return true
     } catch (e: any) {
@@ -79,14 +76,13 @@ export function usePortalAuth() {
         p_patient_name: patientName,
       })
       if (error) throw error
-      const res = data as any;
-      if (!res?.ok) { toast.error(res?.error ?? 'OTP შეცდომა'); return false }
+      if (!data?.ok) { toast.error(data?.error ?? 'OTP შეცდომა'); return false }
 
       const sess: PortalSession = {
-        session_token: res.session_token,
-        patient_id:    res.patient_id,
-        patient_name:  res.patient_name,
-        patient_phone: res.patient_phone,
+        session_token: data.session_token,
+        patient_id:    data.patient_id,
+        patient_name:  data.patient_name,
+        patient_phone: data.patient_phone,
         tenant_id:     tenantId,
       }
       localStorage.setItem(SESSION_KEY, JSON.stringify(sess))
@@ -124,19 +120,19 @@ export function usePortalAppointments(patientId: string | null) {
 
     Promise.all([
       supabase
-        .from('clinic_appointments')
+        .from('appointments')
         .select(`id, start_time, end_time, status, notes,
-          employees!clinic_appointments_doctor_id_fkey(full_name),
-          medical_invoices(id,total,status)`)
+          doctor:auth.users(email),
+          invoice:medical_invoices(id,total,status)`)
         .eq('patient_id', patientId)
         .gte('start_time', now)
         .order('start_time', { ascending: true })
         .limit(10),
       supabase
-        .from('clinic_appointments')
+        .from('appointments')
         .select(`id, start_time, end_time, status, notes,
-          employees!clinic_appointments_doctor_id_fkey(full_name),
-          medical_invoices(id,total,status)`)
+          doctor:auth.users(email),
+          invoice:medical_invoices(id,total,status)`)
         .eq('patient_id', patientId)
         .lt('start_time', now)
         .order('start_time', { ascending: false })
@@ -146,13 +142,13 @@ export function usePortalAppointments(patientId: string | null) {
         id:             row.id,
         start_time:     row.start_time,
         end_time:       row.end_time,
-        doctor_name:    row.employees?.full_name ?? null,
-        service_name:   row.notes ? row.notes.slice(0, 30) : 'კონსულტაცია',
+        doctor_name:    row.doctor?.email ?? null,
+        service_name:   row.service_name ?? null,
         status:         row.status,
         notes:          row.notes,
-        invoice_id:     row.medical_invoices?.[0]?.id ?? null,
-        invoice_total:  row.medical_invoices?.[0]?.total ?? null,
-        invoice_status: row.medical_invoices?.[0]?.status ?? null,
+        invoice_id:     row.invoice?.[0]?.id ?? null,
+        invoice_total:  row.invoice?.[0]?.total ?? null,
+        invoice_status: row.invoice?.[0]?.status ?? null,
       })
       setUpcoming((up.data ?? []).map(map))
       setPast((past_.data ?? []).map(map))
@@ -161,57 +157,6 @@ export function usePortalAppointments(patientId: string | null) {
   }, [patientId])
 
   return { upcoming, past, loading }
-}
-
-// ─── EHR & Clinical Data ──────────────────────────────────────
-
-export function usePortalClinical(patientId: string | null) {
-  const { data: records, isLoading: recordsLoading } = useQuery({
-    queryKey: ['portal-medical-records', patientId],
-    queryFn: async () => {
-      if (!patientId) return [];
-      const { data, error } = await supabase
-        .from('clinic_medical_records')
-        .select(`*, employees(full_name)`)
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!patientId
-  });
-
-  const { data: prescriptions, isLoading: prescriptionsLoading } = useQuery({
-    queryKey: ['portal-prescriptions', patientId],
-    queryFn: async () => {
-      if (!patientId) return [];
-      const { data, error } = await supabase
-        .from('clinic_prescriptions')
-        .select(`*, employees(full_name)`)
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!patientId
-  });
-
-  const { data: consentForms, isLoading: consentLoading } = useQuery({
-    queryKey: ['portal-consent-forms', patientId],
-    queryFn: async () => {
-      if (!patientId) return [];
-      const { data, error } = await supabase
-        .from('consent_forms')
-        .select(`*, template:consent_form_templates(*)`)
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!patientId
-  });
-
-  return { records, prescriptions, consentForms, loading: recordsLoading || prescriptionsLoading || consentLoading };
 }
 
 // ─── Patient documents (portal view) ─────────────────────────
@@ -230,7 +175,7 @@ export function usePortalDocuments(patientId: string | null) {
       .eq('is_portal_visible', true)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        setDocuments((data ?? []) as any[])
+        setDocuments((data ?? []) as PatientDocument[])
         setLoading(false)
       })
   }, [patientId])
@@ -253,7 +198,7 @@ export function usePortalNotifications(patientId: string | null) {
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false })
       .limit(30)
-    setNotifs((data ?? []) as any[])
+    setNotifs((data ?? []) as PortalNotification[])
     setUnread((data ?? []).filter((n: any) => !n.is_read).length)
     setLoading(false)
   }, [patientId])
@@ -268,7 +213,17 @@ export function usePortalNotifications(patientId: string | null) {
     setUnread(prev => Math.max(0, prev - 1))
   }, [])
 
-  return { notifs, unread, loading, markRead, refetch: load }
+  const markAllRead = useCallback(async () => {
+    if (!patientId) return
+    await supabase.from('portal_notifications')
+      .update({ is_read: true })
+      .eq('patient_id', patientId)
+      .eq('is_read', false)
+    setNotifs(prev => prev.map(n => ({ ...n, is_read: true })))
+    setUnread(0)
+  }, [patientId])
+
+  return { notifs, unread, loading, markRead, markAllRead, refetch: load }
 }
 
 // ─── Booking requests ─────────────────────────────────────────
@@ -308,12 +263,12 @@ export function useBookingRequest(tenantId: string | null) {
 
 // ─── Clinic-side: view incoming requests ─────────────────────
 
-export function useAppointmentRequests(tenantId: string | null, opts?: { status?: RequestStatus | 'all' }) {
+export function useAppointmentRequests(opts?: { status?: RequestStatus | 'all' }) {
+  const { tenantId } = useTenant()
   const [requests, setRequests] = useState<AppointmentRequest[]>([])
   const [loading,  setLoading]  = useState(true)
 
   const load = useCallback(async () => {
-    if (!tenantId) return
     setLoading(true)
     let q = supabase
       .from('appointment_requests')
@@ -322,12 +277,11 @@ export function useAppointmentRequests(tenantId: string | null, opts?: { status?
       .order('created_at', { ascending: false })
     if (opts?.status && opts.status !== 'all') q = q.eq('status', opts.status)
     const { data } = await q
-    setRequests((data ?? []) as any[])
+    setRequests((data ?? []) as AppointmentRequest[])
     setLoading(false)
   }, [tenantId, opts?.status])
 
   useEffect(() => {
-    if (!tenantId) return
     load()
     const ch = supabase.channel('req_rt')
       .on('postgres_changes', {

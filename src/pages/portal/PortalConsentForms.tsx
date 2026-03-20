@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { usePatientPortal } from "@/hooks/usePatientPortal";
+import { usePortalClinical, usePortalAuth } from "@/hooks/usePatientPortal";
 import { useSignConsent, useSignaturePad } from "@/hooks/useConsentForms";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -12,7 +12,7 @@ import { STATUS_META, ConsentForm, renderTemplate } from "@/types/consentForms";
 import { toast } from "sonner";
 
 // ─── Local Signature Pad (Simplified) ───────────────────────────
-function PortalSignaturePad({ onCapture }: { onCapture: (data: string) => void }) {
+export function PortalSignaturePad({ onCapture }: { onCapture: (data: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { clear, getDataURL, isEmpty } = useSignaturePad(canvasRef);
 
@@ -51,7 +51,8 @@ function PortalSignaturePad({ onCapture }: { onCapture: (data: string) => void }
 }
 
 export const PortalConsentForms = () => {
-  const { consentForms, loading, patient } = usePatientPortal();
+  const { session } = usePortalAuth();
+  const { consentForms, loading } = usePortalClinical(session?.patient_id ?? null);
   const { signAsPatient, busy } = useSignConsent();
   const [signingForm, setSigningForm] = useState<ConsentForm | null>(null);
   const [capturedSig, setCapturedSig] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export const PortalConsentForms = () => {
   return (
     <div className="p-4 space-y-6 animate-slide-up pb-24">
       <div className="flex flex-col gap-2 pt-4">
-        <Badge className="w-fit bg-purple-500/10 text-purple-500 border-none text-[10px] font-black uppercase tracking-widest px-3 py-1">
+        <Badge variant="outline" className="w-fit bg-purple-500/10 text-purple-500 border-none text-[10px] font-black uppercase tracking-widest px-3 py-1">
           Legal & Consents
         </Badge>
         <h1 className="text-3xl font-black tracking-tighter">თანხმობის ფორმები</h1>
@@ -97,7 +98,7 @@ export const PortalConsentForms = () => {
                     {format(parseISO(form.created_at), 'd MMM, yyyy', { locale: ka })}
                   </p>
                 </div>
-                <Badge className={`text-[9px] font-black border-none uppercase px-2 py-0 ${STATUS_META[form.status].color} ${STATUS_META[form.status].text}`}>
+                <Badge variant="outline" className={`text-[9px] font-black border-none uppercase px-2 py-0 ${STATUS_META[form.status].color} ${STATUS_META[form.status].text}`}>
                   {STATUS_META[form.status].label}
                 </Badge>
               </div>
@@ -119,7 +120,7 @@ export const PortalConsentForms = () => {
       {signingForm && (
         <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex flex-col p-6 overflow-y-auto">
           <div className="flex items-center justify-between mb-8">
-            <Badge className="bg-white/10 text-white border-white/10 text-[10px] font-black uppercase tracking-widest">Document Review</Badge>
+            <Badge variant="outline" className="bg-white/10 text-white border-white/10 text-[10px] font-black uppercase tracking-widest">Document Review</Badge>
             <button onClick={() => { setSigningForm(null); setCapturedSig(null); }} className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center text-white">
               <X className="h-5 w-5" />
             </button>

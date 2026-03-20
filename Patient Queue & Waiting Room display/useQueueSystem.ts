@@ -1,21 +1,21 @@
-// src/hooks/useQueue.ts
+// hooks/useQueueSystem.ts
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase }  from '@/integrations/supabase/client'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { supabase }  from '@/lib/supabase'
+import { useAuth }   from '@/hooks/useAuth'
+import { useTenant } from '@/hooks/useTenant'
 import {
   QueueCounter, QueueTicket, CounterDisplayState,
   TicketStatus, ServiceType, TicketPriority, DailyStats,
-} from '@/types/queue'
-import { toast } from 'sonner'
+} from '@/types/queueSystem'
+import toast from 'react-hot-toast'
 
 // ─── Counters ─────────────────────────────────────────────────
 export function useQueueCounters() {
-  const { activeTenantId: tenantId } = useAuthStore()
+  const { tenantId } = useTenant()
   const [counters, setCounters] = useState<QueueCounter[]>([])
   const [loading,  setLoading]  = useState(true)
 
   const load = useCallback(async () => {
-    if (!tenantId) return
     const { data } = await supabase
       .from('queue_counters')
       .select('*')
@@ -28,7 +28,6 @@ export function useQueueCounters() {
 
   useEffect(() => {
     load()
-    if (!tenantId) return
     const ch = supabase.channel('counters_rt')
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'queue_counters',
@@ -50,12 +49,12 @@ export function useQueueCounters() {
 
 // ─── Today's tickets for a counter ───────────────────────────
 export function useCounterTickets(counterId: string | null) {
-  const { activeTenantId: tenantId } = useAuthStore()
+  const { tenantId } = useTenant()
   const [tickets,  setTickets]  = useState<QueueTicket[]>([])
   const [loading,  setLoading]  = useState(true)
 
   const load = useCallback(async () => {
-    if (!counterId || !tenantId) return
+    if (!counterId) return
     const today = new Date().toISOString().split('T')[0]
     const { data } = await supabase
       .from('queue_tickets')
@@ -100,7 +99,6 @@ export function useAllCountersDisplay(tenantId: string) {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    if (!tenantId) return
     const today = new Date().toISOString().split('T')[0]
 
     const [countersRes, ticketsRes] = await Promise.all([
@@ -135,7 +133,6 @@ export function useAllCountersDisplay(tenantId: string) {
 
   useEffect(() => {
     load()
-    if (!tenantId) return
     const ch = supabase.channel('all_tickets_rt')
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'queue_tickets',
@@ -154,8 +151,8 @@ export function useAllCountersDisplay(tenantId: string) {
 
 // ─── Issue new ticket ─────────────────────────────────────────
 export function useIssueTicket() {
-  const { activeTenantId: tenantId } = useAuthStore()
-  const { user }     = useAuthStore()
+  const { tenantId } = useTenant()
+  const { user }     = useAuth()
   const [busy, setBusy] = useState(false)
 
   const issue = useCallback(async (
@@ -170,7 +167,6 @@ export function useIssueTicket() {
       notes?:        string
     }
   ): Promise<QueueTicket | null> => {
-    if (!tenantId) return null
     setBusy(true)
     const { data, error } = await supabase
       .from('queue_tickets')
@@ -203,9 +199,10 @@ export function useIssueTicket() {
 
 // ─── Counter actions ──────────────────────────────────────────
 export function useCounterActions() {
+  const { tenantId } = useTenant()
   const [busy, setBusy] = useState(false)
 
-  const callNext = useCallback(async (counterId: string): Promise<any | null> => {
+  const callNext = useCallback(async (counterId: string): Promise<QueueTicket | null> => {
     setBusy(true)
     const { data, error } = await supabase.rpc('call_next_ticket', {
       p_counter_id: counterId,
@@ -215,7 +212,7 @@ export function useCounterActions() {
       toast.error(data?.error ?? error?.message ?? 'რიგი ცარიელია')
       return null
     }
-    return data
+    return data as QueueTicket
   }, [])
 
   const recall = useCallback(async (ticketId: string): Promise<void> => {

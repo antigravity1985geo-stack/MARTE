@@ -55,7 +55,10 @@ const getSections = (
         { title: t('nav_cash_drawer'), icon: Wallet2, path: '/app/pos/cash-drawer' }
       ] : []),
       ...(isEnabled('real_estate') || isSuperadmin ? [{ title: 'Real Estate Home', icon: Home, path: '/app/real-estate' }] : []),
-      ...(isEnabled('clinic') || isSuperadmin ? [{ title: t('nav_clinic_calendar'), icon: CalendarDays, path: '/app/clinic/calendar' }] : []),
+      ...(isEnabled('clinic') || isSuperadmin ? [
+        { title: t('nav_clinic_calendar'), icon: CalendarDays, path: '/app/clinic/calendar' },
+        { title: t('nav_queue'), icon: ListOrdered, path: '/app/clinic/queue' }
+      ] : []),
       ...(isEnabled('salon') || isSuperadmin ? [{ title: t('nav_salon'), icon: CalendarDays, path: '/app/salon/calendar' }] : []),
     ],
   });
@@ -68,7 +71,7 @@ const getSections = (
     operationItems.push({ title: t('nav_doctor_performance'), icon: TrendingUp, path: '/app/clinic/performance' });
     operationItems.push({ title: 'ბილინგი', icon: Wallet2, path: '/app/clinic/billing' });
     operationItems.push({ title: t('nav_consent_forms'), icon: ClipboardList, path: '/app/clinic/consent-forms' });
-  }
+    operationItems.push({ title: t('nav_clinical_notes'), icon: FileText, path: '/app/clinic/notes' });  }
   if (isEnabled('sales') || isSuperadmin) {
     operationItems.push({ title: t('nav_sales'), icon: TrendingUp, path: '/app/sales' });
     operationItems.push({ title: t('nav_orders'), icon: ListOrdered, path: '/app/orders' });
