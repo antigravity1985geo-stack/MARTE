@@ -1,8 +1,8 @@
-# საწყობი ERP - სრული პროექტის დოკუმენტაცია
+# MARTE ERP - სრული პროექტის დოკუმენტაცია
 
 ## 📋 პროექტის მიმოხილვა
 
-**საწყობი ERP** არის სრულფუნქციური საწარმოო საწარმოს მართვის სისტემა (ERP), რომელიც შექმნილია React + TypeScript + Vite-ზე დაფუძნებული PWA აპლიკაციად. სისტემა გამიზნულია მაღაზიებისა და საწარმოების სრული ციკლის მართვისთვის - საწყობი → გაყიდვები → ბუღალტერია → HR → CRM.
+**MARTE ERP** არის სრულფუნქციური საწარმოო საწარმოს მართვის სისტემა (ERP), რომელიც შექმნილია React + TypeScript + Vite-ზე დაფუძნებული PWA აპლიკაციად. სისტემა გამიზნულია მაღაზიებისა და საწარმოების სრული ციკლის მართვისთვის - საწყობი → გაყიდვები → ბუღალტერია → HR → CRM.
 
 ### ტექნოლოგიური სტეკი
 
@@ -226,6 +226,20 @@ public/                 # Static assets
 - ✅ **Claims & Installments** — Flexible payment plan management
 - ✅ **Supabase Sync** — Full persistence with real-time balance updates
 
+#### 32. **კლინიკური ჩანაწერები (SOAP Notes)** ✅ სრული
+- ✅ **SOAP Editor** — Split-panel layout with S/O/A/P section editing
+- ✅ **Template System** — Georgian dental-specific templates with quick-pick phrases
+- ✅ **Auto-save** — Debounced auto-save with last-saved indicator
+- ✅ **Voice Input** — Web Speech API (ka-GE) for hands-free note taking
+- ✅ **ICD-10 Picker** — Code search and primary diagnosis marking
+- ✅ **Vitals Capture** — BP, pulse, temp, weight, pain score
+- ✅ **Sign & Amend** — Legal signing workflow with amendment tracking
+
+#### 33. **ფასდაკლების ავტორიზაცია (Discount Auth)** ✅ სრული
+- ✅ **Policy Engine** — Category/product-level discount limits
+- ✅ **Manager PIN Override** — Secure PIN-based approval for exceeding limits
+- ✅ **POS Integration** — Real-time validation during checkout
+
 ---
 
 ## 🎨 UI/UX Enhancements (ბოლო განახლება)
@@ -268,18 +282,26 @@ public/                 # Static assets
 
 ## 📊 Project Stats
 
-- **Total Pages:** 45+
-- **Total Components:** 120+
-- **Total Lines of Code:** ~22,000
-- **Features Implemented:** 95%
-- **Production Ready:** 85%
+- **Total Pages:** 50+
+- **Total Components:** 130+
+- **Total Lines of Code:** ~25,000
+- **Database Tables:** 50+
+- **Custom Hooks:** 62
+- **Type Definitions:** 13 modules
+- **Features Implemented:** 97%
+- **Production Ready:** 90%
 
 ---
 
-**Last Updated:** 2026-03-20  
-**Status:** Beta (Phase 3 "Clinical Core" complete)  
+**Last Updated:** 2026-03-21  
+**Status:** Beta (Phase 3.5 "Clinical Core + SOAP" complete)  
 
-> **Progress Update (2026-03-20):**
+> **Progress Update (2026-03-21):**
+> ✅ **Clinical Notes (SOAP)** — Full SOAP editor with templates, auto-save, voice input, ICD-10, vitals, signing
+> ✅ **Discount Authorization** — PIN-based manager overrides for POS discounts
+> ✅ **Deep Audit** — Fixed broken QueuePage/Portal imports, RLS verification, documentation sync
+
+> **Phase 3 Complete (2026-03-20):**
 > ✅ **Clinical Suite** — Dental Chart v2, Lab Orders, Performance Analytics, Medical Billing
 > ✅ **Patient Experience** — Secure Portal (OTP), Queue System (TTS), Digital Consents
 > ✅ **i18n** — Full coverage for GE, EN, RU, AZ in all clinical modules
@@ -325,17 +347,6 @@ i)
 
 ---
 
-## 📊 Project Stats
-
-- **Total Pages:** 30+
-- **Total Components:** 80+
-- **Total Lines of Code:** ~15,000
-- **Database Tables (planned):** 20+
-- **Features Implemented:** 80%
-- **Production Ready:** 45%
-
----
-
 ## 🤝 Contribution Guidelines
 
 ### For AI Assistants:
@@ -363,13 +374,13 @@ i)
 - UI Components: shadcn/ui
 - Icons: Lucide React
 - Charts: Recharts
-- Database: Supabase (integration pending)
+- Database: Supabase (fully integrated)
 
 ---
 
-**Last Updated:** 2026-03-19  
-**Status:** Development (90% core complete)  
-**Next Milestone:** Construction Module & Multi-industry Refinement
+**Last Updated:** 2026-03-21  
+**Status:** Beta (97% core complete)  
+**Next Milestone:** Construction Module & Operational Automation
 
 > **Progress Update (2026-03-19):**
 > ✅ MARTEHOME — Real Estate module fully integrated
@@ -386,11 +397,11 @@ i)
 
 ## 🆘 Known Issues
 
-1. **localStorage overflow** - არის 5-10MB limit
-2. **No offline sync** - PWA offline ფუნქციონირებს, მაგრამ sync არ არის
-3. **Hard-coded admin credentials** - არ არის secure
-4. **No data validation** - ყველა input უნდა იყოს validated
-5. **Missing error boundaries** - უნდა დაემატოს global error handling
+1. ~~**localStorage overflow**~~ → Migrated to Supabase
+2. **No offline sync** — PWA offline ფუნქციონირებს, მაგრამ sync არ არის
+3. ~~**Hard-coded admin credentials**~~ → Fixed (Supabase Auth)
+4. **No data validation** — Zod schemas სჯობს დაემატოს
+5. ~~**Missing error boundaries**~~ → Added ErrorBoundary to all routes
 
 ---
 

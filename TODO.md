@@ -1,4 +1,4 @@
-# TODO List - საწყობი ERP
+# TODO List - MARTE ERP
 
 ## 🔥 Critical (Must do before production)
 
@@ -225,6 +225,18 @@
   - [x] Create EHR access (Records, Prescriptions, Consents)
   - [x] Add Appointment Request panel for clinic dashboard
   - [x] Mobile-optimized dashboard for patients
+
+- [x] **Clinical Notes (SOAP)** ✅ Completed (Phase 3)
+  - [x] Deploy `create_soap_notes.sql` (Templates + Notes + History View)
+  - [x] Create `useSoapNotes.ts` hooks (CRUD, auto-save, voice input, signing)
+  - [x] Build `SOAPNotesPage.tsx` with split-panel editor
+  - [x] ICD-10 picker, Vitals panel, follow-up tracking
+  - [x] Add sidebar navigation and 4-language translations
+
+- [x] **Discount Authorization** ✅ Completed (Phase 3)
+  - [x] Deploy `discount_auth.sql` (Policies, PIN-based overrides)
+  - [x] Create `useDiscountAuth.ts` hooks
+  - [x] Manager PIN verification workflow in POS
   
 - [x] **Clinical Data Depth** ✅ Completed (Phase 3)
   - [x] Interactive Dental Chart (v2 WOW version)
@@ -272,4 +284,4 @@
 - [~] In progress
 - [!] Blocked
 
-**Last Updated:** 2026-03-20 (Phase 3 "Clinical Core" complete — Portal, Queue, Consent, Billing, Lab, Dental v2 all live)
+**Last Updated:** 2026-03-21 (Phase 3 "Clinical Core" complete — Portal, Queue, Consent, Billing, Lab, Dental v2, SOAP Notes, Discount Auth all live)

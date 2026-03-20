@@ -1,12 +1,13 @@
-// @ts-nocheck
-import { usePatientPortal } from "@/hooks/usePatientPortal";
+import { usePortalAuth, usePortalClinical } from "@/hooks/usePatientPortal";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Pill, Clock, Printer, FileText } from "lucide-react";
+import { Loader2, Pill, Printer } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ka } from "date-fns/locale";
 
 export const PortalPrescriptions = () => {
-  const { prescriptions, loading, patient } = usePatientPortal();
+  const { session } = usePortalAuth();
+  const patientId = session?.patient_id ?? null;
+  const { prescriptions, loading } = usePortalClinical(patientId);
 
   if (loading) {
     return (
@@ -16,7 +17,7 @@ export const PortalPrescriptions = () => {
     );
   }
 
-  if (!patient) {
+  if (!session) {
     return (
       <div className="flex flex-col items-center justify-center p-10 text-center space-y-4">
         <div className="p-4 bg-slate-100 rounded-full">
@@ -46,7 +47,7 @@ export const PortalPrescriptions = () => {
             <p className="font-bold uppercase tracking-widest text-xs">რეცეპტები არ არის</p>
           </div>
         ) : (
-          prescriptions?.map((pres) => (
+          prescriptions?.map((pres: any) => (
             <div key={pres.id} className="glass-card bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-xl border border-white/5 space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -69,7 +70,7 @@ export const PortalPrescriptions = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                {pres.medications.map((m: any, idx: number) => (
+                {pres.medications?.map((m: any, idx: number) => (
                   <div key={idx} className="flex flex-col gap-1 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5">
                     <span className="font-black text-xs portal-text-primary uppercase">{m.name}</span>
                     <span className="text-[11px] text-muted-foreground font-bold">

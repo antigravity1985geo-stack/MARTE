@@ -663,7 +663,7 @@ export default function SOAPNotesPage() {
               >
                 <Tag size={14} className="mr-1.5" />
                 ICD-10
-                {draft?.icd10_codes.length > 0 && (
+                {(draft?.icd10_codes?.length ?? 0) > 0 && (
                   <span className="ml-1.5 bg-white/20 rounded-full px-1.5 text-[10px]">
                     {draft.icd10_codes.length}
                   </span>

@@ -1,12 +1,13 @@
-// @ts-nocheck
-import { usePatientPortal } from "@/hooks/usePatientPortal";
+import { usePortalAuth, usePortalClinical } from "@/hooks/usePatientPortal";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ClipboardList, ImageIcon, Maximize2, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ka } from "date-fns/locale";
 
 export const PortalMedicalRecords = () => {
-  const { records, loading, patient } = usePatientPortal();
+  const { session } = usePortalAuth();
+  const patientId = session?.patient_id ?? null;
+  const { records, loading } = usePortalClinical(patientId);
 
   if (loading) {
     return (
@@ -16,7 +17,7 @@ export const PortalMedicalRecords = () => {
     );
   }
 
-  if (!patient) {
+  if (!session) {
     return (
       <div className="flex flex-col items-center justify-center p-10 text-center space-y-4">
         <div className="p-4 bg-slate-100 rounded-full">
@@ -49,7 +50,7 @@ export const PortalMedicalRecords = () => {
             <p className="font-bold uppercase tracking-widest text-xs">ჩანაწერები არ არის</p>
           </div>
         ) : (
-          records?.map((record) => (
+          records?.map((record: any) => (
             <div key={record.id} className="glass-card bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-xl border border-white/5 space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -77,7 +78,7 @@ export const PortalMedicalRecords = () => {
                     <ImageIcon className="h-3 w-3" /> ფოტომასალა
                   </p>
                   <div className="flex gap-3 overflow-x-auto pb-2">
-                    {record.photo_urls.map((url, i) => (
+                    {record.photo_urls.map((url: string, i: number) => (
                       <a key={i} href={url} target="_blank" rel="noreferrer" className="shrink-0 relative rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
                         <img src={url} alt="Medical" className="h-32 w-32 object-cover" />
                         <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
