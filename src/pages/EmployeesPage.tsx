@@ -109,7 +109,7 @@ export default function EmployeesPage() {
   const [activeTab, setActiveTab] = useState('employees');
   const [search, setSearch] = useState('');
   const { employees, attendance, salarySlips, leaves, reviews, isLoading, addEmployee, updateEmployee, logAttendance, createSalarySlip, paySalary, requestLeave, updateLeaveStatus, addPerformanceReview, workingHours, saveWorkingHours } = useEmployees();
-  const { commissionRules, saveCommissionRule } = useServiceManagement();
+  const { commissionRules, saveCommissionRule, commissions, markCommissionAsPaid } = useServiceManagement();
   const { products } = useProducts();
 
   const currentRoles = ROLES_BY_INDUSTRY[currentIndustry] || COMMON_ROLES;
@@ -717,47 +717,138 @@ export default function EmployeesPage() {
 
               {selectedCommEmp ? (
                 <Card className="md:col-span-3">
-                  <CardHeader><CardTitle className="text-lg">საკომისიოს წესები: {employees.find(e => e.id === selectedCommEmp)?.full_name}</CardTitle></CardHeader>
+                  <CardHeader>
+                    <CardTitle className="text-lg">საკომისიოები: {employees.find(e => e.id === selectedCommEmp)?.full_name}</CardTitle>
+                  </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>სერვისი</TableHead>
-                          <TableHead>პროცენტი (%)</TableHead>
-                          <TableHead>ფიქსირებული (₾)</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {products.filter(p => p.type === 'service').map(service => {
-                          const rule = commissionRules.find(r => r.employee_id === selectedCommEmp && r.service_id === service.id);
-                          return (
-                            <TableRow key={service.id}>
-                              <TableCell className="text-xs font-medium">{service.name}</TableCell>
-                              <TableCell>
-                                <Input 
-                                  type="number" 
-                                  className="w-20 h-8 text-xs font-mono" 
-                                  defaultValue={rule?.percentage || 0}
-                                  onBlur={(e) => saveCommissionRule.mutate({ employee_id: selectedCommEmp, service_id: service.id, percentage: Number(e.target.value) })}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input 
-                                  type="number" 
-                                  className="w-20 h-8 text-xs font-mono" 
-                                  defaultValue={rule?.fixed_amount || 0}
-                                  onBlur={(e) => saveCommissionRule.mutate({ employee_id: selectedCommEmp, service_id: service.id, fixed_amount: Number(e.target.value) })}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {(rule?.percentage! > 0 || rule?.fixed_amount! > 0) && <Badge variant="secondary" className="bg-green-100 text-green-700">აქტიური</Badge>}
-                              </TableCell>
+                    <Tabs defaultValue="rules" className="w-full">
+                      <TabsList className="mb-4">
+                        <TabsTrigger value="rules">წესები</TabsTrigger>
+                        <TabsTrigger value="history">ისტორია</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="rules">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>სერვისი</TableHead>
+                              <TableHead>პროცენტი (%)</TableHead>
+                              <TableHead>ფიქსირებული (₾)</TableHead>
+                              <TableHead></TableHead>
                             </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {products.filter(p => p.type === 'service').map(service => {
+                              const rule = commissionRules.find(r => r.employee_id === selectedCommEmp && r.service_id === service.id);
+                              return (
+                                <TableRow key={service.id}>
+                                  <TableCell className="text-xs font-medium">{service.name}</TableCell>
+                                  <TableCell>
+                                    <Input 
+                                      type="number" 
+                                      className="w-20 h-8 text-xs font-mono" 
+                                      defaultValue={rule?.percentage || 0}
+                                      onBlur={(e) => saveCommissionRule.mutate({ employee_id: selectedCommEmp, service_id: service.id, percentage: Number(e.target.value) })}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input 
+                                      type="number" 
+                                      className="w-20 h-8 text-xs font-mono" 
+                                      defaultValue={rule?.fixed_amount || 0}
+                                      onBlur={(e) => saveCommissionRule.mutate({ employee_id: selectedCommEmp, service_id: service.id, fixed_amount: Number(e.target.value) })}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    {(rule?.percentage! > 0 || rule?.fixed_amount! > 0) && <Badge variant="secondary" className="bg-green-100 text-green-700">აქტიური</Badge>}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TabsContent>
+
+                      <TabsContent value="history">
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <Card className="bg-primary/5">
+                              <CardContent className="pt-4">
+                                <p className="text-xs text-muted-foreground">ჯამური გამომუშავება</p>
+                                <p className="text-2xl font-bold text-primary">
+                                  {commissions(selectedCommEmp).data?.reduce((acc, curr) => acc + Number(curr.amount), 0).toFixed(2)} ₾
+                                </p>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-orange-50">
+                              <CardContent className="pt-4">
+                                <p className="text-xs text-orange-600">გადასახდელი</p>
+                                <p className="text-2xl font-bold text-orange-600">
+                                  {commissions(selectedCommEmp).data?.filter(c => !c.is_paid).reduce((acc, curr) => acc + Number(curr.amount), 0).toFixed(2)} ₾
+                                </p>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-green-50">
+                              <CardContent className="pt-4">
+                                <p className="text-xs text-green-600">გადახდილი</p>
+                                <p className="text-2xl font-bold text-green-600">
+                                  {commissions(selectedCommEmp).data?.filter(c => c.is_paid).reduce((acc, curr) => acc + Number(curr.amount), 0).toFixed(2)} ₾
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </div>
+
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>თარიღი</TableHead>
+                                <TableHead>სერვისი</TableHead>
+                                <TableHead>თანხა</TableHead>
+                                <TableHead>სტატუსი</TableHead>
+                                <TableHead className="text-right">მოქმედება</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {commissions(selectedCommEmp).data?.map((commission) => (
+                                <TableRow key={commission.id}>
+                                  <TableCell className="text-xs">
+                                    {new Date(commission.created_at).toLocaleDateString('ka-GE')}
+                                  </TableCell>
+                                  <TableCell className="text-xs font-medium">
+                                    {commission.salon_appointments?.service_name || '—'}
+                                  </TableCell>
+                                  <TableCell className="font-mono">{Number(commission.amount).toFixed(2)} ₾</TableCell>
+                                  <TableCell>
+                                    <Badge variant={commission.is_paid ? 'default' : 'secondary'}>
+                                      {commission.is_paid ? 'გადახდილი' : 'გადასახდელი'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {!commission.is_paid && (
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        className="h-7 text-[10px]"
+                                        onClick={() => markCommissionAsPaid.mutate(commission.id)}
+                                      >
+                                        გადახდა
+                                      </Button>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                              {(!commissions(selectedCommEmp).data || commissions(selectedCommEmp).data?.length === 0) && (
+                                <TableRow>
+                                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                    მონაცემები ვერ მოიძებნა
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </CardContent>
                 </Card>
               ) : (

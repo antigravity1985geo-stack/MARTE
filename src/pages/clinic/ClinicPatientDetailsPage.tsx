@@ -26,10 +26,12 @@ export default function ClinicPatientDetailsPage() {
   const { clinicRecordsQuery, addClinicRecord, uploadMedicalPhoto } = useClinicPatients();
   const { employees = [] } = useEmployees();
   
+  const [activeTab, setActiveTab] = useState('history');
   const [emrForm, setEmrForm] = useState({
     notes: '',
     employee_id: '',
-    photo_urls: [] as string[]
+    photo_urls: [] as string[],
+    appointment_id: undefined as string | undefined
   });
   const [isUploading, setIsUploading] = useState(false);
 
@@ -120,13 +122,25 @@ export default function ClinicPatientDetailsPage() {
         patient_id: id,
         notes: emrForm.notes,
         employee_id: emrForm.employee_id || undefined,
-        photo_urls: emrForm.photo_urls
+        photo_urls: emrForm.photo_urls,
+        appointment_id: emrForm.appointment_id
       });
-      setEmrForm({ notes: '', employee_id: '', photo_urls: [] });
+      setEmrForm({ notes: '', employee_id: '', photo_urls: [], appointment_id: undefined });
       toast.success('ჩანაწერი დაემატა');
     } catch (err: any) {
       toast.error(err.message);
     }
+  };
+
+  const linkAppointmentToEHR = (apt: any) => {
+    setEmrForm({
+      notes: apt.notes || apt.reason || '',
+      employee_id: apt.doctor_id || '',
+      photo_urls: [],
+      appointment_id: apt.id
+    });
+    setActiveTab('history');
+    toast.info('ვიზიტის მონაცემები გადატანილია EHR ფორმაში');
   };
 
   if (isPatientLoading) {
@@ -200,7 +214,7 @@ export default function ClinicPatientDetailsPage() {
 
           {/* Main Content Area */}
           <div className="md:col-span-2">
-            <Tabs defaultValue="history" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="history">EHR (ისტორია/ფოტოები)</TabsTrigger>
                 <TabsTrigger value="appointments">ვიზიტები</TabsTrigger>
@@ -215,7 +229,12 @@ export default function ClinicPatientDetailsPage() {
                   <div className="md:col-span-1 space-y-6">
                     <Card>
                       <CardHeader className="py-4">
-                        <CardTitle className="text-base font-semibold">ახალი ჩანაწერი (EHR)</CardTitle>
+                        <CardTitle className="text-base font-semibold flex items-center justify-between">
+                          <span>ახალი ჩანაწერი (EHR)</span>
+                          {emrForm.appointment_id && (
+                            <Badge variant="outline" className="text-[10px] bg-primary/5">ლინკი: ვიზიტი</Badge>
+                          )}
+                        </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="space-y-1.5">
@@ -304,6 +323,11 @@ export default function ClinicPatientDetailsPage() {
                                       {record.employees?.full_name && (
                                         <Badge variant="secondary" className="mt-1 bg-primary/10 text-primary hover:bg-primary/20">
                                           {record.employees.full_name}
+                                        </Badge>
+                                      )}
+                                      {record.appointment_id && (
+                                        <Badge variant="outline" className="mt-1 ml-2 text-[10px] opacity-70">
+                                          მიბმულია ვიზიტზე
                                         </Badge>
                                       )}
                                     </div>
@@ -453,9 +477,21 @@ export default function ClinicPatientDetailsPage() {
                                 {format(new Date(apt.start_time), 'PPp', { locale: ka })} • ექიმი: {apt.employees?.full_name}
                               </p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex flex-col items-end gap-2">
                               <p className="text-sm font-bold text-primary">{apt.total_price} GEL</p>
-                              <Badge variant="outline" className="text-[10px] h-5 px-1.5 uppercase">{apt.status}</Badge>
+                              <div className="flex items-center gap-2">
+                                {apt.status === 'completed' && !records.some(r => r.appointment_id === apt.id) && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-7 px-2 text-[10px] gap-1 bg-primary/5 hover:bg-primary/10 text-primary"
+                                    onClick={() => linkAppointmentToEHR(apt)}
+                                  >
+                                    <ClipboardList className="h-3 w-3" /> EHR-ში დამატება
+                                  </Button>
+                                )}
+                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 uppercase">{apt.status}</Badge>
+                              </div>
                             </div>
                           </div>
                         ))}

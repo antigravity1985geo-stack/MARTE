@@ -29,7 +29,16 @@ const fadeUp = {
 };
 
 export default function AccountingPage() {
-  const { accounts, journalEntries, addEntry, getTrialBalance, getProfitLoss, exchangeRates, isLoading } = useAccounting();
+  const { 
+    accounts, 
+    journalEntries, 
+    addEntry, 
+    getTrialBalance, 
+    getProfitLoss, 
+    exchangeRates, 
+    fxRevaluation,
+    isLoading 
+  } = useAccounting();
   const { t } = useI18n();
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], description: '', debitAccount: '', creditAccount: '', amount: '' });
   const [activeTab, setActiveTab] = useState('chart');
@@ -197,6 +206,7 @@ export default function AccountingPage() {
               <TabsTrigger value="trial" className="rounded-lg gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-sm"><Scale className="h-3.5 w-3.5" />{t('accounting_trial')}</TabsTrigger>
               <TabsTrigger value="pl" className="rounded-lg gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-sm"><TrendingUp className="h-3.5 w-3.5" />{t('accounting_pl')}</TabsTrigger>
               <TabsTrigger value="vat" className="rounded-lg gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-sm"><Receipt className="h-3.5 w-3.5" />{t('accounting_vat')}</TabsTrigger>
+              <TabsTrigger value="fx-report" className="rounded-lg gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-sm"><TrendingUp className="h-3.5 w-3.5" />{t('accounting_fx_report')}</TabsTrigger>
               <TabsTrigger value="budget" className="rounded-lg gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-sm"><PieChart className="h-3.5 w-3.5" />{t('accounting_budget')}</TabsTrigger>
               <TabsTrigger value="fixed-assets" className="rounded-lg gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-sm"><Box className="h-3.5 w-3.5" />{t('accounting_fixed_assets')}</TabsTrigger>
             </TabsList>
@@ -527,6 +537,7 @@ export default function AccountingPage() {
           </TabsContent>
 
           {/* VAT */}
+          {/* VAT Tab Content */}
           <TabsContent value="vat">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
               <Card className="border-border overflow-hidden">
@@ -560,6 +571,74 @@ export default function AccountingPage() {
                       </span>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+          {/* FX Report Tab Content */}
+          <TabsContent value="fx-report">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+              <Card className="border-border overflow-hidden">
+                <CardHeader className="bg-muted/20 border-b border-border pb-4">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    {t('accounting_fx_report')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/10">
+                        <TableHead>{t('accounting_account')}</TableHead>
+                        <TableHead>ვალუტა</TableHead>
+                        <TableHead className="text-right">უცხოური ნაშთი</TableHead>
+                        <TableHead className="text-right">{t('accounting_fx_current_rate')}</TableHead>
+                        <TableHead className="text-right">{t('accounting_fx_historical_balance')}</TableHead>
+                        <TableHead className="text-right">{t('accounting_fx_fair_value')}</TableHead>
+                        <TableHead className="text-right">{t('accounting_fx_gain_loss')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {fxRevaluation.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                            {t('no_data')}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        fxRevaluation.map((row: any) => (
+                          <TableRow key={row.account_id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell>
+                              <div className="font-bold">{row.account_code}</div>
+                              <div className="text-xs text-muted-foreground">{row.account_name}</div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                                {row.currency_code}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-bold">
+                              {row.currency_code === 'USD' ? '$' : row.currency_code === 'EUR' ? '€' : ''}
+                              {row.foreign_balance.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-muted-foreground">
+                              {row.current_nbg_rate.toFixed(4)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              ₾{row.current_gel_balance.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-bold">
+                              ₾{row.fair_gel_value.toFixed(2)}
+                            </TableCell>
+                            <TableCell className={`text-right font-mono font-bold ${row.unrealized_gain_loss >= 0 ? 'text-success' : 'text-destructive'}`}>
+                              {row.unrealized_gain_loss >= 0 ? '+' : ''}₾{row.unrealized_gain_loss.toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </motion.div>

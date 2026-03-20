@@ -212,9 +212,98 @@ export function useServiceManagement() {
     },
   });
 
+  const calculateAndSaveCommission = useMutation({
+    mutationFn: async ({ appointmentId, specialistId, serviceName }: { appointmentId: string, specialistId: string, serviceName: string }) => {
+      // 1. Fetch service price
+      const { data: service, error: serviceErr } = await supabase
+        .from('salon_services')
+        .select('price')
+        .eq('name', serviceName)
+        .single();
+      
+      if (serviceErr) throw new Error('სერვისის ფასი ვერ მოიძებნა');
+
+      // 2. Fetch specialist commission rules
+      const { data: specialist, error: specErr } = await supabase
+        .from('salon_specialists')
+        .select('commission_type, commission_rate, commission_fixed')
+        .eq('id', specialistId)
+        .single();
+      
+      if (specErr) throw new Error('სპეციალისტის საკომისიო ვერ მოიძებნა');
+
+      // 3. Calculate amount
+      let amount = 0;
+      if (specialist.commission_type === 'percentage') {
+        amount = (Number(service.price) * (Number(specialist.commission_rate) || 0)) / 100;
+      } else if (specialist.commission_type === 'fixed') {
+        amount = Number(specialist.commission_fixed) || 0;
+      }
+
+      if (amount <= 0) return null;
+
+      // 4. Save to commissions
+      const { data, error } = await supabase
+        .from('salon_commissions')
+        .insert({
+          appointment_id: appointmentId,
+          specialist_id: specialistId,
+          amount,
+          is_paid: false
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff_commission_rules'] });
+      queryClient.invalidateQueries({ queryKey: ['salon_commissions'] });
+    }
+  });
+
+  const commissionsQuery = (specialistId?: string) => useQuery({
+    queryKey: ['salon_commissions', specialistId],
+    queryFn: async () => {
+      let query = supabase
+        .from('salon_commissions')
+        .select('*, salon_appointments(service_name, start_time)')
+        .order('created_at', { ascending: false });
+      
+      if (specialistId) {
+        query = query.eq('specialist_id', specialistId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const markCommissionAsPaid = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from('salon_commissions')
+        .update({ is_paid: true })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['salon_commissions'] });
+      toast.success('საკომისიო მონიშნულია გადახდილად');
+    },
+  });
+
   return {
     commissionRules: commissionRulesQuery.data || [],
     saveCommissionRule,
+    calculateAndSaveCommission,
+    commissions: commissionsQuery,
+    markCommissionAsPaid,
     materials: materialsQuery,
     saveMaterial,
     deleteMaterial,

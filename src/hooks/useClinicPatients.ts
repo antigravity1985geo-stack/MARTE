@@ -23,6 +23,7 @@ export interface ClinicMedicalRecord {
   id: string;
   patient_id: string;
   employee_id: string;
+  appointment_id?: string;
   notes: string;
   photo_urls: string[];
   created_at: string;
@@ -112,7 +113,14 @@ export function useClinicPatients() {
       // Assume tenant_id is handled by database triggers or policies as for other tables
       const { data, error } = await supabase
         .from('clinic_medical_records')
-        .insert({ ...record, user_id: user?.id })
+        .insert({ 
+          patient_id: record.patient_id,
+          employee_id: record.employee_id,
+          appointment_id: record.appointment_id,
+          notes: record.notes,
+          photo_urls: record.photo_urls,
+          user_id: user?.id 
+        })
         .select()
         .single();
       if (error) throw error;

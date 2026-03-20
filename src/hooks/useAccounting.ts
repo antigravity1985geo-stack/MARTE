@@ -15,6 +15,8 @@ export interface Account {
     parent_code: string | null;
     is_system: boolean;
     balance: number;
+    currency_code?: string;
+    foreign_balance?: number;
 }
 
 export interface JournalLine {
@@ -226,6 +228,20 @@ export function useAccounting() {
         staleTime: 1000 * 60 * 60 * 24, // cache for 24 hours in client
     });
 
+    // ---- FX Revaluation ----
+    const fxRevaluationQuery = useQuery({
+        queryKey: ['fx_revaluation', user?.id],
+        enabled: !!user?.id,
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('view_fx_revaluation')
+                .select('*');
+            if (error) throw error;
+            return data;
+        },
+        staleTime: 60_000,
+    });
+
     // ---- Mutations ----
 
     const addEntry = useMutation({
@@ -397,7 +413,8 @@ export function useAccounting() {
         journalEntries,
         vatRecords,
         exchangeRates: exchangeRatesQuery.data || [],
-        isLoading: accountsQuery.isLoading || journalQuery.isLoading,
+        fxRevaluation: fxRevaluationQuery.data || [],
+        isLoading: accountsQuery.isLoading || journalQuery.isLoading || fxRevaluationQuery.isLoading,
         addEntry,
         addMultiLineEntry,
         addVatRecord,

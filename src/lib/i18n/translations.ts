@@ -319,6 +319,12 @@ const t = {
   accounting_type_equity: { ka: 'კაპიტალი', en: 'Equity' },
   accounting_type_revenue: { ka: 'შემოსავალი', en: 'Revenue' },
   accounting_type_expense: { ka: 'ხარჯი', en: 'Expense' },
+  accounting_fx_report: { ka: 'სავალუტო სხვაობა', en: 'FX Report' },
+  accounting_fx_revaluation: { ka: 'გადაფასება', en: 'Revaluation' },
+  accounting_fx_gain_loss: { ka: 'მოგება / (ზარალი)', en: 'Gain / (Loss)' },
+  accounting_fx_fair_value: { ka: 'სამართლიანი ღირებულება', en: 'Fair Value' },
+  accounting_fx_current_rate: { ka: 'მიმდინარე კურსი', en: 'Current Rate' },
+  accounting_fx_historical_balance: { ka: 'ისტორიული ნაშთი (GEL)', en: 'Hist. Balance (GEL)' },
 
   // ─── Employees / HR ──────────────────────────────────────────────────────
   employees_title: { ka: 'თანამშრომლები', en: 'Employees', ru: 'Сотрудники', az: 'İşçilər' },

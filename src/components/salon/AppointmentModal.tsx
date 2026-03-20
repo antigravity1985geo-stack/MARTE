@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useServiceManagement } from '@/hooks/useServiceManagement';
 
 interface Specialist {
   id: string;
@@ -53,6 +54,8 @@ export function AppointmentModal({
   const [serviceName, setServiceName] = useState(existingAppointment?.service_name || '');
   const [specialistId, setSpecialistId] = useState(existingAppointment?.specialist_id || selectedSpecialist || '');
   
+  const { calculateAndSaveCommission } = useServiceManagement();
+
   // Format existing time or use selectedTime
   const defaultTime = existingAppointment 
     ? new Date(existingAppointment.start_time).toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' })
@@ -96,11 +99,41 @@ export function AppointmentModal({
           .update(payload)
           .eq('id', existingAppointment.id);
         if (error) throw error;
+
+        // Trigger commission if marked as completed
+        if (status === 'completed' && existingAppointment.status !== 'completed') {
+           try {
+             await calculateAndSaveCommission.mutateAsync({
+               appointmentId: existingAppointment.id,
+               specialistId: specialistId,
+               serviceName: serviceName
+             });
+           } catch (commErr) {
+             console.error('Commission error:', commErr);
+             toast.error('ბონუსის დაანგარიშებისას მოხდა შეცდომა');
+           }
+        }
       } else {
-        const { error } = await supabase
+        const { data: newApt, error } = await supabase
           .from('salon_appointments')
-          .insert(payload);
+          .insert(payload)
+          .select()
+          .single();
         if (error) throw error;
+
+        // If created directly as completed
+        if (status === 'completed' && newApt) {
+            try {
+              await calculateAndSaveCommission.mutateAsync({
+                appointmentId: newApt.id,
+                specialistId: specialistId,
+                serviceName: serviceName
+              });
+            } catch (commErr) {
+              console.error('Commission error:', commErr);
+              toast.error('ბონუსის დაანგარიშებისას მოხდა შეცდომა');
+            }
+        }
       }
     },
     onSuccess: () => {
@@ -129,6 +162,7 @@ export function AppointmentModal({
     setIsSubmitting(true);
     saveMutation.mutate();
   };
+
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
