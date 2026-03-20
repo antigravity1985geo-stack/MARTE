@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { PageTransition } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,15 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, ArrowRightLeft, TrendingUp, Globe, Loader2 } from 'lucide-react';
+import { useExchangeRates } from '@/hooks/useExchangeRates';
 import { toast } from 'sonner';
-
-interface CurrencyRate {
-  code: string;
-  name: string;
-  rate: number;
-  change: number;
-  date: string;
-}
 
 interface ConversionRecord {
   id: string;
@@ -28,68 +21,16 @@ interface ConversionRecord {
   date: string;
 }
 
-const defaultRates: CurrencyRate[] = [
-  { code: 'USD', name: 'აშშ დოლარი', rate: 2.6845, change: -0.0012, date: new Date().toISOString().split('T')[0] },
-  { code: 'EUR', name: 'ევრო', rate: 2.9234, change: 0.0045, date: new Date().toISOString().split('T')[0] },
-  { code: 'GBP', name: 'ბრიტანული ფუნტი', rate: 3.4012, change: -0.0023, date: new Date().toISOString().split('T')[0] },
-  { code: 'TRY', name: 'თურქული ლირა', rate: 0.0782, change: -0.0003, date: new Date().toISOString().split('T')[0] },
-  { code: 'RUB', name: 'რუსული რუბლი', rate: 0.0294, change: 0.0001, date: new Date().toISOString().split('T')[0] },
-  { code: 'UAH', name: 'უკრაინული გრივნა', rate: 0.0649, change: -0.0002, date: new Date().toISOString().split('T')[0] },
-  { code: 'AZN', name: 'აზერბაიჯანული მანათი', rate: 1.5791, change: 0.0008, date: new Date().toISOString().split('T')[0] },
-  { code: 'AMD', name: 'სომხური დრამი', rate: 0.0069, change: 0.0000, date: new Date().toISOString().split('T')[0] },
-];
-
 export default function CurrencyPage() {
-  const [rates, setRates] = useState<CurrencyRate[]>(defaultRates);
+  const { currencies, isLoading, isSyncing, sync, convert } = useExchangeRates();
   const [conversions, setConversions] = useState<ConversionRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [convertForm, setConvertForm] = useState({ fromCurrency: 'USD', toCurrency: 'GEL', amount: '' });
-
-  const fetchNBGRates = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/?currencies=USD,EUR,GBP,TRY,RUB,UAH,AZN,AMD');
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data[0]?.currencies) {
-          const newRates: CurrencyRate[] = data[0].currencies.map((c: any) => ({
-            code: c.code,
-            name: c.name || c.code,
-            rate: c.rate / (c.quantity || 1),
-            change: c.diff || 0,
-            date: data[0].date?.split('T')[0] || new Date().toISOString().split('T')[0],
-          }));
-          setRates(newRates);
-          toast.success('კურსები განახლდა ეროვნული ბანკიდან');
-        }
-      } else {
-        toast.info('ეროვნული ბანკის API მიუწვდომელია, ნაჩვენებია სადემონსტრაციო კურსები');
-      }
-    } catch {
-      toast.info('კურსები ვერ განახლდა, ნაჩვენებია სადემონსტრაციო კურსები');
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => { fetchNBGRates(); }, []);
 
   const handleConvert = () => {
     const amount = parseFloat(convertForm.amount);
     if (!amount) { toast.error('შეიყვანეთ თანხა'); return; }
 
-    let result: number;
-    const fromRate = rates.find(r => r.code === convertForm.fromCurrency);
-    const toRate = rates.find(r => r.code === convertForm.toCurrency);
-
-    if (convertForm.fromCurrency === 'GEL') {
-      result = toRate ? amount / toRate.rate : amount;
-    } else if (convertForm.toCurrency === 'GEL') {
-      result = fromRate ? amount * fromRate.rate : amount;
-    } else {
-      const gelAmount = fromRate ? amount * fromRate.rate : amount;
-      result = toRate ? gelAmount / toRate.rate : gelAmount;
-    }
-
+    const result = convert(amount, convertForm.fromCurrency, convertForm.toCurrency);
     const rate = amount > 0 ? result / amount : 0;
 
     setConversions(prev => [{
@@ -105,15 +46,24 @@ export default function CurrencyPage() {
     toast.success(`${amount} ${convertForm.fromCurrency} = ${result.toFixed(4)} ${convertForm.toCurrency}`);
   };
 
-  const allCurrencies = ['GEL', ...rates.map(r => r.code)];
+  const handleSync = async () => {
+    try {
+      await sync();
+      toast.success('კურსები განახლდა ბაზაში NBG API-დან');
+    } catch (error) {
+      toast.error('კურსების განახლება ვერ მოხერხდა');
+    }
+  };
+
+  const allCurrencies = currencies.length > 0 ? currencies.map(c => c.code) : ['GEL', 'USD', 'EUR'];
 
   return (
     <PageTransition>
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="text-2xl font-bold">ვალუტა & კურსები</h1>
-          <Button onClick={fetchNBGRates} disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+          <Button onClick={handleSync} disabled={isLoading || isSyncing}>
+            {isLoading || isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             კურსის განახლება (NBG)
           </Button>
         </div>
@@ -127,7 +77,7 @@ export default function CurrencyPage() {
 
           <TabsContent value="rates" className="mt-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              {rates.slice(0, 4).map(r => (
+              {currencies.filter(c => c.code !== 'GEL').slice(0, 4).map(r => (
                 <Card key={r.code}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -135,8 +85,8 @@ export default function CurrencyPage() {
                         <p className="text-xs text-muted-foreground">{r.code}/GEL</p>
                         <p className="text-xl font-bold">{r.rate.toFixed(4)}</p>
                       </div>
-                      <Badge variant={r.change >= 0 ? 'default' : 'destructive'} className="text-xs">
-                        {r.change >= 0 ? '+' : ''}{r.change.toFixed(4)}
+                      <Badge variant="outline" className="text-xs">
+                        {r.symbol}
                       </Badge>
                     </div>
                   </CardContent>
@@ -150,20 +100,18 @@ export default function CurrencyPage() {
                     <TableHead>კოდი</TableHead>
                     <TableHead>ვალუტა</TableHead>
                     <TableHead className="text-right">კურსი (GEL)</TableHead>
-                    <TableHead className="text-right">ცვლილება</TableHead>
-                    <TableHead>თარიღი</TableHead>
+                    <TableHead>სიმბოლო</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rates.map(r => (
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={4} className="text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                  ) : currencies.map(r => (
                     <TableRow key={r.code}>
                       <TableCell className="font-mono font-bold">{r.code}</TableCell>
                       <TableCell>{r.name}</TableCell>
                       <TableCell className="text-right font-semibold">{r.rate.toFixed(4)}</TableCell>
-                      <TableCell className={`text-right ${r.change >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {r.change >= 0 ? '+' : ''}{r.change.toFixed(4)}
-                      </TableCell>
-                      <TableCell className="text-sm">{r.date}</TableCell>
+                      <TableCell>{r.symbol}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
