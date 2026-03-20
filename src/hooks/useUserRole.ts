@@ -7,7 +7,7 @@ export type AppRole = 'admin' | 'cashier' | 'senior_cashier' | 'manager' | 'ware
 // ყველა როლისთვის საერთო გვერდები
 const COMMON_PATHS = [
   '/', '/pos', '/products', '/categories', '/sales', '/queue', '/profile', '/guide', 
-  '/salon/calendar', '/clinic/calendar', '/clinic/patients', '/clinic/services',
+  '/salon/calendar', '/clinic/calendar', '/clinic/patients', '/clinic/services', '/clinic/lab-orders',
   '/real-estate', '/real-estate/properties', '/real-estate/mortgages'
 ];
 

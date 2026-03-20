@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,14 +10,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, CheckCircle2, CircleDashed, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function TreatmentPlanner({ patientId }: { patientId: string }) {
+export function TreatmentPlanner({ patientId, initialTooth }: { patientId: string, initialTooth?: string }) {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [cost, setCost] = useState('');
-  const [toothNumber, setToothNumber] = useState('');
+  const [toothNumber, setToothNumber] = useState(initialTooth || '');
+
+  // Sync tooth number if it changes from parent (e.g. clicking on chart)
+  useEffect(() => {
+    if (initialTooth) {
+      setToothNumber(initialTooth);
+    }
+  }, [initialTooth]);
 
   const { data: treatments = [], isLoading } = useQuery({
     queryKey: ['clinic_treatments', patientId],

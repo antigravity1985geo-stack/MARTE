@@ -5,7 +5,7 @@ import {
   ClipboardList, Warehouse, Factory, Users, Truck, Receipt,
   Calculator, FileText, BarChart3,
   UserCog, Clock, ListOrdered, LogOut,
-  Menu, X, Activity,
+  Menu, X, Activity, Beaker, TestTube,
   Globe, Building2, Building,
   ShieldCheck, CalendarDays, Lock, Home, Key, Stethoscope, Wallet2, Settings, Gift, Scissors, RotateCcw
 } from 'lucide-react';
@@ -62,7 +62,11 @@ const getSections = (
 
   // 2. Business Operations
   const operationItems: any[] = [];
-  if (isEnabled('clinic') || isSuperadmin) operationItems.push({ title: t('nav_patients'), icon: Users, path: '/app/clinic/patients' });
+  if (isEnabled('clinic') || isSuperadmin) {
+    operationItems.push({ title: t('nav_patients'), icon: Users, path: '/app/clinic/patients' });
+    operationItems.push({ title: t('nav_lab_orders'), icon: TestTube, path: '/app/clinic/lab-orders' });
+    operationItems.push({ title: t('nav_doctor_performance'), icon: TrendingUp, path: '/app/clinic/performance' });
+  }
   if (isEnabled('sales') || isSuperadmin) {
     operationItems.push({ title: t('nav_sales'), icon: TrendingUp, path: '/app/sales' });
     operationItems.push({ title: t('nav_orders'), icon: ListOrdered, path: '/app/orders' });

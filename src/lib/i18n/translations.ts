@@ -140,6 +140,8 @@ const t = {
   nav_company: { ka: 'კომპანია', en: 'Company' },
   nav_cash_drawer: { ka: 'სალარო (ნაღდი ფული)', en: 'Cash Drawer', ru: 'Касса', az: 'Kassa' },
   nav_returns: { ka: 'დაბრუნებები', en: 'Returns', ru: 'Возвраты', az: 'Qayıdışlar' },
+  nav_lab_orders: { ka: 'ლაბ. შეკვეთები', en: 'Lab Orders', ru: 'Лаб. заказы', az: 'Laboratoriya Sifarişləri' },
+  nav_doctor_performance: { ka: 'ექიმების ანალიტიკა', en: 'Doctor Performance', ru: 'Аналитика врачей', az: 'Həkim Analitikası' },
   logout: { ka: 'გამოსვლა', en: 'Logout' },
 
   // ─── Auth Page ────────────────────────────────────────────────────────────
