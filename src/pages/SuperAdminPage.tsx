@@ -890,7 +890,7 @@ export default function SuperAdminPage() {
                               {r.role}
                             </Badge>
                           ))}
-                          {u.is_superadmin && (
+                          {(u.role === 'superadmin' || u.role === 'admin_super') && (
                             <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] px-1.5 py-0">
                               Superadmin
                             </Badge>

@@ -60,11 +60,15 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
     try {
       const [profileRes, tenantsRes] = await Promise.all([
-        supabase.from('profiles').select('full_name, is_superadmin, referral_code, referred_by').eq('id', session.user.id).maybeSingle(),
+        supabase.from('profiles').select('display_name, role, referral_code, referred_by').eq('id', session.user.id).maybeSingle(),
         supabase.from('tenant_members').select(`role, tenants(id, name, industry, features, limits, usage, subscription_plan, subscription_status)`).eq('user_id', session.user.id)
       ]);
 
+      if (profileRes.error) {
+        console.error('Error loading profiles:', profileRes.error);
+      }
       profileData = profileRes.data;
+
       if (tenantsRes.data) {
         tenantsList = tenantsRes.data.map((t: any) => ({
           id: t.tenants.id,
@@ -84,9 +88,10 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     
     // Pick active tenant from localStorage or default to first
     const savedTenantId = localStorage.getItem('marte_active_tenant');
+    const isActuallySuperadmin = profileData?.role === 'superadmin' || profileData?.role === 'admin_super';
     
     // SUPERADMIN "LOGIN AS" BYPASS
-    if (profileData?.is_superadmin && savedTenantId && !tenantsList.find(t => t.id === savedTenantId)) {
+    if (isActuallySuperadmin && savedTenantId && !tenantsList.find(t => t.id === savedTenantId)) {
       // Fetch that tenant so superadmin can pretend to be a member
       const { data: targetTenant } = await supabase.from('tenants').select('id, name, industry, features, limits, usage, subscription_plan, subscription_status').eq('id', savedTenantId).maybeSingle();
       if (targetTenant) {
@@ -115,8 +120,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       user: {
         id: session.user.id,
         email: session.user.email || '',
-        fullName: profileData?.full_name || fallbackName,
-        isSuperadmin: !!profileData?.is_superadmin,
+        fullName: profileData?.display_name || fallbackName,
+        isSuperadmin: isActuallySuperadmin,
         referralCode: profileData?.referral_code,
         referredBy: profileData?.referred_by,
       },
