@@ -143,6 +143,12 @@ const t = {
   nav_lab_orders: { ka: 'ლაბ. შეკვეთები', en: 'Lab Orders', ru: 'Лаб. заказы', az: 'Laboratoriya Sifarişləri' },
   nav_doctor_performance: { ka: 'ექიმების ანალიტიკა', en: 'Doctor Performance', ru: 'Аналитика врачей', az: 'Həkim Analitikası' },
   nav_consent_forms: { ka: 'თანხმობის ფორმები', en: 'Consent Forms', ru: 'Формы согласия', az: 'Razılıq Formaları' },
+  medical_records: { ka: 'სამედიცინო ისტორია', en: 'Medical Records' },
+  prescriptions: { ka: 'რეცეპტები', en: 'Prescriptions' },
+  consent_forms: { ka: 'თანხმობა', en: 'Consent Forms' },
+  sign_here: { ka: 'მოაწერეთ ხელი', en: 'Sign Here' },
+  confirm_signature: { ka: 'დადასტურება', en: 'Confirm Signature' },
+  clear_signature: { ka: 'გასუფთავება', en: 'Clear Signature' },
   logout: { ka: 'გამოსვლა', en: 'Logout' },
 
   // ─── Auth Page ────────────────────────────────────────────────────────────

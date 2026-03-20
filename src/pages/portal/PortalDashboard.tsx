@@ -2,7 +2,7 @@ import { useOutletContext, Link, useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, History as HistoryIcon, CreditCard, Star, Sparkles, Info, ArrowRight } from "lucide-react";
+import { Calendar, History as HistoryIcon, CreditCard, Star, Sparkles, Info, ArrowRight, ClipboardList, Pill, Shield } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -113,6 +113,44 @@ export const PortalDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {tenant.industry === 'clinic' && (
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="group glass-card overflow-hidden border-none shadow-xl hover:shadow-emerald-500/20">
+            <Link to={`/portal/${tenant_slug}/medical`}>
+              <CardContent className="flex flex-col items-center justify-center p-8 bg-white/90 dark:bg-slate-900/90">
+                <div className="bg-emerald-500/10 text-emerald-500 mb-4 rounded-3xl p-4 group-hover:scale-110 transition-transform duration-500">
+                   <ClipboardList className="h-8 w-8" />
+                </div>
+                <span className="font-black text-xs uppercase tracking-tighter text-center">სამედიცინო <br/> ისტორია</span>
+              </CardContent>
+            </Link>
+          </Card>
+          <Card className="group glass-card overflow-hidden border-none shadow-xl hover:shadow-blue-500/20">
+            <Link to={`/portal/${tenant_slug}/prescriptions`}>
+              <CardContent className="flex flex-col items-center justify-center p-8 bg-white/90 dark:bg-slate-900/90">
+                <div className="bg-blue-500/10 text-blue-500 mb-4 rounded-3xl p-4 group-hover:scale-110 transition-transform duration-500">
+                   <Pill className="h-8 w-8" />
+                </div>
+                <span className="font-black text-xs uppercase tracking-tighter text-center">ჩემი <br/> რეცეპტები</span>
+              </CardContent>
+            </Link>
+          </Card>
+          <Card className="group glass-card overflow-hidden border-none shadow-xl hover:shadow-purple-500/20 col-span-2">
+            <Link to={`/portal/${tenant_slug}/consents`}>
+              <CardContent className="flex flex-row items-center gap-6 p-8 bg-white/90 dark:bg-slate-900/90">
+                <div className="bg-purple-500/10 text-purple-500 rounded-3xl p-4 group-hover:scale-110 transition-transform duration-500">
+                   <Shield className="h-8 w-8" />
+                </div>
+                <div className="text-left">
+                  <span className="font-black text-xs uppercase tracking-tighter block">თანხმობის ფორმები</span>
+                  <span className="text-[10px] text-muted-foreground font-bold">გაეცანით და მოაწერეთ ხელი დოკუმენტებს</span>
+                </div>
+              </CardContent>
+            </Link>
+          </Card>
+        </div>
+      )}
 
       {/* Loyalty Card */}
       <LoyaltyCard 

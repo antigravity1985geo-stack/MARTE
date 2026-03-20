@@ -99,6 +99,9 @@ const PortalCatalog = lazy(() => import('@/pages/portal/PortalCatalog').then(m =
 const PortalAuth = lazy(() => import('@/pages/portal/PortalAuth').then(m => ({ default: m.PortalAuth })));
 const PortalPaymentSuccess = lazy(() => import('@/pages/portal/PortalPaymentSuccess'));
 const PortalPaymentFailure = lazy(() => import('@/pages/portal/PortalPaymentFailure'));
+const PortalMedicalRecords = lazy(() => import('@/pages/portal/PortalMedicalRecords').then(m => ({ default: m.PortalMedicalRecords })));
+const PortalPrescriptions = lazy(() => import('@/pages/portal/PortalPrescriptions').then(m => ({ default: m.PortalPrescriptions })));
+const PortalConsentForms = lazy(() => import('@/pages/portal/PortalConsentForms').then(m => ({ default: m.PortalConsentForms })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -204,6 +207,9 @@ const App = () => (
                   <Route path="history" element={<PortalHistory />} />
                   <Route path="payment-success" element={<PortalPaymentSuccess />} />
                   <Route path="payment-failure" element={<PortalPaymentFailure />} />
+                  <Route path="medical" element={<PortalMedicalRecords />} />
+                  <Route path="prescriptions" element={<PortalPrescriptions />} />
+                  <Route path="consents" element={<PortalConsentForms />} />
                 </Route>
 
                 {/* Legacy Redirects */}

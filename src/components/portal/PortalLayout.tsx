@@ -1,6 +1,6 @@
 import { Outlet, useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { usePortal } from "@/hooks/usePortal";
-import { Loader2, Calendar, Clock, User, Home, ShoppingBag, Globe, Check } from "lucide-react";
+import { Loader2, Calendar, Clock, User, Home, ShoppingBag, Globe, Check, ClipboardList, Pill } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/hooks/useI18n";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -147,7 +147,7 @@ export const PortalLayout = () => {
             <div className="absolute -bottom-1 h-1 w-1 rounded-full portal-bg-primary" />
           )}
         </Link>
-        <Link
+                <Link
           to={`/portal/${tenant_slug}/history`}
           className={`relative group flex flex-col items-center gap-1.5 transition-all duration-300 ${location.pathname.includes('/history') ? 'portal-text-primary' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
         >
@@ -159,6 +159,29 @@ export const PortalLayout = () => {
             <div className="absolute -bottom-1 h-1 w-1 rounded-full portal-bg-primary" />
           )}
         </Link>
+
+        {tenant.industry === 'clinic' && (
+          <>
+            <Link
+              to={`/portal/${tenant_slug}/medical`}
+              className={`relative group flex flex-col items-center gap-1.5 transition-all duration-300 ${location.pathname.includes('/medical') ? 'portal-text-primary' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            >
+              <div className={`p-1.5 rounded-xl transition-all duration-300 ${location.pathname.includes('/medical') ? 'bg-portal-primary/10' : 'group-hover:bg-slate-100/50'}`}>
+                <ClipboardList className={`h-6 w-6 transition-transform duration-300 ${location.pathname.includes('/medical') ? 'scale-110' : 'group-hover:scale-105'}`} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider">ისტორია</span>
+            </Link>
+            <Link
+              to={`/portal/${tenant_slug}/prescriptions`}
+              className={`relative group flex flex-col items-center gap-1.5 transition-all duration-300 ${location.pathname.includes('/prescriptions') ? 'portal-text-primary' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+            >
+              <div className={`p-1.5 rounded-xl transition-all duration-300 ${location.pathname.includes('/prescriptions') ? 'bg-portal-primary/10' : 'group-hover:bg-slate-100/50'}`}>
+                <Pill className={`h-6 w-6 transition-transform duration-300 ${location.pathname.includes('/prescriptions') ? 'scale-110' : 'group-hover:scale-105'}`} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider">RX</span>
+            </Link>
+          </>
+        )}
       </nav>
     </div>
   );
